@@ -1,0 +1,390 @@
+@*
+    ======================================================================
+    VIEW: Sessions / Index.cshtml
+    PURPOSE: User interface rendering for the Sessions module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MstSessionPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Session Management";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canAdd = PermHelper.HasPermissionByUrl("/Sessions", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Sessions", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Sessions", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Sessions", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Sessions", "Export");
+}
+
+@* Local alert div removed in favor of global toast system *@
+
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Session Management</h6>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        @if (canAdd)
+        {
+            <button class="btn btn-primary" id="btnAddSession" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-edit me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="sessionsTable">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="ps-4" style="width: 50px;">Select</th>
+                                <th>Session Title</th>                                
+                                <th>Created On</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model.Sessions)
+                            {
+                                <tr class="item-row" onclick="selectItem(@s.SessionId, this)" style="cursor: pointer;">
+                                    <td class="ps-4 text-center">
+                                        <input type="checkbox" name="selectedSession"
+                                               class="form-check-input student-checkbox"
+                                               value="@s.SessionId">                                    
+                                    </td>
+                                    <td>
+                                        @s.SessionTitle
+                                    </td>
+                                    <td>@s.CreatedOn.ToString("dd MMM yyyy")</td>
+                                    <td>
+                                        @if (canEdit)
+                                        {
+                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                <input class="form-check-input session-status-switch" type="checkbox" @(s.IsActive ? "checked" : "") onchange="toggleStatus(@s.SessionId, this.checked)">
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">@(s.IsActive ? "Active" : "Inactive")</span>
+                                        }
+                                    </td>
+                                    
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header p-3">
+                <h5 class="modal-title" id="modalTitle">Add Session</h5>
+                <div class="ms-auto d-flex align-items-center gap-1">                    
+                    <button type="button" class="btn btn-success" id="btnSave" onclick="saveItem()">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body p-3">
+                <div id="sessionModalNotice" class="alert alert-warning py-2 small d-none mb-3" role="alert"></div>
+                <form id="itemForm">
+                    <input type="hidden" id="txtItemId" value="0">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Session Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtSessionTitle" placeholder="e.g. 2024-25" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtSessionTitle"></div>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="isActive" checked>
+                        <label class="form-check-label fw-bold" for="isActive">Active</label>                        
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const IV = window.InlineFormValidation;
+        const sessionFieldMap = { txtSessionTitle: 'errTxtSessionTitle' };
+        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+        let selectedSessionId = 0;
+
+        function clearSessionModalValidation() {
+            IV.clearMap(sessionFieldMap);
+            IV.clearNotice('sessionModalNotice');
+        }
+
+        IV.bindAutoClear(sessionFieldMap);
+
+        function selectItem(id, row) {
+            IV.clearNotice('sessionPageNotice');
+            selectedSessionId = id;
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            //row.querySelector('input[type="radio"]').checked = true;
+            const btnEdit = document.getElementById('btnEdit');
+            const btnDelete = document.getElementById('btnDelete');
+            if (btnEdit && permCanEdit) btnEdit.disabled = false;
+            if (btnDelete && permCanDelete) btnDelete.disabled = false;
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openAddModal() {
+            if (!permCanAdd) {
+                IV.setNotice('sessionPageNotice', 'You do not have permission to add.');
+                return;
+            }
+            IV.clearNotice('sessionPageNotice');
+            clearSessionModalValidation();
+            document.getElementById('modalTitle').textContent = 'Add Session';
+            document.getElementById('itemForm').reset();
+            document.getElementById('txtItemId').value = "0";
+            document.getElementById('isActive').checked = true;
+            itemModal.show();
+        }
+
+        async function editSelected() {
+            if (!permCanEdit) {
+                IV.setNotice('sessionPageNotice', 'You do not have permission to edit.');
+                return;
+            }
+            if (selectedSessionId === 0) return;
+            IV.clearNotice('sessionPageNotice');
+            clearSessionModalValidation();
+            try {
+                const resp = await fetch(`/Sessions/GetSession?id=${selectedSessionId}`);
+                const res = await resp.json();
+                if (res.success) {
+                    document.getElementById('modalTitle').textContent = 'Edit Session';
+                    document.getElementById('txtItemId').value = res.data.sessionId;
+                    document.getElementById('txtSessionTitle').value = res.data.sessionTitle;
+                    document.getElementById('isActive').checked = res.data.isActive;
+                    itemModal.show();
+                } else {
+                    IV.setNotice('sessionPageNotice', res.message || 'Could not load session.');
+                }
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('sessionPageNotice', 'Could not load session details.');
+            }
+        }
+
+        async function deleteSelected() {
+            if (!permCanDelete) {
+                IV.setNotice('sessionPageNotice', 'You do not have permission to delete.');
+                return;
+            }
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: '/Sessions/Delete',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+
+        async function saveItem() {
+            const sid = parseInt(document.getElementById('txtItemId').value);
+            if (sid === 0 && !permCanAdd) {
+                IV.setNotice('sessionModalNotice', 'You do not have permission to add.');
+                return;
+            }
+            if (sid > 0 && !permCanEdit) {
+                IV.setNotice('sessionModalNotice', 'You do not have permission to edit.');
+                return;
+            }
+            clearSessionModalValidation();
+            const title = document.getElementById('txtSessionTitle').value.trim();
+            if (!title) {
+                IV.setFieldError('txtSessionTitle', 'errTxtSessionTitle', 'Session title is required.');
+                return;
+            }
+
+            const data = {
+                sessionId: parseInt(document.getElementById('txtItemId').value),
+                sessionTitle: title,
+                isActive: document.getElementById('isActive').checked
+            };
+
+            const btn = document.getElementById('btnSave');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+
+            try {
+                const resp = await fetch('/Sessions/Save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    location.reload();
+                } else {
+                    IV.setNotice('sessionModalNotice', res.message || 'Save failed.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ti ti-cloud me-1"></i>Save';
+                }
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('sessionModalNotice', 'Could not save session.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ti ti-cloud me-1"></i>Save';
+            }
+        }
+
+        async function toggleStatus(id, isActive) {
+            if (!permCanEdit) {
+                IV.setNotice('sessionPageNotice', 'You do not have permission to change status.');
+                location.reload();
+                return;
+            }
+            IV.clearNotice('sessionPageNotice');
+            try {
+                const resp = await fetch(`/Sessions/ToggleStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
+                const res = await resp.json();
+                if (res.success) {
+                    if (isActive) location.reload();
+                } else {
+                    IV.setNotice('sessionPageNotice', res.message || 'Could not update status.');
+                    location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('sessionPageNotice', 'Could not update status.');
+                location.reload();
+            }
+        }
+
+        let exportTable;
+        $(document).ready(function () {
+            if ($.fn.DataTable.isDataTable('#sessionsTable')) {
+                $('#sessionsTable').DataTable().destroy();
+            }
+            exportTable = $('#sessionsTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2], rows: ':visible' } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2], rows: ':visible' } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2], rows: ':visible' } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2], rows: ':visible' } },
+                    { extend: 'print', exportOptions: { columns: [1, 2], rows: ':visible' } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false
+            });
+        });
+
+        function triggerExport(type) {
+            if (!exportTable) return;
+            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+            else if (type === 'print') exportTable.button('.buttons-print').trigger();
+        }
+    </script>
+}

@@ -1,0 +1,248 @@
+@*
+    ======================================================================
+    VIEW: Settings / CompanyMaster.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+@section Styles {
+    <style>
+        .ck-editor__editable_inline {
+            min-height: 300px;
+        }
+
+        .select2-container--default .select2-selection--multiple {
+            border-radius: 5px;
+            border: 1px solid #ddd;            
+            transition: all 0.3s ease;
+        }
+        /* Focus effect */
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple {
+            -border-color: #2E37A4;
+            -box-shadow: 0 0 8px rgba(108, 99, 255, 0.3);
+        }
+        /* Selected tags */
+
+        .select2-selection__choice {
+            background: linear-gradient(135deg, #6c63ff, #42a5f5) !important;
+            color: #fff !important;
+            border-radius: 20px !important;
+            padding: 5px 12px !important;
+            font-size: 14px;
+            border: none !important;
+            margin-top: 5px;
+            transition: transform 0.2s ease;
+        }
+            /* Hover animation */
+
+            .select2-selection__choice:hover {
+                -transform: scale(1.05);
+            }
+        /* Remove (X) button */
+
+        .select2-selection__choice__remove {
+            color: #fff !important;
+            margin-right: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            top: 3px !important;
+        }
+        /* Dropdown */
+
+        .select2-dropdown {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        /* Options */
+
+        .select2-results__option {
+            padding: 10px;
+            transition: background 0.2s;
+        }
+        /* Hover option */
+
+        .select2-results__option--highlighted {
+            background: #6c63ff !important;
+            color: white;
+            padding-inline: 15px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #999;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            margin-top: 3px;
+            border-right: 0;
+            margin-right: 5px;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__display {
+            padding-left: 10px;
+        }
+    </style>
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Company Master</h4>
+    </div>
+    @if (canEdit)
+    {
+        <button class="btn btn-primary" id="btnSaveGeneralSettings">
+            <i class="ti ti-cloud me-1"></i> Save
+        </button>
+    }
+</div>
+@* 
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">General Settings</h4>
+    </div>
+</div> *@
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="bg-light p-3 rounded-3 mb-3">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label for="school_name" class="form-label">School Name</label>
+                            <input type="text" class="form-control" id="txtSchoolName" value="ABC" />
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label for="school_code" class="form-label">School Code</label>
+                            <input type="number" class="form-control" id="txtSchoolCode" value="123" />
+                        </div>
+                    </div>
+                    <div class="col-lg-12">
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea rows="2" class="form-control" id="txtAddress"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="txtPhone" value="9876543210" />
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Id</label>
+                            <input type="email" class="form-control" id="txtEmail" value="abcd123@gmail.com" />
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <h6>Academic Session</h6>
+                <div class="bg-light p-3 rounded-3 mb-3">
+                <div class="row">                    
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label class="form-label">Session</label>
+                            <select class="form-select" id="ddlSession">
+                                <option>2024-2025</option>
+                                <option>2025-2026</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label class="form-label">Session Start Month</label>
+                            <select class="form-select" id="ddlStartMonth">
+                                <option>Jan</option>
+                                <option>Feb</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                
+                <h6>Date Time</h6>
+                <div class="bg-light p-3 rounded-3 mb-3">
+                <div class="row">                    
+                    <div class="col-lg-4">
+                        <div class="mb-3">
+                            <label class="form-label">Date Format</label>
+                            <select class="form-select" id="ddlDateFormat">
+                                <option>dd-mm-yyyy</option>
+                                <option>dd-mmm-yyyy</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="mb-3">
+                            <label class="form-label">Timezone</label>
+                            <select class="form-select" id="ddlTimezone">
+                                <option>GMT (UTC)</option>
+                                <option>GMT (UTC) - India</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="mb-3">
+                            <label class="form-label">Start Day Of Week</label>
+                            <select class="form-select" id="ddlStartDay">
+                                <option>Monday</option>
+                                <option>Sunday</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                
+                <h6>Currency</h6>                
+                <div class="bg-light p-3 rounded-3 mb-3">
+                <div class="row">                    
+                    <div class="col-lg-6">
+                        <div class="mb-3">
+                            <label class="form-label">Currency Format</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><input type="text" id="txtCurrencySymbol" class="form-control border-0" size="2" value="₹" /></span>
+                                <select class="form-select" id="ddlCurrencyFormat">
+                                    <option>12345678.00</option>
+                                    <option>123,3456,78.00</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.ckeditor.com/ckeditor5/39.0.1/classic/ckeditor.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Placeholder for CKEditor if needed on this page
+            // ClassicEditor.create(document.querySelector('#editor')).catch(error => { console.error(error); });
+        });
+    </script>
+}

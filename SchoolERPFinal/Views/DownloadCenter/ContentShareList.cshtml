@@ -1,0 +1,239 @@
+
+@{
+    ViewData["Title"] = "Content Share List";
+}
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Content Share List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+            <i class="ti ti-trash me-1"></i>Delete
+        </button>
+        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerBtn(4)">
+            <i class="ti ti-printer me-1"></i>Print
+        </button>
+        <div class="dropdown d-inline-flex">
+            <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search by title..." style="min-width: 220px;" onkeyup="loadData()">
+                    </div>
+                    @* <input type="text" id="txtSearch" class="form-control w-25" placeholder="Search by title..." onkeyup="loadData()" /> *@
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl overflow-auto">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblShare">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Title</th>
+                                <th>Share URL</th>
+                                <th>Share Date</th>
+                                <th>Valid Upto</th>
+                                <th>Shared By</th>
+                                <th>Created On</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4"><div class="spinner-border text-primary"></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        let selectedId = 0;
+
+        $(document).ready(function () {
+            loadData();
+        });
+
+        function triggerBtn(index) {
+            if ($.fn.DataTable.isDataTable('#tblShare')) {
+                const table = $('#tblShare').DataTable();
+                table.button(index).trigger();
+            } else {
+                showToast('No data available to export', 'warning');
+            }
+        }
+
+        function loadData() {
+            const search = $('#txtSearch').val().toLowerCase();
+            selectedId = 0;
+            $('#btnDelete').prop('disabled', true);
+
+            if ($.fn.DataTable.isDataTable('#tblShare')) {
+                $('#tblShare').DataTable().destroy();
+            }
+
+            $.get('/DownloadCenter/GetSharedLinkList', function (res) {
+                let html = '';
+                let filtered = [];
+                if (res.success && res.data.length > 0) {
+                    filtered = res.data.filter(x => x.title.toLowerCase().includes(search));
+                    if (filtered.length > 0) {
+                        filtered.forEach(item => {
+                            const publicUrl = window.location.origin + '/Public/SharedContent?token=' + item.shareToken;
+                            html += `
+                                <tr onclick="selectRow(${item.sharedLinkID}, this)" style="cursor:pointer">
+                                    <td class="ps-3"><input type="checkbox" name="rowSelect" class="form-check-input student-checkbox" value="${item.sharedLinkID}"></td>
+                                    <td class="">${item.title}</td>
+                                    <td>
+                                        <div class="input-group input-group-sm border" style="width: 300px;">
+                                            <input type="text" class="form-control border-0" value="${publicUrl}" readonly id="url_${item.sharedLinkID}">
+                                            <button class="btn btn-light" onclick="copyUrl('${item.sharedLinkID}', event)"><i class="ti ti-copy"></i></button>
+                                        </div>
+                                    </td>
+                                    <td>${item.shareDate ? new Date(item.shareDate).toLocaleDateString('en-GB') : 'N/A'}</td>
+                                    <td>${item.validUpto ? new Date(item.validUpto).toLocaleDateString('en-GB') : '<span class="text-success">Permanent</span>'}</td>
+                                    <td>${item.sharedBy}</td>
+                                    <td>${new Date(item.createdOn).toLocaleString('en-GB')}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html = '<tr><td colspan="7" class="text-center py-4 text-muted">No matching records found.</td></tr>';
+                    }
+                } else {
+                    html = '<tr><td colspan="7" class="text-center py-4 text-muted">No shared links found.</td></tr>';
+                }
+                $('#listBody').html(html);
+
+                if (filtered.length > 0) {
+                    const exportOpts = {
+                        columns: [1, 2, 3, 4, 5, 6],
+                        stripHtml: true,
+                        format: {
+                            body: function (data, row, column, node) {
+                                if (column === 2) {
+                                    return $(node).find('input').val() || data;
+                                }
+                                return data;
+                                //return $('<div>').html(data).text().trim();
+                            }
+                        }
+                    };
+
+                    $('#tblShare').DataTable({
+                        dom: 'Bfrtip',
+                        buttons: [
+                            { extend: 'copy', exportOptions: exportOpts },
+                            { extend: 'csv', exportOptions: exportOpts },
+                            { extend: 'excel', exportOptions: exportOpts },
+                            { extend: 'pdf', exportOptions: exportOpts },
+                            { extend: 'print', exportOptions: exportOpts }
+                        ],
+                        searching: false,
+                        paging: true,
+                        info: true,
+                        lengthChange: false,
+                        pageLength: 10
+                    });
+                }
+            });
+        }
+
+        function selectRow(id, element) {
+            selectedId = id;
+            $(element).addClass('bg-light').siblings().removeClass('bg-light');
+            //$(element).find('input[type="radio"]').prop('checked', true);
+            $('#btnDelete').prop('disabled', false);
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function copyUrl(id, event) {
+            if (event) event.stopPropagation();
+            const el = document.getElementById('url_' + id);
+            el.select();
+            document.execCommand('copy');
+            showToast('Link copied to clipboard', 'info');
+        }
+
+        function deleteSelected() {
+            if (selectedId <= 0) return;
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+             Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                     url: '/DownloadCenter/DeleteSharedLink',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+    </script>
+}

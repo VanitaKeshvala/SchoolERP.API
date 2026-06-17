@@ -1,0 +1,252 @@
+@*
+    ======================================================================
+    VIEW: Settings / EmailSettings.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MstEmailConfigViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Email Settings</h6>
+        @* <p class="text-muted mb-0">Configure your SMTP settings for system emails.</p> *@
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        @if (canEdit)
+        {
+            <button type="button" class="btn btn-success" id="btnSaveEmail">
+                <i class="ti ti-cloud me-1"></i>Save
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header bg-transparent border-bottom py-3">
+                <h6 class="card-title mb-0">SMTP Configuration</h6>
+            </div>
+            <div class="card-body">
+                @* Local alert div removed in favor of global toast system *@
+                <form id="emailSettingsForm">
+                    <input type="hidden" id="hdnEmailId" value="@(Model?.EmailId ?? 0)" />
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                <label class="form-label">Email Engine</label>
+                                <select class="form-select form-control" id="ddlEmailType">
+                                    <option value="smtp" selected="@(Model?.EmailType == "smtp")">SMTP (Recommended)</option>
+                                    <option value="sendmail" selected="@(Model?.EmailType == "sendmail")">SendMail</option>
+                                </select>
+                                @* <small class="text-muted">Choose how emails are sent from the system.</small> *@
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                <label class="form-label">Service Status</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model?.IsActive == true ? "checked" : "")>
+                                    <label class="form-check-label" for="chkIsActive">Enable Email Service</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="smtpFields" style="@(Model?.EmailType == "smtp" || string.IsNullOrEmpty(Model?.EmailType) ? "" : "display:none;")">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">SMTP Host <span class="text-danger">*</span></label>
+                                    <input type="text" id="txtSmtpServer" class="form-control" placeholder="e.g. smtp.gmail.com" value="@Model?.SMTPServer">
+                                    <div class="invalid-feedback" id="errSmtpServer"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">SMTP Port <span class="text-danger">*</span></label>
+                                    <input type="text" id="txtSmtpPort" class="form-control" placeholder="e.g. 587" value="@Model?.SMTPPort">
+                                    <div class="invalid-feedback" id="errSmtpPort"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">SMTP Username <span class="text-danger">*</span></label>
+                                    <input type="text" id="txtSmtpUsername" class="form-control" placeholder="Email address" value="@Model?.SMTPUsername">
+                                    <div class="invalid-feedback" id="errSmtpUsername"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">SMTP Password <span class="text-danger">*</span></label>
+                                    <div class="d-flex position-relative align-items-center">
+                                    <input type="password" id="txtSmtpPassword" class="form-control" placeholder="Password" value="@Model?.SMTPPassword">
+                                    <div class="invalid-feedback" id="errSmtpPassword"></div>
+                                    <button class="btn position-absolute end-0" type="button" id="btnTogglePassword">
+                                        <i class="ti ti-eye"></i>
+                                    </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">Encryption</label>
+                                    <select class="form-select form-control" id="ddlSslTls">
+                                        <option value="none" selected="@(Model?.SslTls == "none")">None</option>
+                                        <option value="ssl" selected="@(Model?.SslTls == "ssl")">SSL</option>
+                                        <option value="tls" selected="@(Model?.SslTls == "tls" || string.IsNullOrEmpty(Model?.SslTls))">TLS</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label">SMTP Authentication</label>
+                                    <select class="form-select form-control" id="ddlSmtpAuth">
+                                        <option value="yes" selected="@(Model?.SMTPAuth == "yes" || string.IsNullOrEmpty(Model?.SMTPAuth))">
+                                            Yes (Recommended)
+                                        </option>
+                                        <option value="no" selected="@(Model?.SMTPAuth == "no")">
+                                            No
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* <div class="alert alert-info border-0 shadow-none mb-0 d-flex align-items-center">
+                        <i class="ti ti-info-circle fs-4 me-2"></i>
+                        <div>
+                            <strong>Pro Tip:</strong> For Gmail, use App Passwords if 2FA is enabled. Recommended port is 587 with TLS.
+                        </div>
+                    </div> *@
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* SweetAlert script removed in favor of global toast system *@
+
+@section Scripts {
+<script>
+    $(document).ready(function () {
+        const IV = window.InlineFormValidation;
+        const emailFieldMap = { 
+            txtSmtpServer: 'errSmtpServer', 
+            txtSmtpPort: 'errSmtpPort', 
+            txtSmtpUsername: 'errSmtpUsername', 
+            txtSmtpPassword: 'errSmtpPassword' 
+        };
+        IV.bindAutoClear(emailFieldMap);
+
+        // Toggle SMTP fields based on Email Type
+        $('#ddlEmailType').on('change', function () {
+            if ($(this).val() === 'smtp') {
+                $('#smtpFields').slideDown();
+            } else {
+                $('#smtpFields').slideUp();
+            }
+        });
+
+        // Toggle Password Visibility
+        $('#btnTogglePassword').on('click', function () {
+            const input = $('#txtSmtpPassword');
+            const icon = $(this).find('i');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('ti-eye').addClass('ti-eye-off');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('ti-eye-off').addClass('ti-eye');
+            }
+        });
+
+        // Save Settings
+        @if (canEdit)
+        {
+            <text>
+        $('#btnSaveEmail').on('click', function () {
+            const btn = $(this);
+            const originalHtml = btn.html();
+
+            // Simple validation
+            if ($('#ddlEmailType').val() === 'smtp') {
+                IV.clearMap(emailFieldMap);
+                IV.clearNotice('emailNotice');
+
+                const server = $('#txtSmtpServer').val().trim();
+                const port = $('#txtSmtpPort').val().trim();
+                const username = $('#txtSmtpUsername').val().trim();
+                const password = $('#txtSmtpPassword').val();
+
+                let hasError = false;
+                if (!server) { IV.setFieldError('txtSmtpServer', 'errSmtpServer', 'SMTP host is required.'); hasError = true; }
+                if (!port) { IV.setFieldError('txtSmtpPort', 'errSmtpPort', 'SMTP port is required.'); hasError = true; }
+                if (!username) { IV.setFieldError('txtSmtpUsername', 'errSmtpUsername', 'SMTP username is required.'); hasError = true; }
+                if (!password) { IV.setFieldError('txtSmtpPassword', 'errSmtpPassword', 'SMTP password is required.'); hasError = true; }
+
+                if (hasError) {
+                    showToast('Please correct the highlighted fields.', 'warning');
+                    return;
+                }
+            }
+
+            // Serializes local SMTP authentication logic payload to MstEmailConfigUpsertRequest
+            const request = {
+                EmailId: parseInt($('#hdnEmailId').val()) || 0,
+                EmailType: $('#ddlEmailType').val(),
+                SMTPServer: $('#txtSmtpServer').val(),
+                SMTPPort: $('#txtSmtpPort').val(),
+                SMTPUsername: $('#txtSmtpUsername').val(),
+                SMTPPassword: $('#txtSmtpPassword').val(),
+                SslTls: $('#ddlSslTls').val(),
+                SMTPAuth: $('#ddlSmtpAuth').val(),
+                IsActive: $('#chkIsActive').is(':checked')
+            };
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+
+            $.ajax({
+                url: '@Url.Action("SaveEmailSettings", "Settings")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function (response) {
+                    if (response.success) {
+                        showToast(response.message, 'success');
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showToast(response.message || 'Save failed.', 'error');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", status, error, xhr.responseText);
+                    showToast('An unexpected error occurred. Check browser console for details.', 'error');
+                },
+                complete: function () {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+            </text>
+        }
+    });
+</script>
+}

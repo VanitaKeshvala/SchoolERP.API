@@ -1,0 +1,412 @@
+@model SchoolERP.Net.Models.HRDepartmentPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Library Books";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canPrint = PermHelper.HasPermissionByUrl("/Library/Books", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Library/Books", "Export");
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Book Catalog</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button class="btn btn-primary d-inline-flex align-items-center" onclick="openAddModal()">
+            <i class="ti ti-plus me-1"></i>Add
+        </button>
+        <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center" disabled onclick="editSelected()">
+            <i class="ti ti-pencil me-1"></i>Edit
+        </button>
+        <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+            <i class="ti ti-trash me-1"></i>Delete
+        </button>
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        } 
+
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search by title, author, or book no..." style="min-width: 220px;" onkeyup="loadData()">
+                    </div>
+                    @* <input type="text" id="txtSearch" class="form-control w-25" placeholder="Search by title, author, or book no..." onkeyup="loadData()" /> *@
+                    <div class="small text-muted">Showing all entries</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl overflow-auto">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblBooks">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Book Title</th>
+                                <th>Book No</th>
+                                <th>Author</th>
+                                <th>Publisher</th>
+                                <th>Rack No</th>
+                                <th>Qty</th>
+                                <th>Available</th>
+                                <th>Price</th>
+                                <th>Post Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="upsertModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Book</h5>
+                <div>
+                    <a href="/Library/ImportBook" class="btn btn-warning btn-sm">
+                        <i class="ti ti-file-import me-1"></i>Import
+                    </a>
+                    <button class="btn btn-success btn-sm" onclick="saveData()">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="upsertForm">
+                    <input type="hidden" id="hdnId" value="0" />
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Book Title <span class="text-danger">*</span></label>
+                            <input type="text" id="txtTitle" class="form-control" required placeholder="Enter book title">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Book Number</label>
+                            <input type="text" id="txtNo" class="form-control" placeholder="e.g., LIB-001">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">ISBN Number</label>
+                            <input type="text" id="txtISBN" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Publisher</label>
+                            <input type="text" id="txtPublisher" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Author</label>
+                            <input type="text" id="txtAuthor" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Subject</label>
+                            <input type="text" id="txtSubject" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Rack Number</label>
+                            <input type="text" id="txtRack" class="form-control" placeholder="e.g., A-12">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Qty <span class="text-danger">*</span></label>
+                            <input type="number" id="txtQty" class="form-control" required min="0" value="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Book Price (₹)</label>
+                            <input type="number" id="txtPrice" class="form-control" step="0.01" value="0.00">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Post Date</label>
+                            <input type="date" id="txtDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description</label>
+                            <textarea id="txtDescription" class="form-control" rows="3" placeholder="Optional description..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+
+        function triggerExport(index) {
+        if ($.fn.DataTable.isDataTable('#tblBooks')) {
+                const table = $('#tblBooks').DataTable();
+            table.button(index).trigger();
+        }
+    }
+        function initializeDataTable() {
+
+            if ($.fn.DataTable.isDataTable('#tblBooks')) {
+                $('#tblBooks').DataTable().destroy();
+            }
+
+            $('#tblBooks').DataTable({
+                destroy: true,
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false,
+                language: {
+                    emptyTable: "No books found in catalog."
+                }
+            });
+        }
+
+$(document).ready(function () {
+           
+})
+
+
+        let selectedId = 0;
+
+        $(document).ready(function () {
+            loadData();
+        });
+
+        function loadData() {
+            const search = $('#txtSearch').val();
+            selectedId = 0;
+            $('#btnEdit, #btnDelete').prop('disabled', true);
+
+            $.get('/Library/GetBookList', { search }, function (res) {
+                let html = '';
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(item => {
+                        html += `
+                            <tr onclick="selectRow(${item.bookID}, this)" style="cursor:pointer">
+                                <td class="ps-3"><input type="checkbox" name="rowSelect" class="form-check-input student-checkbox" value="${item.bookID}"></td>
+                                <td>${item.bookTitle}</td>
+                                <td>${item.bookNo || '-'}</td>
+                                <td>${item.author || '-'}</td>
+                                <td>${item.publisher || '-'}</td>
+                                <td>${item.rackNo || '-'}</td>
+                                <td class="text-center">${item.totalQty}</td>
+                                <td class="text-center"><span class="badge bg-success-transparent">${item.availableQty}</span></td>
+                                <td>₹${item.bookPrice.toFixed(2)}</td>
+                                <td>${item.postDate ? new Date(item.postDate).toLocaleDateString('en-GB') : '-'}</td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" ${item.isActive ? 'checked' : ''} onchange="toggleStatus(${item.bookID})">
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } 
+                $('#listBody').html(html);
+                initializeDataTable();
+            });
+        }
+
+        function selectRow(id, element) {
+            selectedId = id;
+            $(element).addClass('bg-light').siblings().removeClass('bg-light');
+            //$(element).find('input[type="radio"]').prop('checked', true);
+            $('#btnEdit, #btnDelete').prop('disabled', false);
+                    let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openAddModal() {
+            $('#hdnId').val(0);
+            $('#upsertForm')[0].reset();
+            $('#txtQty').val(1);
+            $('#txtPrice').val(0.00);
+            $('#modalTitle').text('Add Book');
+            $('#upsertModal').modal('show');
+        }
+
+        function editSelected() {
+            if (selectedId <= 0) return;
+            $.get('/Library/GetBook', { id: selectedId }, function (res) {
+                if (res.success) {
+                    $('#hdnId').val(res.data.bookID);
+                    $('#txtTitle').val(res.data.bookTitle);
+                    $('#txtNo').val(res.data.bookNo);
+                    $('#txtISBN').val(res.data.isbnNo);
+                    $('#txtPublisher').val(res.data.publisher);
+                    $('#txtAuthor').val(res.data.author);
+                    $('#txtSubject').val(res.data.subject);
+                    $('#txtRack').val(res.data.rackNo);
+                    $('#txtQty').val(res.data.totalQty);
+                    $('#txtPrice').val(res.data.bookPrice);
+                    if (res.data.postDate) {
+                        $('#txtDate').val(new Date(res.data.postDate).toLocaleDateString('en-CA'));
+                    }
+                    $('#txtDescription').val(res.data.description);
+                    
+                    $('#modalTitle').text('Edit Book');
+                    $('#upsertModal').modal('show');
+                }
+            });
+        }
+
+        function saveData() {
+            const title = $('#txtTitle').val().trim();
+            const qty = $('#txtQty').val();
+
+            if (!title || !qty) {
+                showToast('Book Title and Quantity are required', 'warning');
+                return;
+            }
+
+            const data = {
+                bookID: parseInt($('#hdnId').val()),
+                bookTitle: title,
+                bookNo: $('#txtNo').val().trim(),
+                isbnNo: $('#txtISBN').val().trim(),
+                publisher: $('#txtPublisher').val().trim(),
+                author: $('#txtAuthor').val().trim(),
+                subject: $('#txtSubject').val().trim(),
+                rackNo: $('#txtRack').val().trim(),
+                totalQty: parseInt(qty),
+                bookPrice: parseFloat($('#txtPrice').val()),
+                postDate: $('#txtDate').val(),
+                description: $('#txtDescription').val().trim()
+            };
+
+            $.ajax({
+                url: '/Library/UpsertBook',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        $('#upsertModal').modal('hide');
+                        loadData();
+                        initializeDataTable();
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteSelected() {
+            if (selectedId <= 0) return;
+
+                    let selectedIds = [];
+         $('.student-checkbox:checked').each(function () {
+                  selectedIds.push(parseInt($(this).val()));
+              });
+         if (selectedIds.length === 0) {
+                  alert("Please select at least one student.");
+                  return;
+              }
+          Swal.fire({
+              title: 'Are you sure?',
+              text: "You are about to delete this student record. This action cannot be undone!",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#d33',
+              cancelButtonColor: '#3085d6',
+              confirmButtonText: 'Yes, delete it!',
+              customClass: {
+                  confirmButton: 'btn btn-danger me-2',
+                  cancelButton: 'btn btn-secondary'
+              },
+              buttonsStyling: false
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  $.ajax({
+                      url: '/Library/DeleteBook',
+                      type: 'POST',
+                      contentType: 'application/json',
+                      data: JSON.stringify(selectedIds),
+                      success: function (res) {
+                          if (res.success) {
+                              Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                  .then(() => location.reload());
+                          } else {
+                              Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                          }
+                      },
+                      error: function () {
+                          Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                      }
+                  });
+              }
+          });
+        }
+
+        function toggleStatus(id) {
+            $.post('/Library/ToggleStatus', { id: id }, function (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                } else {
+                    Swal.fire('Error!', res.message, 'error');
+                    loadData();
+                    initializeDataTable();
+                }
+            });
+        }
+    </script>
+}

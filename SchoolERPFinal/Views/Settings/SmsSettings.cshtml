@@ -1,0 +1,203 @@
+@*
+    ======================================================================
+    VIEW: Settings / SmsSettings.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MstSmsConfigViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">SMS Settings</h6>
+        @* <p class="text-muted mb-0">Configure your SMS gateway settings for system alerts.</p> *@
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        @if (canEdit)
+        {
+            <button type="button" class="btn btn-success" id="btnSaveSms">
+                <i class="ti ti-cloud me-1"></i>Save
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header bg-transparent border-bottom py-3">
+                <h6 class="card-title mb-0">SMS Gateway Configuration</h6>
+            </div>
+            <div class="card-body">
+                @* Local alert div removed in favor of global toast system *@
+                <form id="smsSettingsForm">
+                    <input type="hidden" id="hdnSmsId" value="@(Model?.SmsId ?? 0)" />
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">SMS Gateway <span class="text-danger">*</span></label>
+                                <input type="text" id="txtSmsGateway" class="form-control" placeholder="e.g. Twilio, MSG91, Clickatell" value="@Model?.SmsGateway">
+                                <div class="invalid-feedback" id="errSmsGateway"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <div class="form-check form-switch mt-2" style="font-size: 1.1rem;">
+                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model?.IsActive == true || Model == null ? "checked" : "")>
+                                    <label class="form-check-label ms-2" for="chkIsActive" id="lblStatus">@(Model?.IsActive == true || Model == null ? "Active" : "Inactive")</label>
+                                </div>
+                                <small class="text-muted">Enable or disable this SMS gateway.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">API URL <span class="text-danger">*</span></label>
+                                <input type="text" id="txtSmsApiUrl" class="form-control" placeholder="https://api.gateway.com/send" value="@Model?.SmsApiUrl">
+                                <div class="invalid-feedback" id="errSmsApiUrl"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">API Key / Auth Token <span class="text-danger">*</span></label>
+                                <div class="d-flex position-relative align-items-center">                                    
+                                    <input type="password" id="txtSmsApiKey" class="form-control" placeholder="Your API Key" value="@Model?.SmsApiKey">
+                                    <div class="invalid-feedback" id="errSmsApiKey"></div>
+                                    <button class="btn position-absolute end-0" type="button" id="btnToggleSmsKey">
+                                        <i class="ti ti-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* <div class="alert alert-info border-0 shadow-none mb-0 d-flex align-items-center">
+                        <i class="ti ti-info-circle fs-4 me-2"></i>
+                        <div>
+                            <strong>Note:</strong> Ensure your API URL includes placeholders if required by your provider (e.g., [MOBILE], [MESSAGE]).
+                        </div>
+                    </div> *@
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* SweetAlert script removed in favor of global toast system *@
+
+@section Scripts {
+<script>
+    $(document).ready(function () {
+        const IV = window.InlineFormValidation;
+        const smsFieldMap = { 
+            txtSmsGateway: 'errSmsGateway', 
+            txtSmsApiUrl: 'errSmsApiUrl', 
+            txtSmsApiKey: 'errSmsApiKey' 
+        };
+        IV.bindAutoClear(smsFieldMap);
+
+        // Toggle API Key Visibility
+        $('#btnToggleSmsKey').on('click', function () {
+            const input = $('#txtSmsApiKey');
+            const icon = $(this).find('i');
+            if (input.attr('type') === 'password') {
+                input.attr('type', 'text');
+                icon.removeClass('ti-eye').addClass('ti-eye-off');
+            } else {
+                input.attr('type', 'password');
+                icon.removeClass('ti-eye-off').addClass('ti-eye');
+            }
+        });
+ 
+        // Update Status Label dynamically
+        $('#chkIsActive').on('change', function () {
+            if ($(this).is(':checked')) {
+                $('#lblStatus').text('Active');
+            } else {
+                $('#lblStatus').text('Inactive');
+            }
+        });
+
+        // Save Settings
+        @if (canEdit)
+        {
+            <text>
+        $('#btnSaveSms').on('click', function () {
+            const btn = $(this);
+            const originalHtml = btn.html();
+
+            // Simple validation
+            IV.clearMap(smsFieldMap);
+            IV.clearNotice('smsNotice');
+
+            const gateway = $('#txtSmsGateway').val().trim();
+            const apiUrl = $('#txtSmsApiUrl').val().trim();
+            const apiKey = $('#txtSmsApiKey').val();
+
+            let hasError = false;
+            if (!gateway) { IV.setFieldError('txtSmsGateway', 'errSmsGateway', 'SMS gateway is required.'); hasError = true; }
+            if (!apiUrl) { IV.setFieldError('txtSmsApiUrl', 'errSmsApiUrl', 'API URL is required.'); hasError = true; }
+            if (!apiKey) { IV.setFieldError('txtSmsApiKey', 'errSmsApiKey', 'API key is required.'); hasError = true; }
+
+            if (hasError) {
+                showToast('Please correct the highlighted fields.', 'warning');
+                return;
+            }
+
+            // Serializes gateway provider credentials mapped to MstSmsConfigUpsertRequest
+            const request = {
+                SmsId: parseInt($('#hdnSmsId').val()) || 0,
+                SmsGateway: $('#txtSmsGateway').val(),
+                SmsApiUrl: $('#txtSmsApiUrl').val(),
+                SmsApiKey: $('#txtSmsApiKey').val(),
+                SmsStatus: $('#chkIsActive').is(':checked') ? 'Active' : 'Inactive',
+                IsActive: $('#chkIsActive').is(':checked')
+            };
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Saving...');
+
+            $.ajax({
+                url: '@Url.Action("SaveSmsSettings", "Settings")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(request),
+                success: function (response) {
+                    if (response.success) {
+                        showToast(response.message, 'success');
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showToast(response.message || 'Save failed.', 'error');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error("AJAX Error:", status, error, xhr.responseText);
+                    showToast('An unexpected error occurred. Check browser console for details.', 'error');
+                },
+                complete: function () {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+            </text>
+        }
+    });
+</script>
+}

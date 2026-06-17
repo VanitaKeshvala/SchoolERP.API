@@ -1,0 +1,154 @@
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.csproj.AssemblyReference.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\rpswa.dswa.cache.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.GeneratedMSBuildEditorConfig.editorconfig
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.AssemblyInfoInputs.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.AssemblyInfo.cs
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.csproj.CoreCompileInputs.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.MvcApplicationPartsAssemblyInfo.cs
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.MvcApplicationPartsAssemblyInfo.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\appsettings.Development.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\appsettings.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.staticwebassets.endpoints.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.exe
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.deps.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.runtimeconfig.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.pdb
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Bcl.Cryptography.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.Extensions.Abstractions.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.Internal.Logging.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Caching.Abstractions.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Caching.Memory.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Options.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.OpenApi.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.SqlServer.Server.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Configuration.ConfigurationManager.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Diagnostics.EventLog.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Security.Cryptography.Pkcs.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Security.Cryptography.ProtectedData.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\cs\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\de\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\es\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\fr\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\it\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ja\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ko\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\pl\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\pt-BR\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ru\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\tr\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\zh-Hans\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\zh-Hant\Microsoft.Data.SqlClient.resources.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\unix\lib\net9.0\Microsoft.Data.SqlClient.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\Microsoft.Data.SqlClient.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Diagnostics.EventLog.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Security.Cryptography.Pkcs.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\rjimswa.dswa.cache.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\scopedcss\bundle\SchoolERP.API.styles.css
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.build.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.build.json.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.development.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.build.endpoints.json
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolER.14191096.Up2Date
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\refint\SchoolERP.API.dll
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.pdb
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.genruntimeconfig.cache
+D:\frelance\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\ref\SchoolERP.API.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\appsettings.Development.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\appsettings.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.staticwebassets.endpoints.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.exe
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.deps.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.runtimeconfig.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\SchoolERP.API.pdb
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Dapper.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Bcl.Cryptography.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.Extensions.Abstractions.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Data.SqlClient.Internal.Logging.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Caching.Abstractions.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Caching.Memory.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Options.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.OpenApi.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\Microsoft.SqlServer.Server.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Configuration.ConfigurationManager.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Diagnostics.EventLog.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Security.Cryptography.Pkcs.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\System.Security.Cryptography.ProtectedData.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\cs\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\de\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\es\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\fr\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\it\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ja\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ko\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\pl\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\pt-BR\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\ru\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\tr\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\zh-Hans\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\zh-Hant\Microsoft.Data.SqlClient.resources.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\unix\lib\net9.0\Microsoft.Data.SqlClient.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\Microsoft.Data.SqlClient.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Diagnostics.EventLog.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\bin\Debug\net9.0\runtimes\win\lib\net9.0\System.Security.Cryptography.Pkcs.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.csproj.AssemblyReference.cache
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.GeneratedMSBuildEditorConfig.editorconfig
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.AssemblyInfoInputs.cache
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.AssemblyInfo.cs
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.csproj.CoreCompileInputs.cache
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.MvcApplicationPartsAssemblyInfo.cs
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.MvcApplicationPartsAssemblyInfo.cache
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\scopedcss\bundle\SchoolERP.API.styles.css
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.build.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.development.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.build.endpoints.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets\msbuild.SchoolERP.API.Microsoft.AspNetCore.StaticWebAssets.props
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets\msbuild.SchoolERP.API.Microsoft.AspNetCore.StaticWebAssetEndpoints.props
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets\msbuild.build.SchoolERP.API.props
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets\msbuild.buildMultiTargeting.SchoolERP.API.props
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets\msbuild.buildTransitive.SchoolERP.API.props
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.pack.json
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolER.14191096.Up2Date
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\refint\SchoolERP.API.dll
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.pdb
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\SchoolERP.API.genruntimeconfig.cache
+D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERP.API\obj\Debug\net9.0\ref\SchoolERP.API.dll

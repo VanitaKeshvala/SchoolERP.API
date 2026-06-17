@@ -1,0 +1,441 @@
+@model SchoolERP.Net.Models.PickupPointPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Pickup Point Management";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Transport/PickupPoint", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Transport/PickupPoint", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Transport/PickupPoint", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Transport/PickupPoint", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Transport/PickupPoint", "Export");
+}
+
+@section Styles {
+    <style>
+        .dt-buttons { display: none !important; }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Pickup Point List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+<!-- Filters -->
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search by name..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblPickupPoint">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Pickup Point Name</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th style="width: 80px;" class="text-center">Map</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr class="item-row" onclick="selectItem(@item.PickupPointID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="selectedItem"
+                                               class="form-check-input student-checkbox"
+                                               value="@item.PickupPointID">                                    
+                                    </td>
+                                    <td>@item.PickupPointName</td>
+                                    <td>@(item.PickupPointLatitude?.ToString("F6") ?? "-")</td>
+                                    <td>@(item.PickupPointLongitude?.ToString("F6") ?? "-")</td>
+                                    <td class="text-center">
+                                        @if (item.PickupPointLatitude.HasValue && item.PickupPointLongitude.HasValue)
+                                        {
+                                            <button class="btn btn-light" onclick="event.stopPropagation(); openMap(@item.PickupPointLatitude, @item.PickupPointLongitude)" title="View on Map">
+                                                <i class="ti ti-map-pin text-success fs-14"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   onchange="toggleStatus(@item.PickupPointID, this.checked)"
+                                                   @(item.IsActive ? "checked" : "")
+                                                   @(canEdit ? "" : "disabled")>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Items.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        @if (ViewBag.ErrorMessage != null)
+                                        {
+                                            <div class="text-danger">Error: @ViewBag.ErrorMessage</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No records found.</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="entryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Pickup Point</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveRecord()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="entryForm">
+                    <input type="hidden" id="hdnPickupPointID" value="0">
+                    <div class="row row-gap-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Pickup Point Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtName" required maxlength="200" oninput="clearError('txtName')">
+                            <div class="invalid-feedback">Pickup Point Name is required</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Latitude <span class="text-danger">*</span></label>
+                            <input type="number" step="0.0000000001" class="form-control" id="txtLatitude" required oninput="clearError('txtLatitude')">
+                            <div class="invalid-feedback">Latitude is required</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Longitude <span class="text-danger">*</span></label>
+                            <input type="number" step="0.0000000001" class="form-control" id="txtLongitude" required oninput="clearError('txtLongitude')">
+                            <div class="invalid-feedback">Longitude is required</div>
+                        </div>
+                        <div class="col-md-12 mt-2">
+                            <button type="button" class="btn btn-info btn-sm text-white" onclick="previewMap()">
+                                <i class="ti ti-map-pin me-1"></i> Preview Location
+                            </button>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" checked>
+                                <label class="form-check-label" for="chkActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map Modal -->
+<div class="modal fade" id="mapModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">View Location</h5>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i> Close
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="mapFrame" width="100%" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function triggerExport(index) {
+        if ($.fn.DataTable.isDataTable('#tblPickupPoint')) {
+            const table = $('#tblPickupPoint').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+    $(document).ready(function () {
+        $('#tblPickupPoint').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2, 3] } },
+                { extend: 'csv', exportOptions: { columns: [1, 2, 3] } },
+                { extend: 'excel', exportOptions: { columns: [1, 2, 3] } },
+                { extend: 'pdf', exportOptions: { columns: [1, 2, 3] } },
+                { extend: 'print', exportOptions: { columns: [1, 2, 3] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false
+        });
+    });
+
+    let selectedId = 0;
+    const canEdit = @canEdit.ToString().ToLower();
+    const canDelete = @canDelete.ToString().ToLower();
+
+    function selectItem(id, row) {
+        selectedId = id;
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        row.classList.add('bg-light');
+        //row.querySelector('input[type="radio"]').checked = true;
+
+        if (canEdit) {
+            const btnEdit = document.getElementById('btnEdit');
+            if (btnEdit) btnEdit.disabled = false;
+        }
+        if (canDelete) {
+            const btnDelete = document.getElementById('btnDelete');
+            if (btnDelete) btnDelete.disabled = false;
+        }
+
+        let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+        document.getElementById('txtSearchInput').addEventListener('keyup', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#tblPickupPoint tbody tr').forEach(row => {
+            if (row.classList.contains('item-row')) {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            }
+        });
+    });
+
+    function openMap(lat, lng) {
+        if (!lat || !lng) {
+            showToast('Latitude and Longitude are required to view the map.', 'warning');
+            return;
+        }
+        const url = `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+        document.getElementById('mapFrame').src = url;
+        new bootstrap.Modal(document.getElementById('mapModal')).show();
+    }
+
+    function previewMap() {
+        const lat = document.getElementById('txtLatitude').value;
+        const lng = document.getElementById('txtLongitude').value;
+        if (!lat || !lng) {
+            showToast('Please enter both Latitude and Longitude to preview.', 'warning');
+            return;
+        }
+        openMap(lat, lng);
+    }
+
+    function clearError(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('is-invalid');
+    }
+
+    function openAddModal() {
+        document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.getElementById('modalTitle').textContent = 'Add Pickup Point';
+        document.getElementById('hdnPickupPointID').value = 0;
+        document.getElementById('entryForm').reset();
+        document.getElementById('chkActive').checked = true;
+        new bootstrap.Modal(document.getElementById('entryModal')).show();
+    }
+
+    function editSelected() {
+        if (!selectedId) return;
+        fetch(`/Transport/GetPickupPointByID/${selectedId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'danger'); return; }
+                const d = res.data;
+                document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+                document.getElementById('modalTitle').textContent = 'Edit Pickup Point';
+                document.getElementById('hdnPickupPointID').value = d.pickupPointID;
+                document.getElementById('txtName').value = d.pickupPointName;
+                document.getElementById('txtLatitude').value = d.pickupPointLatitude || '';
+                document.getElementById('txtLongitude').value = d.pickupPointLongitude || '';
+                document.getElementById('chkActive').checked = d.isActive;
+                new bootstrap.Modal(document.getElementById('entryModal')).show();
+            });
+    }
+
+    async function saveRecord() {
+        let isValid = true;
+        const name = document.getElementById('txtName').value.trim();
+        const lat = document.getElementById('txtLatitude').value;
+        const lng = document.getElementById('txtLongitude').value;
+
+        if (!name) { document.getElementById('txtName').classList.add('is-invalid'); isValid = false; }
+        if (!lat) { document.getElementById('txtLatitude').classList.add('is-invalid'); isValid = false; }
+        if (!lng) { document.getElementById('txtLongitude').classList.add('is-invalid'); isValid = false; }
+
+        if (!isValid) return;
+
+        const data = {
+            pickupPointID: parseInt(document.getElementById('hdnPickupPointID').value) || 0,
+            pickupPointName: name,
+            pickupPointLatitude: parseFloat(lat),
+            pickupPointLongitude: parseFloat(lng),
+            isActive: document.getElementById('chkActive').checked
+        };
+
+        fetch('/Transport/UpsertPickupPoint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success ? 'success' : 'danger');
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+    }
+
+    function deleteSelected() {
+        if (!selectedId) return;
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                     url: '/Transport/DeletePickupPoint',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+    }
+
+    function toggleStatus(id, isActive) {
+        fetch(`/Transport/TogglePickupPointStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 3000);
+    }
+</script>
+}

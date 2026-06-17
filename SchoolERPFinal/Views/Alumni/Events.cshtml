@@ -1,0 +1,671 @@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Alumni Events";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Alumni/Events", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Alumni/Events", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Alumni/Events", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Alumni/Events", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Alumni/Events", "Export");
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/calender/fullcalendar.min.css">
+    <link rel="stylesheet" href="~/calender/fullcalendar.print.css" media="print">
+
+
+    <style>
+
+        #calendar {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .fc-event {
+            background: #21b300 !important;
+            border: none !important;
+            color: white !important;
+            border-radius: 3px !important;
+            font-size: 12px !important;
+            padding: 2px 6px !important;
+        }
+
+        .dt-buttons { display: none !important; }
+
+        .tooltip-inner {
+            max-width: 300px;
+            text-align: left;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>        
+        <h6 class="fw-bold mb-0">Alumni Events</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <button class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#eventModal" onclick="resetForm()">
+                <i class="ti ti-plus me-1"></i> Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="handleEditAction()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="handleDeleteAction()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+       
+        <button id="btnView" class="btn btn-teal" disabled onclick="handleViewAction()">
+            <i class="ti ti-eye me-1"></i> View
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Side: Calendar -->
+    <div class="col-md-6">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Right Side: Event List -->
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-2">
+            <div class="card-body p-3">
+                <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                    <i class="ti ti-search text-muted"></i>
+                    <input type="text" class="form-control border-0 ps-2" id="txtSearch" placeholder="Search events...">
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-tbl event-list-card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="tblEvents">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;" class="ps-3">#</th>
+                                <th>Event Title</th>
+                                <th>Schedule</th>
+                                <th>Location</th>
+                                <th style="width: 80px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventTableBody">
+                            <!-- Data populated by AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Event</h5>
+                <div>
+                    <button class="btn btn-success" id="btnSaveEvent">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="eventForm" enctype="multipart/form-data">
+                    <input type="hidden" id="eventId" value="0">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Event Title <span class="text-danger">*</span></label>
+                            <input type="text" id="eventTitle" class="form-control" placeholder="Enter event title" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">From Date <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="fromDate" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">To Date <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="toDate" class="form-control" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold d-block">Event For <span class="text-danger">*</span></label>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="eventFor" id="allAlumni" value="1" checked>
+                                <label for="allAlumni" class="form-check-label">All Alumni</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="eventFor" id="specificClass" value="2">
+                                <label for="specificClass" class="form-check-label">Class</label>
+                            </div>
+                        </div>
+
+                        <div id="classTargeting" class="col-md-12 d-none">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Session</label>
+                                    <select id="modalSessionSelect" class="form-select select2-modal">
+                                        <option value="">Select Session</option>
+                                        @if (ViewBag.SessionList != null)
+                                        {
+                                            foreach (var s in ViewBag.SessionList)
+                                            {
+                                                <option value="@s.SessionId">@s.SessionTitle</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Class</label>
+                                    <select id="modalClassSelect" class="form-select select2-modal">
+                                        <option value="">Select Class</option>
+                                        @if (ViewBag.ClassList != null)
+                                        {
+                                            foreach (var c in ViewBag.ClassList)
+                                            {
+                                                <option value="@c.ClassID">@c.ClassName</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Section(s)</label>
+                                    <select id="modalSectionSelect" class="form-select select2-modal" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Location</label>
+                            <input type="text" id="location" class="form-control" placeholder="Event venue or location">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Event Photo</label>
+                            <input type="file" id="eventPhoto" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea id="eventDescription" class="form-control" rows="4" placeholder="Brief details about the event"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Detail Modal -->
+<div class="modal fade" id="eventView" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header justify-content-between">
+                <h5 class="modal-title">Event Description</h5>
+                <button class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="ti ti-x me-1"></i> Close
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <img id="viewImage" src="/assets/img/default-event.jpg" class="rounded object-fit-cover" width="80" height="80" alt="Event">
+                    <div>
+                        <h6 id="viewTitle" class="mb-1">Demo Event</h6>
+                        <span id="viewDate" class="text-muted"><i class="ti ti-calendar"></i></span>
+                    </div>
+                </div>
+                <hr>
+                <div>
+                    <h6 class="mb-1">Note :</h6>
+                    <p id="viewDescription" class="text-muted mb-0"></p>
+                </div>
+                <hr>
+                <div>
+                    <h6 class="mb-1">Location :</h6>
+                    <p id="viewLocation" class="text-muted mb-0">-</p>
+                </div>
+                <div id="viewAudienceContainer" class="d-none">
+                    <hr>
+                    <h6 class="mb-1">Target Audience :</h6>
+                    <p class="text-muted mb-0">
+                        <span id="viewAudienceSummary"></span><br/>
+                        <small id="viewSections" class="text-primary"></small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    
+    <script src="~/calender/fullcalendar.min.js"></script>
+    <script src="~/calender/locale-all.js"></script>
+    <script>
+        let selectedId = 0;
+        let calendar;
+        const canEdit = @canEdit.ToString().ToLower();
+        const canDelete = @canDelete.ToString().ToLower();
+
+        $(document).ready(function () {
+            initCalendar();
+            loadEvents();
+
+            $('.select2-modal').select2({ dropdownParent: $('#eventModal'), width: '100%' });
+
+            $('#modalClassSelect').on('change', function () {
+                loadSections($(this).val());
+            });
+
+            $('input[name="eventFor"]').on('change', function () {
+                if ($(this).val() == '2') {
+                    $('#classTargeting').removeClass('d-none');
+                } else {
+                    $('#classTargeting').addClass('d-none');
+                }
+            });
+
+            $('#txtSearch').on('keyup', function () {
+                loadEvents($(this).val());
+            });
+
+            $('#btnSaveEvent').on('click', function () {
+                saveEvent();
+            });
+        });
+
+        function initCalendar() {
+            calendar = $('#calendar').fullCalendar({
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay'
+                },
+                editable: false,
+                eventLimit: true,
+                displayEventTime: true,
+                displayEventEnd: true,
+                timeFormat: 'h:mm a',
+                eventRender: function (event, element) {
+
+                    const tooltipContent = `
+                <div>
+                    <strong>${event.title}</strong><br/>
+                    <b>Time:</b> ${event.fromTime} - ${event.toTime}<br/>
+                    <b>Location:</b> ${event.location || '-'}<br/>
+                    <b>Description:</b> ${event.description || '-'}
+                </div>
+            `;
+
+                    element.attr('data-bs-toggle', 'tooltip');
+                    element.attr('data-bs-html', 'true');
+                    element.attr('title', tooltipContent);
+
+                    new bootstrap.Tooltip(element[0]);
+                },
+                events: function (start, end, timezone, callback) {
+                    $.get('/Alumni/GetEvents', function (res) {
+                        if (res.success) {
+                            const events = res.data.map(item => {
+                                let startVal = item.fromDate;
+                                let endVal = item.toDate;
+                                
+                                // Split to get local dates
+                                const startDateStr = startVal.split('T')[0];
+                                const endDateStr = endVal.split('T')[0];
+
+                                // For all-day spanning in FullCalendar, end date is exclusive.
+                                // We add 1 day to the end date so it spans completely through the last day.
+                                
+                                const mappedEnd = moment(endDateStr).add(1, 'days').format('YYYY-MM-DD');
+                                
+                                // Prepend event start time for easy viewing on the solid spanning bar
+                                const startTimeStr = moment(startVal).format('h:mm A');
+                                const endTimeStr = moment(endVal).format('h:mm A');
+                                const displayTitle = `${startTimeStr} to ${endTimeStr} - ${item.eventTitle}`;
+
+                                return {
+                                    id: item.eventID,
+                                    title: displayTitle,
+                                    start: startDateStr,
+                                    end: mappedEnd,
+                                    allDay: true,
+
+                                    // Tooltip Data
+                                    description: item.eventDescription,
+                                    location: item.location,
+                                    fromTime: startTimeStr,
+                                    toTime: endTimeStr
+                                };
+                            });
+                            callback(events);
+                        }
+                    });
+                },
+                dayClick: function(date, jsEvent, view) {
+                    const clickedDate = date.format('YYYY-MM-DD');
+                    const events = $('#calendar').fullCalendar('clientEvents');
+                    const match = events.find(e => {
+                        const start = e.start.format('YYYY-MM-DD');
+                        const end = e.end ? e.end.format('YYYY-MM-DD') : start;
+                        return clickedDate >= start && clickedDate <= end;
+                    });
+                    if (match) {
+                        selectItem(match.id, `#row-${match.id}`);
+                    }
+                },
+                eventClick: function(event, jsEvent, view) {
+
+                    selectItem(event.id, `#row-${event.id}`);
+                    handleViewAction();
+
+                },
+                dayRender: function(date, cell) {
+                    if (!selectedId) return;
+                    const data = $(`#row-${selectedId}`).data('item-info');
+                    if (!data) return;
+
+                    const cellDate = date.format('YYYY-MM-DD');
+                    const start = data.fromDate.split('T')[0];
+                    const end = data.toDate.split('T')[0];
+
+                    if (cellDate >= start && cellDate <= end) {
+                        cell.addClass('bg-warning-subtle border-warning');
+                    }
+                }
+            });
+        }
+
+        function loadSections(classId) {
+            if (classId) {
+                return $.get('/Attendance/GetSectionsByClass', { classId: classId }, function (res) {
+                    let html = '';
+                    if (res.success) {
+                        res.data.forEach(s => {
+                            html += `<option value="${s.sectionID}">${s.sectionName}</option>`;
+                        });
+                    }
+                    $('#modalSectionSelect').html(html).trigger('change');
+                });
+            } else {
+                $('#modalSectionSelect').html('').trigger('change');
+                return $.Deferred().resolve().promise();
+            }
+        }
+
+        function loadEvents(search = '') {
+            $('#eventTableBody').html('<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+            
+            $.get('/Alumni/GetEvents', { searchText: search }, function (res) {
+                if (res.success) {
+                    let html = '';
+                    if (res.data.length === 0) {
+                        html = '<tr><td colspan="5" class="text-center py-5 text-danger">No events found.</td></tr>';
+                    } else {
+                        res.data.forEach((item, index) => {
+                            let statusHtml = `
+                                <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                    <input class="form-check-input" type="checkbox" onchange="toggleStatus(${item.eventID}, this.checked)" ${item.isActive ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
+                                </div>`;
+
+                            html += `
+                                <tr id="row-${item.eventID}" class="item-row" onclick="selectItem(${item.eventID}, this)" style="cursor: pointer;">
+                                    <td class="ps-3">${index + 1}</td>
+                                    <td class="fw-medium">${item.eventTitle}</td>
+                                    <td>
+                                        <small class="d-block text-muted">${new Date(item.fromDate).toLocaleDateString()}</small>
+                                        <small class="text-primary">${new Date(item.fromDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+                                    </td>
+                                    <td>${item.location || '-'}</td>
+                                    <td>${statusHtml}</td>
+                                </tr>`;
+                        });
+                    }
+                    $('#eventTableBody').html(html);
+                    
+                    res.data.forEach(item => {
+                        $(`#row-${item.eventID}`).data('item-info', item);
+                    });
+
+                    selectedId = 0;
+                    $('#btnView, #btnEdit, #btnDelete').prop('disabled', true);
+                    if (calendar) $('#calendar').fullCalendar('refetchEvents');
+                    initBackgroundDataTable();
+                }
+            });
+        }
+
+        let exportTable;
+        function initBackgroundDataTable() {
+            if ($.fn.DataTable.isDataTable('#tblEvents')) {
+                $('#tblEvents').DataTable().destroy();
+            }
+            exportTable = $('#tblEvents').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false
+            });
+        }
+
+        function triggerExport(type) {
+            if (!exportTable) return;
+            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+            else if (type === 'print') exportTable.button('.buttons-print').trigger();
+        }
+
+        function selectItem(id, row) {
+            selectedId = id;
+            $('.item-row').removeClass('bg-light');
+            $(row).addClass('bg-light');
+            
+            $('#btnView').prop('disabled', false);
+            if(canEdit) $('#btnEdit').prop('disabled', false);
+            if(canDelete) $('#btnDelete').prop('disabled', false);
+
+            if (calendar) $('#calendar').fullCalendar('rerenderEvents');
+        }
+
+        function handleViewAction() {
+            $(".tooltip").removeClass("show");
+            if (!selectedId) return;
+            const data = $(`#row-${selectedId}`).data('item-info');
+            
+            $('#viewTitle').text(data.eventTitle);
+            $('#viewDate').html(`<i class="ti ti-calendar"></i> ${new Date(data.fromDate).toLocaleString()} - ${new Date(data.toDate).toLocaleString()}`);
+            $('#viewDescription').text(data.eventDescription || 'No description provided.');
+            $('#viewLocation').text(data.location || 'Not specified.');
+            
+            if (data.eventFor == 2) {
+                $('#viewAudienceContainer').removeClass('d-none');
+                $('#viewAudienceSummary').text(`${data.sessionName} | ${data.className}`);
+                $('#viewSections').text(`Sections: ${data.sectionNames || 'All'}`);
+            } else {
+                $('#viewAudienceContainer').addClass('d-none');
+            }
+
+            if (data.hasPhoto) {
+                $('#viewImage').attr('src', `/Alumni/DownloadPhoto/${data.eventID}`);
+            } else {
+                $('#viewImage').attr('src', '/assets/img/default-event.jpg');
+            }
+
+            $('#eventView').modal('show');
+        }
+
+        function handleEditAction() {
+            if (!selectedId) return;
+            const data = $(`#row-${selectedId}`).data('item-info');
+            
+            $('#modalTitle').text('Edit Event');
+            $('#eventId').val(data.eventID);
+            $('#eventTitle').val(data.eventTitle);
+            $('#fromDate').val(data.fromDate.split('.')[0]); 
+            $('#toDate').val(data.toDate.split('.')[0]);
+            $('#location').val(data.location);
+            $('#eventDescription').val(data.eventDescription);
+            
+            $(`input[name="eventFor"][value="${data.eventFor}"]`).prop('checked', true).trigger('change');
+            
+            if (data.eventFor == 2) {
+                $('#modalSessionSelect').val(data.sessionID).trigger('change');
+                $('#modalClassSelect').val(data.classID).trigger('change');
+                
+                loadSections(data.classID).then(() => {
+                    const sectionIds = data.sectionIDs ? data.sectionIDs.split(',') : [];
+                    $('#modalSectionSelect').val(sectionIds).trigger('change');
+                });
+            }
+
+            $('#eventModal').modal('show');
+        }
+
+        function saveEvent() {
+            const form = $('#eventForm')[0];
+            if (!form.checkValidity()) { form.reportValidity(); return; }
+
+            const formData = new FormData();
+            formData.append('EventID', $('#eventId').val());
+            formData.append('EventTitle', $('#eventTitle').val());
+            formData.append('FromDate', $('#fromDate').val());
+            formData.append('ToDate', $('#toDate').val());
+            formData.append('Location', $('#location').val());
+            formData.append('EventDescription', $('#eventDescription').val());
+            
+            const eventFor = $('input[name="eventFor"]:checked').val();
+            formData.append('EventFor', eventFor);
+            
+            if (eventFor == '2') {
+                formData.append('SessionID', $('#modalSessionSelect').val());
+                formData.append('ClassID', $('#modalClassSelect').val());
+                formData.append('SectionIDs', $('#modalSectionSelect').val() ? $('#modalSectionSelect').val().join(',') : '');
+            }
+
+            const fileInput = $('#eventPhoto')[0];
+            if (fileInput.files.length > 0) {
+                formData.append('EventPhoto', fileInput.files[0]);
+            }
+
+            $.ajax({
+                url: '/Alumni/UpsertEvent',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire('Success', res.message, 'success');
+                        $('#eventModal').modal('hide');
+                        loadEvents();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function handleDeleteAction() {
+            if (!selectedId) return;
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This event will be deleted permanently!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/Alumni/DeleteEvent', { id: selectedId }, function (res) {
+                        if (res.success) {
+                            Swal.fire('Deleted!', res.message, 'success');
+                            loadEvents();
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function toggleStatus(id, isActive) {
+            $.post('/Alumni/ToggleStatus', { id: id, isActive: isActive }, function (res) {
+                if (res.success) {
+                    if (calendar) $('#calendar').fullCalendar('refetchEvents');
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                    loadEvents();
+                }
+            });
+        }
+
+        function resetForm() {
+            $('#modalTitle').text('Add Event');
+            $('#eventId').val(0);
+            $('#eventForm')[0].reset();
+            $('input[name="eventFor"][value="1"]').prop('checked', true).trigger('change');
+            $('#modalSessionSelect, #modalClassSelect, #modalSectionSelect').val('').trigger('change');
+
+            selectedId = 0;
+            $('.item-row').removeClass('bg-light');
+            $('#btnView, #btnEdit, #btnDelete').prop('disabled', true);
+        }
+    </script>
+}

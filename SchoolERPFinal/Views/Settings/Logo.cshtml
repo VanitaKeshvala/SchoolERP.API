@@ -1,0 +1,90 @@
+@*
+    ======================================================================
+    VIEW: Settings / Logo.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Upload Logo</h6>
+    </div>
+   @*  <button class="btn btn-primary" onclick="openAddModal()">
+        <i class="ti ti-plus me-1"></i> Add
+    </button> *@
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            @* <div class="card-header">
+                <h5 class="card-title">Upload Logo</h5>
+            </div> *@
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-xl-4">
+                        <div class="card p-3">
+                            <h6>Print Logo <span class="text-primary small">(170 <i class="ti ti-x"></i> 184)</span></h6>
+                            <div class="bg-light img-size mb-2" style="height: 100px;"></div>
+                            
+                            @if (canEdit)
+                            {
+                                <div class='file mt-2'>
+                                    <label for='txtPrintLogo'>
+                                        <i class="ti ti-cloud-upload"></i> Update
+                                    </label>
+                                    <input id='txtPrintLogo' type='file' class="d-none" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="card p-3">
+                            <h6>Admin Logo <span class="text-primary small">(290 <i class="ti ti-x"></i> 51)</span></h6>
+                            <div class="bg-light img-size mb-2" style="height: 100px;"></div>                            
+                            @if (canEdit)
+                            {
+                                <div class='file mt-2'>
+                                    <label for='txtAdminLogo'>
+                                        <i class="ti ti-cloud-upload"></i> Update
+                                    </label>
+                                    <input id='txtAdminLogo' type='file' class="d-none" />
+                                </div>
+                            }
+                        </div>
+                    </div>                    
+                    <div class="col-xl-4">
+                        <div class="card p-3">
+                            <h6>Admin Small Logo <span class="text-primary small">(32 <i class="ti ti-x"></i> 32)</span></h6>
+                            <div class="bg-light img-size mb-2" style="height: 100px;"></div>                            
+                            @if (canEdit)
+                            {
+                                <div class='file mt-2'>
+                                    <label for='txtAdminSmallLogo'>
+                                        <i class="ti ti-cloud-upload"></i> Update
+                                    </label>
+                                    <input id='txtAdminSmallLogo' type='file' class="d-none" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,166 @@
+@using SchoolERP.Net.Models
+@{
+    ViewData["Title"] = "Import Student";
+    var classes = ViewBag.Classes as List<MstClassViewModel> ?? new List<MstClassViewModel>();
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Import Student</h6>
+    </div>
+    <div>
+        <a href="~/import_student_sample_file.csv" class="btn btn-warning d-inline-flex align-items-center" download><i class="ti ti-download me-1"></i>Download Sample Import File</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <form id="importForm" enctype="multipart/form-data">
+            <div class="card shadow-tbl-outer">
+                <div class="card-header">
+                    <div class="bg-light p-3 rounded-3 mb-3">
+                        <ol class="m-0 p-0 px-3">
+                            <li class="mb-2">Your CSV data should be in the format below. The first line of your CSV file should be the column headers.</li>
+                            <li>Format dates as Y-m-d (2018-06-06).</li>
+                            <li>Duplicate Admission Numbers will not be imported.</li>
+                            <li>Gender: Male, Female.</li>
+                            <li>Category & House: Use names exactly as they appear in the system.</li>
+                        </ol>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Class <span class="text-danger">*</span></label>
+                                <select name="classId" id="ClassID" class="form-select form-control" required>
+                                    <option value="">Select Class</option>
+                                    @foreach (var c in classes)
+                                    {
+                                        <option value="@c.ClassID">@c.ClassName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Section <span class="text-danger">*</span></label>
+                                <select name="sectionId" id="SectionID" class="form-select form-control" required>
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Select CSV File <span class="text-danger">*</span></label>
+                                <input type="file" name="file" id="CsvFile" class="form-control" accept=".csv" required />
+                            </div>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <div class="mb-3 w-100">
+                                <button type="submit" class="btn btn-primary mb-1" id="btnImport">
+                                    <i class="ti ti-upload me-1"></i>Import
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body" id="resultContainer" style="display:none;">
+                    <h6 class="fw-bold mb-3">Import Results</h6>
+                    <div class="table-responsive">
+                        <table class="table" id="resultTable">
+                            <thead>
+                                <tr>
+                                    <th>Admission No</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Load Sections
+            $('#ClassID').change(function () {
+                var classId = $(this).val();
+                $('#SectionID').html('<option value="">Select Section</option>');
+                if (classId) {
+                    $.get('/StudentInformation/GetSections', { classId: classId }, function (res) {
+                        $.each(res, function (i, item) {
+                            $('#SectionID').append('<option value="' + item.id + '">' + item.name + '</option>');
+                        });
+                    });
+                }
+            });
+
+            // Handle Import
+            $('#importForm').submit(function (e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                var btn = $('#btnImport');
+                var btnHtml = btn.html();
+
+                btn.html('<span class="spinner-border spinner-border-sm me-1"></span>Processing...').prop('disabled', true);
+                $('#resultContainer').hide();
+                $('#resultTable tbody').empty();
+
+                $.ajax({
+                    url: '/StudentInformation/ImportStudent',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.success) {
+                            $('#resultContainer').show();
+                            $.each(res.results, function (i, item) {
+                                var statusClass = item.success ? 'text-success' : 'text-danger';
+                                var statusIcon = item.success ? 'ti-check' : 'ti-x';
+                                var row = `<tr>
+                                    <td>${item.admissionNo || ''}</td>
+                                    <td>${item.name || ''}</td>
+                                    <td class="${statusClass} fw-bold"><i class="ti ${statusIcon} me-1"></i>${item.success ? 'Success' : 'Failed'}</td>
+                                    <td class="${statusClass}">${item.message}</td>
+                                </tr>`;
+                                $('#resultTable tbody').append(row);
+                            });
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Completed',
+                                text: 'The import process has finished.',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: res.message
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred during import.'
+                        });
+                    },
+                    complete: function () {
+                        btn.html(btnHtml).prop('disabled', false);
+                    }
+                });
+            });
+        });
+    </script>
+}

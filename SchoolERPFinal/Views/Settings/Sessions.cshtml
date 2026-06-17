@@ -1,0 +1,105 @@
+@*
+    ======================================================================
+    VIEW: Settings / Sessions.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Session Settings </h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="d-flex align-items-center">
+                            <input type="text" id="txtSessionName" class="form-control flex-fill me-3" placeholder="Enter Session Name">
+                            <button type="submit" id="btnSaveSession" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-2">Session List</h4>
+                <div class="d-flex align-items-center">
+                    <input type="text" id="txtSearchSession" class="form-control flex-fill me-3" placeholder="Search...">
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <button class="btn btn-icon btn-outline-primary" id="btnCopy" title="Copy">
+                            <i class="ti ti-copy fs-5"></i>
+                        </button>
+                        <button class="btn btn-icon btn-outline-secondary" id="btnExportExcel" title="Excel">
+                            <i class="ti ti-file-excel fs-5"></i>
+                        </button>
+                        <button class="btn btn-icon btn-outline-info" id="btnBarcode" title="Barcode">
+                            <i class="ti ti-file-barcode fs-5"></i>
+                        </button>
+                        <button class="btn btn-icon btn-outline-danger" id="btnExportPdf" title="PDF">
+                            <i class="ti ti-file-type-pdf fs-5"></i>
+                        </button>
+                        <button class="btn btn-icon btn-outline-success" id="btnPrint" title="Print">
+                            <i class="ti ti-printer fs-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Session</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2024-2025</td>
+                                <td><span class="badge badge-boxed badge-outline-success">Active</span></td>
+                                <td class="text-end">
+                                    <div class="dropdown dropstart d-inline-block">
+                                        <a class="drop-arrow-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="ti ti-dots-vertical fs-18 text-muted"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li><a class="dropdown-item" href="#">Edit</a></li>
+                                            <li><a class="dropdown-item" href="#">Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2025-2026</td>
+                                <td><span class="badge badge-boxed badge-outline-primary">Pending</span></td>
+                                <td class="text-end">
+                                    <div class="dropdown dropstart d-inline-block">
+                                        <a class="drop-arrow-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="ti ti-dots-vertical fs-18 text-muted"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li><a class="dropdown-item" href="#">Edit</a></li>
+                                            <li><a class="dropdown-item" href="#">Delete</a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

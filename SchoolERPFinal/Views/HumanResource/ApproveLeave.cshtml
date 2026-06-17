@@ -1,0 +1,536 @@
+@model SchoolERP.Net.Models.HRApplyLeavePageViewModel
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Approve Leave";
+    Layout = "_Layout";
+}
+@inject PermissionHelper PermHelper
+@{
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Income/Search", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Income/Search", "Edit");
+    var canPrint = PermHelper.HasPermissionByUrl("/Income/Search", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Income/Search", "Export");
+
+}
+
+<style>
+    .shadow-tbl { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border: 1px solid #e9ecef; }
+    .bg-light-success { background-color: #e6fffa; color: #008767; }
+    .bg-light-danger { background-color: #fff5f5; color: #e53e3e; }
+    .bg-light-warning { background-color: #fffaf0; color: #dd6b20; }
+    
+    /* Remove validation icons */
+    .was-validated .form-control:valid, .was-validated .form-control:invalid,
+    .was-validated .form-select:valid, .was-validated .form-select:invalid {
+        background-image: none !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    .select2-container--default .select2-selection--single.is-invalid {
+        border-color: #dc3545 !important;
+    }
+
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <h6 class="fw-bold mb-0">Leave Approval Dashboard</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <button type="button" class="btn btn-primary" onclick="openApplyModal()">
+                <i class="ti ti-plus me-1"></i> Apply Leave
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button type="button" id="btnTopEdit" class="btn btn-info" onclick="handleTopEdit()" disabled>
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+ 
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table" id="tblApproveLeave">
+                        <thead>
+                            <tr>
+                                <th class="" style="width: 40px;">#</th>
+                                <th>Staff</th>
+                                <th>Leave Type</th>
+                                <th>Duration</th>
+                                <th>Days</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Leaves != null && Model.Leaves.Any())
+                            {
+                                foreach (var item in Model.Leaves.OrderByDescending(x => x.ApplyDate))
+                                {
+                                    var statusClass = item.Status == "Approved" ? "bg-light-success" : 
+                                                      item.Status == "Disapproved" ? "bg-light-danger" : "bg-light-warning";
+                                    
+                                    <tr>
+                                        <td class="ps-3">
+                                            <input type="radio" class="form-check-input" name="leaveSelect" onclick="selectRow(@item.ApplyLeaveID)" />
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width:36px;height:36px;">
+                                                    <span class="small fw-bold">@item.StaffName.Substring(0, 1)</span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-dark">@item.StaffName</div>
+                                                    <div class="small text-muted">@item.StaffCode</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info-subtle text-info px-2">@item.LeaveTypeName</span>
+                                            <div class="small text-muted mt-1" title="@item.Reason">
+                                                <i class="ti ti-info-circle me-1"></i>@(item.Reason?.Length > 30 ? item.Reason.Substring(0, 30) + "..." : item.Reason)
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="small">
+                                                <div class="text-dark">@item.FromDate.ToString("dd MMM yyyy")</div>
+                                                <div class="">to @item.ToDate.ToString("dd MMM yyyy")</div>
+                                            </div>
+                                        </td>
+                                        <td><span class="">@((item.ToDate - item.FromDate).Days + 1)</span></td>
+                                        <td>
+                                            <span class="badge @statusClass px-2">@item.Status</span>
+                                            @if (!string.IsNullOrEmpty(item.Note))
+                                            {
+                                                <div class="small text-muted mt-1" title="@item.Note">
+                                                    <i class="ti ti-message-dots me-1"></i>Admin: @(item.Note.Length > 20 ? item.Note.Substring(0, 20) + "..." : item.Note)
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <div class="text-muted mb-2"><i class="ti ti-notes-off fs-1"></i></div>
+                                        <span class="text-muted">No pending leave applications.</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals are consolidated into applyModal below -->
+
+<!-- Apply Leave Modal -->
+<div class="modal fade" id="applyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h6 class="modal-title fw-bold" id="applyModalTitle">Apply Leave (Administrative)</h6>
+                <div>
+                    <button type="button" class="btn btn-success shadow-sm" onclick="saveLeave()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-danger shadow-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <form id="applyForm" class="needs-validation" novalidate>
+                <div class="modal-body p-4">
+                    <div id="divError" class="alert alert-danger d-none mb-3" role="alert">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        <span id="spnErrorMessage"></span>
+                    </div>
+
+                    <input type="hidden" id="hdnApplyLeaveID" value="0" />
+                    <input type="hidden" id="hdnStaffID" value="0" />
+                    <input type="hidden" id="hdnLeaveTypeID" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Staff <span class="text-danger req-star">*</span></label>
+                            <div id="divStaffInput">
+                                <select id="ddlStaff" class="form-select select2" required onchange="fetchLeaveBalance()">
+                                    <option value="">Select Staff</option>
+                                    @foreach (var s in Model.StaffList)
+                                    {
+                                        <option value="@s.StaffID">@s.FirstName @s.LastName (@s.StaffCode)</option>
+                                    }
+                                </select>
+                                <div class="invalid-feedback">Please select a staff member.</div>
+                            </div>
+                            <div id="lblStaff" class="form-control-plaintext fw-bold text-dark d-none"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Leave Type <span class="text-danger req-star">*</span></label>
+                            <div id="divLeaveTypeInput">
+                                <select id="ddlLeaveType" class="form-select select2" required onchange="showBalanceInfo()">
+                                    <option value="">Select Type</option>
+                                </select>
+                                <div class="invalid-feedback">Please select a leave type.</div>
+                            </div>
+                            <div id="lblLeaveType" class="form-control-plaintext fw-bold text-dark d-none"></div>
+                        </div>
+                        <div class="col-md-12" id="divBalance" style="display:none;">
+                            <div class="alert alert-info py-2 px-3 mb-0 d-flex align-items-center">
+                                <i class="ti ti-info-circle me-2 fs-5"></i>
+                                <span>Remaining Balance: <strong id="spnBalance">0</strong> Days</span>
+                                <span class="ms-auto small text-muted">Total Quota: <span id="spnTotalQuota">0</span> | Used: <span id="spnUsed">0</span></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">From Date <span class="text-danger req-star">*</span></label>
+                            <div id="divFromDateInput">
+                                <input type="date" id="txtFromDate" class="form-control" required onchange="clearError()">
+                                <div class="invalid-feedback">Required.</div>
+                            </div>
+                            <div id="lblFromDate" class="form-control-plaintext fw-bold text-dark d-none"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">To Date <span class="text-danger req-star">*</span></label>
+                            <div id="divToDateInput">
+                                <input type="date" id="txtToDate" class="form-control" required onchange="clearError()">
+                                <div class="invalid-feedback">Required.</div>
+                            </div>
+                            <div id="lblToDate" class="form-control-plaintext fw-bold text-dark d-none"></div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Reason</label>
+                            <div id="divReasonInput">
+                                <textarea id="txtReason" class="form-control" rows="2" placeholder="Enter reason for leave..."></textarea>
+                            </div>
+                            <div id="lblReason" class="form-control-plaintext text-dark d-none"></div>
+                        </div>
+                        <div class="col-md-6" id="divStatus">
+                            <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                            <select id="ddlStatus" class="form-select">
+                                <option value="Pending">Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Disapproved">Disapproved</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="divAttachment">
+                            <label class="form-label fw-semibold">Attachment</label>
+                            <div id="divAttachmentInput">
+                                <input type="file" id="fileAttachment" class="form-control" />
+                            </div>
+                            <div id="lblAttachment" class="d-none">
+                                <a id="lnkAttachment" href="#" target="_blank" class="btn btn-sm btn-outline-info"><i class="ti ti-download me-1"></i>View Attachment</a>
+                                <span id="noAttachment" class="text-muted small italic">No attachment uploaded</span>
+                            </div>
+                        </div>
+                        <div class="col-md-12" id="divAdminNote">
+                            <label class="form-label fw-semibold">Admin Remarks</label>
+                            <textarea id="txtAdminNote" class="form-control" rows="2" placeholder="Admin remarks..."></textarea>
+                        </div>
+                       
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 d-none">
+                    <button type="button" class="btn btn-secondary shadow-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="saveLeave()">
+                        <i class="ti ti-device-floppy me-1"></i>Save Application
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblApproveLeave')) {
+                const table = $('#tblApproveLeave').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+$(document).ready(function () {
+            $('#tblApproveLeave').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                { extend: 'print', exportOptions: { columns: [1, 2, 3, 4,5] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false
+        });
+})
+
+
+        let selectedApplyLeaveID = null;
+
+        $(document).ready(function () {
+            $('.select2').select2({
+                dropdownParent: $('#applyModal'),
+                width: '100%'
+            });
+
+            // Re-initialize select2 when modals open
+            $('#applyModal').on('shown.bs.modal', function () {
+                $('.select2').select2({ dropdownParent: $('#applyModal'), width: '100%' });
+            });
+
+            $('.select2').on('change', function() {
+                $(this).next('.select2-container').removeClass('is-invalid');
+                if ($(this).val()) {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+        });
+
+        // --- Leave Management Logic ---
+        function selectRow(id) {
+            selectedApplyLeaveID = id;
+            $('#btnTopEdit').prop('disabled', false);
+        }
+
+        function toggleModalMode(isEdit) {
+            if (isEdit) {
+                // Hide inputs, show labels
+                $('[id^="div"][id$="Input"]').addClass('d-none');
+                $('[id^="lbl"]').removeClass('d-none');
+                $('.req-star').addClass('d-none');
+                $('#divBalance').hide();
+                // Disable validation for hidden inputs
+                $('#ddlStaff, #ddlLeaveType, #txtFromDate, #txtToDate').prop('required', false);
+            } else {
+                // Show inputs, hide labels
+                $('[id^="div"][id$="Input"]').removeClass('d-none');
+                $('[id^="lbl"]').addClass('d-none');
+                $('.req-star').removeClass('d-none');
+                // Re-enable validation
+                $('#ddlStaff, #ddlLeaveType, #txtFromDate, #txtToDate').prop('required', true);
+            }
+        }
+
+        function handleTopEdit() {
+            if (selectedApplyLeaveID) editLeave(selectedApplyLeaveID);
+        }
+
+        async function editLeave(id) {
+            try {
+                const response = await fetch(`/HumanResource/GetApplyLeaveByID/${id}`);
+                const res = await response.json();
+                if (res.success) {
+                    const data = res.data;
+                    $('#hdnApplyLeaveID').val(data.applyLeaveID);
+                    $('#hdnStaffID').val(data.staffID);
+                    $('#hdnLeaveTypeID').val(data.leaveTypeID);
+                    toggleModalMode(true);
+                    $('#applyModalTitle').text('Process Leave Application');
+                    
+                    // Populate inputs (for background/save logic)
+                    $('#ddlStaff').val(data.staffID).trigger('change');
+                    
+                    // Manually add the leave type option if it doesn't exist to ensure val() works
+                    if ($(`#ddlLeaveType option[value="${data.leaveTypeID}"]`).length === 0) {
+                        $('#ddlLeaveType').append(new Option(data.leaveTypeName, data.leaveTypeID, true, true));
+                    }
+                    $('#ddlLeaveType').val(data.leaveTypeID).trigger('change');
+                    $('#txtFromDate').val(data.fromDate.split('T')[0]);
+                    $('#txtToDate').val(data.toDate.split('T')[0]);
+                    $('#txtReason').val(data.reason);
+                    $('#ddlStatus').val(data.status);
+                    $('#txtAdminNote').val(data.note);
+
+                    // Populate labels
+                    $('#lblStaff').text(`${data.staffName} (${data.staffCode})`);
+                    $('#lblLeaveType').text(data.leaveTypeName);
+                    $('#lblFromDate').text(new Date(data.fromDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }));
+                    $('#lblToDate').text(new Date(data.toDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }));
+                    $('#lblReason').text(data.reason || 'N/A');
+                    
+                    if (data.attachmentDocName) {
+                        $('#lnkAttachment').attr('href', `/HumanResource/DownloadApplyLeaveDocument/${data.applyLeaveID}`).show();
+                        $('#noAttachment').hide();
+                    } else {
+                        $('#lnkAttachment').hide();
+                        $('#noAttachment').show();
+                    }
+
+                    $('#applyModal').modal('show');
+                }
+            } catch (error) {
+                console.error('Error fetching leave details:', error);
+            }
+        }
+
+        // --- Application Logic ---
+        function openApplyModal() {
+            $('#applyForm')[0].reset();
+            $('#applyForm').removeClass('was-validated');
+            toggleModalMode(false);
+            $('#hdnApplyLeaveID').val(0);
+            $('#applyModalTitle').text('Apply Leave (Administrative)');
+            $('#ddlStaff').val('').trigger('change');
+            $('#ddlLeaveType').empty().append('<option value="">Select Type</option>').trigger('change');
+            $('#ddlStatus').val('Pending');
+            $('#txtAdminNote').val('');
+            $('#divBalance').hide();
+            clearError();
+            $('#applyModal').modal('show');
+        }
+
+        function showError(msg) {
+            $('#spnErrorMessage').text(msg);
+            $('#divError').removeClass('d-none').fadeIn();
+        }
+
+        function clearError() {
+            $('#divError').addClass('d-none');
+        }
+
+        function showBalanceInfo() {
+            clearError();
+            const selectedOpt = $('#ddlLeaveType option:selected');
+            if (selectedOpt.val()) {
+                $('#spnBalance').text(selectedOpt.data('balance') || 0);
+                $('#spnTotalQuota').text(selectedOpt.data('total') || 0);
+                $('#spnUsed').text(selectedOpt.data('used') || 0);
+                $('#divBalance').fadeIn();
+            } else {
+                $('#divBalance').hide();
+            }
+        }
+
+        async function fetchLeaveBalance() {
+            const staffId = $('#ddlStaff').val();
+            if (!staffId) { $('#divBalance').hide(); return; }
+            try {
+                const response = await fetch(`/HumanResource/GetStaffAllLeaveBalances?staffId=${staffId}`);
+                const res = await response.json();
+                const ddl = $('#ddlLeaveType');
+                ddl.empty().append('<option value="">Select Type</option>');
+                if (res.success && res.data) {
+                    res.data.forEach(b => {
+                        ddl.append(`<option value="${b.leaveTypeID}" data-balance="${b.balance}" data-total="${b.totalQuota}" data-used="${b.totalUsed}">${b.leaveTypeName} (Bal: ${b.balance})</option>`);
+                    });
+                }
+                showBalanceInfo();
+            } catch (error) { console.error(error); }
+        }
+
+        async function saveLeave() {
+            clearError();
+            const form = document.getElementById('applyForm');
+            form.classList.add('was-validated');
+            if (!form.checkValidity()) return;
+
+            const applyLeaveId = parseInt($('#hdnApplyLeaveID').val());
+            const isEdit = applyLeaveId > 0;
+
+            if (!isEdit) {
+                const fromDate = new Date($('#txtFromDate').val());
+                const toDate = new Date($('#txtToDate').val());
+                if (toDate < fromDate) { showError('To Date cannot be earlier than From Date.'); return; }
+
+                const diffTime = Math.abs(toDate - fromDate);
+                const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                const balance = parseFloat($('#ddlLeaveType option:selected').data('balance')) || 0;
+
+                if (requestedDays > balance) {
+                    showError(`Insufficient Balance! You are requesting ${requestedDays} days, but only ${balance} days are remaining for this leave type.`);
+                    return;
+                }
+            }
+
+            const fileEl = document.getElementById('fileAttachment');
+            let attachmentBase64 = null, docType = null, docName = null;
+            if (fileEl.files[0]) {
+                const file = fileEl.files[0];
+                docType = file.type; docName = file.name;
+                attachmentBase64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(file); });
+            }
+
+            const data = {
+                applyLeaveID: parseInt($('#hdnApplyLeaveID').val()) || 0,
+                staffID: parseInt($('#hdnStaffID').val()) || parseInt($('#ddlStaff').val()) || 0,
+                leaveTypeID: parseInt($('#hdnLeaveTypeID').val()) || parseInt($('#ddlLeaveType').val()) || 0,
+                fromDate: $('#txtFromDate').val(),
+                toDate: $('#txtToDate').val(),
+                reason: $('#txtReason').val(),
+                status: $('#ddlStatus').val(),
+                note: $('#txtAdminNote').val(),
+                attachmentBase64: attachmentBase64,
+                attachmentDocType: docType,
+                attachmentDocName: docName
+            };
+
+            console.log('Sending Leave Data:', data);
+            
+            try {
+                const response = await fetch('/HumanResource/UpsertApplyLeave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await response.json();
+                if (res.success || res.Success) {
+                    location.reload();
+                } else {
+                    const errorMsg = res.message || res.Message || JSON.stringify(res);
+                    alert("Error: " + errorMsg);
+                }
+            } catch (error) {
+                console.error('Save Error:', error);
+                alert('A system error occurred. Please check the console for details.');
+            }
+        }
+    </script>
+}

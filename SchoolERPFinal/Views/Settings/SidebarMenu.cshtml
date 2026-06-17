@@ -1,0 +1,99 @@
+@*
+    ======================================================================
+    VIEW: Settings / SidebarMenu.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<style>
+    .menu-item {
+        background: #fbfbfb;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: grab;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    .menu-dropzone {
+        flex: 1;
+        border: 1px dashed #ddd;
+        border-radius: 10px;
+        min-height: 200px;
+        background: white;
+        padding: 15px;
+    }
+    .dropped-item {
+        background: #3498db;
+        color: white;
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: 5px;
+    }
+</style>
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Sidebar Menu</h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Selected Sidebar Menus</h4>
+            </div>
+            <div class="card-body">
+                <div class="menu-dropzone" id="block1">
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Menu List</h4>
+            </div>
+            <div class="card-body">
+                <div class="menu-dropzone p-0 border-0 mb-0" id="menuList">
+                    <div class="menu-item" draggable="true">Dashboard</div>
+                    <div class="menu-item" draggable="true">Students</div>
+                    <div class="menu-item" draggable="true">Attendance</div>
+                    <div class="menu-item" draggable="true">Fees Management</div>
+                    <div class="menu-item" draggable="true">Examinations</div>
+                    <div class="menu-item" draggable="true">Reports</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let dragged = null;
+
+    document.addEventListener("dragstart", function (e) {
+        if (e.target.classList.contains("menu-item")) {
+            dragged = e.target;
+        }
+    });
+
+    document.querySelectorAll(".menu-dropzone").forEach(zone => {
+        zone.addEventListener("dragover", function (e) {
+            e.preventDefault();
+        });
+
+        zone.addEventListener("drop", function (e) {
+            e.preventDefault();
+            if (dragged) {
+                this.appendChild(dragged);
+            }
+        });
+    });
+</script>
+}

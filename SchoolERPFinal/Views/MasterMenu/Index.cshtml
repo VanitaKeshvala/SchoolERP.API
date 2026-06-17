@@ -1,0 +1,765 @@
+@*
+    ======================================================================
+    VIEW: MasterMenu / Index.cshtml
+    PURPOSE: Menu Management — Proper Tree-View UI with Drag & Drop Reordering
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MenusPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using System.Linq
+@using System.Collections.Generic
+@using SchoolERP.Net.Helpers
+@using SchoolERP.Net.Models
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Menu Management";
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd    = PermHelper.HasPermissionByUrl("/MasterMenu", "Add");
+    var canEdit   = PermHelper.HasPermissionByUrl("/MasterMenu", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/MasterMenu", "Delete");
+    var canPrint  = PermHelper.HasPermissionByUrl("/MasterMenu", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/MasterMenu", "Export");
+
+    var menuGroups = (Model.Menus ?? new List<MenuViewModel>()).ToLookup(m => m.ParentID);
+
+    // Pre-compute a flat, ordered list with tree metadata.
+    var flatRows = new List<(MenuViewModel Menu, int Depth, bool IsLast, bool HasChildren, List<bool> AncIsLast, int? ParentId)>();
+
+    void BuildFlat(int? parentId, int depth, List<bool> ancIsLast)
+    {
+        if (depth > 20) return; // Prevent infinite recursion
+        var siblings = menuGroups[parentId].OrderBy(m => m.DisplayOrder).ToList();
+        for (int si = 0; si < siblings.Count; si++)
+        {
+            var m2      = siblings[si];
+            bool isLast = (si == siblings.Count - 1);
+            bool hasCh  = menuGroups.Contains(m2.MenuID);
+            flatRows.Add((m2, depth, isLast, hasCh, new List<bool>(ancIsLast), parentId));
+            if (hasCh)
+            {
+                var next = new List<bool>(ancIsLast) { isLast };
+                BuildFlat(m2.MenuID, depth + 1, next);
+            }
+        }
+    }
+
+    BuildFlat(null, 0, new List<bool>());
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/treeview.css" asp-append-version="true">
+}
+<style>
+    .tree-indent{
+        width:35px;
+    }
+    .tree-line-v {        
+        left: 25px;        
+        border-left: 1px dotted grey;
+    }
+    .tree-line-h {
+        left: 25px;
+        border-top: 1px dotted grey;
+    }
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #e2eafc !important;
+    }
+    .drag-handle {
+        cursor: grab;
+        padding: 5px;
+        color: #adb5bd;
+    }
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    .cursor-move {
+        cursor: move;
+    }
+    .tree-row.selected td{
+        background-color: #e3e4ef70;
+    }
+</style>
+
+@* Page Notice *@
+@* Local alert div removed in favor of global toast system *@
+
+@* Page Header *@
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">
+            Menu Management
+        </h6>        
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-1">       
+        @if (canAdd)
+        {
+            <button class="btn btn-primary shadow-sm" id="btnAddMenu" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search menus..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@* Tree Table Card *@
+<div class="card shadow-tbl">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table" id="menusTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>Select</th>
+                        <th style="width:50px;">ID</th>
+                        <th>Menu Name</th>
+                        <th>Display Label</th>
+                        <th>URL / Route</th>
+                        <th>Key</th>
+                        <th style="width:60px;">Order</th>
+                        <th>Parent</th>
+                        <th style="width:80px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in flatRows)
+                    {
+                        var menu    = row.Menu;
+                        var depth   = row.Depth;
+                        var isLast  = row.IsLast;
+                        var hasCh   = row.HasChildren;
+                        var ancList = row.AncIsLast;
+                        var pid     = row.ParentId;
+
+                        <tr class="tree-row @(hasCh ? "has-children" : "")"
+                            data-id="@menu.MenuID"
+                            @(pid.HasValue ? Html.Raw($"data-parent-id='{pid}'") : Html.Raw(""))
+                            data-depth="@depth"
+                            onclick="selectRow(@menu.MenuID, this)">
+
+                            @* Drag Handle *@
+                            <td class="text-center">
+                                @if (canEdit)
+                                {
+                                    <i class="ti ti-selector drag-handle cursor-move" title="Drag to reorder"></i>
+                                }
+                            </td>
+                            @* SELECT *@
+                            <td>
+                                <input type="checkbox" name="selectedMenu"
+                                       class="form-check-input student-checkbox"
+                                       value="@menu.MenuID">
+                            </td>
+                            @* ID *@
+                            <td class="">@menu.MenuID</td>
+
+                            @* Tree Name Cell *@
+                            <td>
+                                <div class="tree-cell">
+
+                                    @* Indent columns with connector lines *@
+                                    @for (int lvl = 0; lvl < depth; lvl++)
+                                    {
+                                        bool ancLast = (lvl < ancList.Count) && ancList[lvl];
+                                        <div class="tree-indent">
+                                            @if (lvl == depth - 1)
+                                            {
+                                                <span class="tree-line-v @(isLast ? "last-sib" : "")"></span>
+                                                <span class="tree-line-h"></span>
+                                            }
+                                            else if (!ancLast)
+                                            {
+                                                <span class="tree-line-v"></span>
+                                            }
+                                        </div>
+                                    }
+
+                                    @* Toggle or spacer *@
+                                    @if (hasCh)
+                                    {
+                                        <span class="tree-toggle" onclick="toggleNode(@menu.MenuID, event)" title="Expand/Collapse">
+                                            <i class="fas fa-plus"></i>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="tree-leaf-spacer"></span>
+                                    }
+
+                                    @* Menu icon *@
+                                    <i class="@(menu.MenuIcon ?? "ti ti-box") tree-icon"></i>
+
+                                    @* Name *@
+                                    <span>@menu.MenuName</span>
+                                    @if (!string.IsNullOrWhiteSpace(menu.DisplayLabel) && menu.DisplayLabel != menu.MenuName)
+                                    {
+                                        <small class="text-muted ms-2">(@menu.DisplayLabel)</small>
+                                    }
+                                </div>
+                            </td>
+
+                            <td>@menu.DisplayLabel</td>
+
+                            @* URL *@
+                            <td>@menu.MenuURL</td>
+
+                            @* Key *@
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(menu.MenuKey))
+                                {
+                                    <span class="badge-key">@menu.MenuKey</span>
+                                }
+                                else { <span class="text-muted small">—</span> }
+                            </td>
+
+                            @* Order *@
+                            <td class="display-order-cell">@menu.DisplayOrder</td>
+
+                            @* Parent *@
+                            <td>
+                                @if (string.IsNullOrEmpty(menu.ParentMenuName))
+                                { <span class="badge bg-light text-dark fw-normal border">Root</span> }
+                                else
+                                { <small class="text-muted">@menu.ParentMenuName</small> }
+                            </td>
+
+                            @* Status *@
+                            <td onclick="event.stopPropagation()">
+                                @if (canEdit)
+                                {
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               @(menu.IsActive ? "checked" : "")
+                                               onchange="toggleStatus(@menu.MenuID, this.checked)"
+                                               id="sw_@menu.MenuID">
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge @(menu.IsActive ? "bg-success" : "bg-secondary")">
+                                        @(menu.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+@* ══ Add / Edit Menu Modal ══ *@
+<div class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add New Menu</h5>
+                <div class="ms-auto d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-success" onclick="saveMenu()" id="btnSaveMenu">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-3">
+                <div id="menuModalNotice" class="alert alert-warning py-2 small d-none mb-3" role="alert"></div>
+                <form id="menuForm" class="row g-3">
+                    <input type="hidden" id="txtMenuId" value="0">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Menu Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtMenuName" maxlength="20"
+                               placeholder="e.g. FeesCollection" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtMenuName"></div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Display Label</label>
+                        <input type="text" class="form-control" id="txtDisplayLabel" maxlength="200"
+                               placeholder="e.g. Fees Collection" autocomplete="off">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Menu Key</label>
+                        <input type="text" class="form-control" id="txtMenuKey" maxlength="50"
+                               placeholder="e.g. FEES_COLLECTION" autocomplete="off">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Menu Icon <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtMenuIcon" maxlength="50"
+                               placeholder="e.g. ti ti-users" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtMenuIcon"></div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Target URL / Route <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtMenuURL" maxlength="300"
+                               placeholder="e.g. /Fees/Index" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtMenuURL"></div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Parent Menu</label>
+                        <select class="form-select form-control searchable-select" id="ddlParentId">
+                            <option value="">None (Root Menu)</option>
+                            @foreach (var row in flatRows)
+                            {
+                                <option value="@row.Menu.MenuID">@Html.Raw(new string('\u00A0', row.Depth * 4)) @row.Menu.MenuName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Display Order</label>
+                        <input type="number" class="form-control" id="txtDisplayOrder" value="0" min="0">
+                        <div class="invalid-feedback" id="errTxtDisplayOrder"></div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-check form-switch mt-4">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    /* ── Permissions ── */
+    const permCanAdd    = @Html.Raw(JsonSerializer.Serialize(canAdd));
+    const permCanEdit   = @Html.Raw(JsonSerializer.Serialize(canEdit));
+    const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+
+    const IV         = window.InlineFormValidation;
+    const menuModal  = new bootstrap.Modal(document.getElementById('menuModal'));
+    let selectedId   = 0;
+
+    const menuFieldMap = {
+        txtMenuName     : 'errTxtMenuName',
+        txtMenuIcon     : 'errTxtMenuIcon',
+        txtMenuURL      : 'errTxtMenuURL',
+        txtDisplayOrder : 'errTxtDisplayOrder'
+    };
+    IV.bindAutoClear(menuFieldMap);
+
+    $(document).ready(() => {
+        initSelect2();
+        initSortable();
+    });
+
+    /* ── Select2 ── */
+    function initSelect2() {
+        const $ddl = $('#ddlParentId');
+        if (!$ddl.length || typeof $ddl.select2 !== 'function') return;
+        if ($ddl.hasClass('select2-hidden-accessible')) return;
+        $ddl.select2({ placeholder: 'Select parent menu', allowClear: true, width: '100%', dropdownParent: $('#menuModal') });
+    }
+
+    /* ════════════════════════════════════════
+       TREE  — expand / collapse
+    ════════════════════════════════════════ */
+    function toggleNode(id, event) {
+        event.stopPropagation();
+        const parentRow = document.querySelector(`tr[data-id='${id}']`);
+        if (!parentRow) return;
+
+        const isExpanded = parentRow.getAttribute('data-expanded') === '1';
+        const icon = parentRow.querySelector('.tree-toggle i');
+
+        if (isExpanded) {
+            // Collapse
+            parentRow.setAttribute('data-expanded', '0');
+            if (icon) icon.className = 'fas fa-plus';
+            collapseDescendants(id);
+        } else {
+            // Expand — show only direct children
+            const children = document.querySelectorAll(`tr[data-parent-id='${id}']`);
+            children.forEach(r => r.style.display = 'table-row');
+            parentRow.setAttribute('data-expanded', '1');
+            if (icon) icon.className = 'fas fa-minus';
+        }
+    }
+
+    function collapseDescendants(id) {
+        const children = document.querySelectorAll(`tr[data-parent-id='${id}']`);
+        children.forEach(r => {
+            r.style.display = 'none';
+            const childId   = r.getAttribute('data-id');
+            const childIcon = r.querySelector('.tree-toggle i');
+            if (childIcon) childIcon.className = 'fas fa-plus';
+            r.setAttribute('data-expanded', '0');
+            collapseDescendants(childId);
+        });
+    }
+
+    /* ════════════════════════════════════════
+       DRAG & DROP
+    ════════════════════════════════════════ */
+    function initSortable() {
+        const tbody = document.querySelector('#menusTable tbody');
+        if (!tbody || !permCanEdit) return;
+
+        Sortable.create(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                const itemEl = evt.item;
+                const menuId = itemEl.getAttribute('data-id');
+                const parentId = itemEl.getAttribute('data-parent-id');
+
+                // 1. Move all descendants along with the parent in the DOM to maintain tree integrity
+                moveDescendantsInDom(menuId, itemEl);
+
+                // 2. Identify all siblings at the same level
+                const selector = parentId ? `tr[data-parent-id="${parentId}"]` : 'tr:not([data-parent-id])';
+                const siblings = Array.from(tbody.querySelectorAll(selector));
+                
+                // 3. Recalculate DisplayOrder based on new DOM order
+                const orders = siblings.map((row, index) => {
+                    const newOrder = index + 1;
+                    row.querySelector('.display-order-cell').textContent = newOrder;
+                    return {
+                        menuID: parseInt(row.getAttribute('data-id')),
+                        displayOrder: newOrder
+                    };
+                });
+
+                // 4. Update on server
+                saveOrder(orders);
+            }
+        });
+    }
+
+    function moveDescendantsInDom(parentId, targetEl) {
+        const descendants = Array.from(document.querySelectorAll(`tr[data-parent-id="${parentId}"]`));
+        let lastInBranch = targetEl;
+        
+        descendants.forEach(child => {
+            lastInBranch.after(child);
+            // Recursively move children of this child
+            lastInBranch = moveDescendantsInDom(child.getAttribute('data-id'), child);
+        });
+        
+        return lastInBranch;
+    }
+
+    async function saveOrder(orders) {
+        try {
+            const res = await (await fetch('/MasterMenu/UpdateOrder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orders)
+            })).json();
+            
+            if (!res.success) {
+                IV.setNotice('menuPageNotice', res.message || 'Failed to update order.');
+            }else{
+                    IV.setNotice('menuPageNotice', res.message || 'Order is updated.');
+            }
+        } catch {
+            IV.setNotice('menuPageNotice', 'Error saving menu order.');
+        }
+    }
+
+    /* ════════════════════════════════════════
+       ROW SELECTION
+    ════════════════════════════════════════ */
+    function selectRow(id, row) {
+        IV.clearNotice('menuPageNotice');
+        selectedId = id;
+        document.querySelectorAll('.tree-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        const btnEdit   = document.getElementById('btnEdit');
+        const btnDelete = document.getElementById('btnDelete');
+        if (btnEdit   && permCanEdit)   btnEdit.disabled   = false;
+        if (btnDelete && permCanDelete) btnDelete.disabled = false;
+
+        let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+    /* ════════════════════════════════════════
+       ADD / EDIT / DELETE
+    ════════════════════════════════════════ */
+    function clearModal() {
+        IV.clearMap(menuFieldMap);
+        IV.clearNotice('menuModalNotice');
+    }
+
+    function openAddModal() {
+        if (!permCanAdd) { IV.setNotice('menuPageNotice', 'You do not have permission to add.'); return; }
+        IV.clearNotice('menuPageNotice');
+        clearModal();
+        document.getElementById('modalTitle').textContent = 'Add New Menu';
+        document.getElementById('menuForm').reset();
+        document.getElementById('txtMenuId').value  = '0';
+        document.getElementById('isActive').checked = true;
+        $('#ddlParentId').val('').trigger('change');
+        menuModal.show();
+    }
+
+    async function editSelected() {
+        if (!permCanEdit) { IV.setNotice('menuPageNotice', 'You do not have permission to edit.'); return; }
+        if (!selectedId)  return;
+        IV.clearNotice('menuPageNotice');
+        clearModal();
+        try {
+            const res = await (await fetch(`/MasterMenu/GetMenu?menuId=${selectedId}`)).json();
+            if (!res.success) { IV.setNotice('menuPageNotice', res.message || 'Could not load menu.'); return; }
+            const m = res.menu;
+            document.getElementById('modalTitle').textContent       = 'Edit Menu';
+            document.getElementById('txtMenuId').value              = m.menuID;
+            document.getElementById('txtMenuName').value            = m.menuName;
+            document.getElementById('txtDisplayLabel').value        = m.displayLabel  || '';
+            document.getElementById('txtMenuKey').value             = m.menuKey       || '';
+            document.getElementById('txtMenuURL').value             = m.menuURL;
+            document.getElementById('txtMenuIcon').value            = m.menuIcon;
+            document.getElementById('txtDisplayOrder').value        = m.displayOrder;
+            document.getElementById('isActive').checked             = m.isActive;
+            $('#ddlParentId').val(m.parentID || '').trigger('change');
+            menuModal.show();
+        } catch { IV.setNotice('menuPageNotice', 'Could not load menu details.'); }
+    }
+
+    async function deleteSelected() {
+        if (!permCanDelete) { IV.setNotice('menuPageNotice', 'You do not have permission to delete.'); return; }
+        if (!selectedId) return;
+
+        IV.clearNotice('menuPageNotice');
+        try {
+            
+
+            let selectedIds = [];
+            $('.student-checkbox:checked').each(function () {
+                     selectedIds.push(parseInt($(this).val()));
+                 });
+            if (selectedIds.length === 0) {
+                         alert("Please select at least one menu.");
+                     return;
+                 }
+             Swal.fire({
+                 title: 'Are you sure?',
+                     text: "You are about to delete this menu record. This action cannot be undone!",
+                 icon: 'warning',
+                 showCancelButton: true,
+                 confirmButtonColor: '#d33',
+                 cancelButtonColor: '#3085d6',
+                 confirmButtonText: 'Yes, delete it!',
+                 customClass: {
+                     confirmButton: 'btn btn-danger me-2',
+                     cancelButton: 'btn btn-secondary'
+                 },
+                 buttonsStyling: false
+             }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                          url: '/MasterMenu/Delete',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                                 Swal.fire('Deleted!', 'menu record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                                 Swal.fire('Error!', res.message || 'Failed to delete menu.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        } catch {
+            IV.setNotice('menuPageNotice', 'Could not delete menu.');
+        }
+    }
+
+    /* ════════════════════════════════════════
+       SAVE
+    ════════════════════════════════════════ */
+    function validateMenuForm() {
+        clearModal();
+        let ok = true;
+        const name  = document.getElementById('txtMenuName').value.trim();
+        const icon  = document.getElementById('txtMenuIcon').value.trim();
+        const url   = document.getElementById('txtMenuURL').value.trim();
+        const order = parseInt(document.getElementById('txtDisplayOrder').value, 10);
+        if (!name)                                           { IV.setFieldError('txtMenuName',     'errTxtMenuName',     'Menu name is required.');          ok = false; }
+        if (!icon)                                           { IV.setFieldError('txtMenuIcon',     'errTxtMenuIcon',     'Menu icon is required.');          ok = false; }
+        if (!url)                                            { IV.setFieldError('txtMenuURL',      'errTxtMenuURL',      'Target URL is required.');         ok = false; }
+        if (isNaN(order) || order < 0)                      { IV.setFieldError('txtDisplayOrder', 'errTxtDisplayOrder', 'Enter a valid display order (≥ 0).'); ok = false; }
+        return ok;
+    }
+
+    async function saveMenu() {
+        const menuId = parseInt(document.getElementById('txtMenuId').value);
+        if (menuId === 0 && !permCanAdd)  { IV.setNotice('menuModalNotice', 'No permission to add.');  return; }
+        if (menuId  >  0 && !permCanEdit) { IV.setNotice('menuModalNotice', 'No permission to edit.'); return; }
+        if (!validateMenuForm()) return;
+
+        const data = {
+            menuID       : menuId,
+            menuName     : document.getElementById('txtMenuName').value.trim(),
+            displayLabel : document.getElementById('txtDisplayLabel').value.trim(),
+            menuKey      : document.getElementById('txtMenuKey').value.trim(),
+            menuIcon     : document.getElementById('txtMenuIcon').value.trim(),
+            menuURL      : document.getElementById('txtMenuURL').value.trim(),
+            parentID     : document.getElementById('ddlParentId').value
+                             ? parseInt(document.getElementById('ddlParentId').value) : null,
+            displayOrder : parseInt(document.getElementById('txtDisplayOrder').value, 10),
+            isActive     : document.getElementById('isActive').checked
+        };
+
+        const btn = document.getElementById('btnSaveMenu');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+
+        try {
+            const res = await (await fetch('/MasterMenu/Save', {
+                method  : 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body    : JSON.stringify(data)
+            })).json();
+            if (res.success) { menuModal.hide(); location.reload(); }
+            else {
+                IV.setNotice('menuModalNotice', res.message || 'Save failed.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ti ti-cloud me-1"></i>Save';
+            }
+        } catch {
+            IV.setNotice('menuModalNotice', 'Could not save menu.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ti ti-cloud me-1"></i>Save';
+        }
+    }
+
+    /* ════════════════════════════════════════
+       STATUS TOGGLE
+    ════════════════════════════════════════ */
+    async function toggleStatus(menuId, isActive) {
+        if (!permCanEdit) { IV.setNotice('menuPageNotice', 'No permission to change status.'); location.reload(); return; }
+        IV.clearNotice('menuPageNotice');
+        try {
+            const res = await (await fetch(`/MasterMenu/ToggleStatus?menuId=${menuId}&isActive=${isActive}`, { method: 'POST' })).json();
+            if (!res.success) { IV.setNotice('menuPageNotice', res.message || 'Could not update status.'); location.reload(); }
+        } catch { IV.setNotice('menuPageNotice', 'Could not update status.'); location.reload(); }
+    }
+
+
+        let exportTable;
+        $(document).ready(function () {
+            if ($.fn.DataTable.isDataTable('#menusTable')) {
+                $('#menusTable').DataTable().destroy();
+            }
+            exportTable = $('#menusTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7], rows: ':visible' } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7], rows: ':visible' } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7], rows: ':visible' } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7], rows: ':visible' } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7], rows: ':visible' } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false
+            });
+        });
+
+        function triggerExport(type) {
+            if (!exportTable) return;
+            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+            else if (type === 'print') exportTable.button('.buttons-print').trigger();
+        }
+
+        document.getElementById('txtSearchInput').addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#menusTable tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+</script>
+}

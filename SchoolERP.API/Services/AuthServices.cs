@@ -1,0 +1,83 @@
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
+using SchoolERP.API.DTOs;
+using SchoolERP.API.Interfaces;
+using SchoolERP.API.Models;
+using SchoolERP.API.Models.Common;
+using SchoolERP.API.Utilities;
+using System.Data;
+
+namespace SchoolERP.API.Services
+{
+    public class AuthServices: IAuthServices
+    {
+        private readonly IConfiguration _configuration;
+        private readonly JwtHelper _jwtHelper;
+
+        public AuthServices(IConfiguration configuration, JwtHelper jwtHelper)
+        {
+            _configuration = configuration;
+            _jwtHelper = jwtHelper;
+        }
+
+        // This function is used to authenticate a user, retrieve session details, and generate a JWT token.
+        public async Task<ApiResponse<UserSessionModel?>> LoginAsync(string username,string password)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+
+                param.Add("@Username", username);
+                param.Add("@PasswordPlain", password);
+
+                using var multi = await conn.QueryMultipleAsync(
+                    "sp_User_Login_Secure",
+                    param,
+                    commandType: CommandType.StoredProcedure);
+
+                var loginResult =
+                    await multi.ReadFirstOrDefaultAsync<LoginResultDto>();
+
+                if (loginResult == null)
+                {
+                    return ApiResponse<UserSessionModel?>
+                        .ErrorResponse("User not found");
+                }
+
+                if (loginResult.Result == 0)
+                {
+                    return ApiResponse<UserSessionModel?>
+                        .ErrorResponse(loginResult.Message);
+                }
+
+                var user =await multi.ReadFirstOrDefaultAsync<UserSessionModel>();
+
+                // Use empty string if UserTypeName is null or empty
+                var userTypeName =
+                    !string.IsNullOrWhiteSpace(user.UserTypeName)
+                        ? user.UserTypeName
+                        : string.Empty;
+
+                // Generate JWT token for authenticated user
+                user.Token = _jwtHelper.GenerateToken(
+                    user.Username,
+                    user.DefaultRoleName,
+                    user.UserID,
+                    user.UserTypeID,
+                    user.DefaultRoleID,
+                    userTypeName);
+
+                return ApiResponse<UserSessionModel?>
+                    .SuccessResponse(user, loginResult.Message);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<UserSessionModel?>
+            .ErrorResponse(ex.Message);
+            }            
+        }
+    }
+}

@@ -1,0 +1,280 @@
+@*
+    ======================================================================
+    VIEW: Settings / IdAutoGen.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">ID Auto Generation</h6>
+    </div>
+    <div class="d-flex gap-1">
+        <button class="btn btn-success shadow-sm" onclick="saveAllSettings()">
+            <i class="ti ti-cloud me-1"></i> Save All
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Student Admission No. Section -->
+    <div class="col-xl-12 mb-2">
+        <div class="card shadow-tbl-outer h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fs-14 mb-0">Student Admission No. Auto Generation</h6>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="chkStudentEnabled">
+                        <label class="form-check-label" for="chkStudentEnabled">Enable Auto Generation</label>
+                    </div>
+                </div>
+                
+                <div class="bg-light rounded-3 p-3">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Prefix</label>
+                            <input type="text" id="txtStudentPrefix" class="form-control" placeholder="e.g. ADM">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Digit Count</label>
+                            <select id="ddlStudentDigitCount" class="form-select form-control">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4" selected>4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start From</label>
+                            <input type="number" id="txtStudentStartNo" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Include System Fields (In Order)</label>
+                            <select id="ddlStudentFields" class="form-select" multiple>
+                                <!-- Populated dynamically -->
+                            </select>
+                            <small class="text-muted">Selected fields will be appended to the prefix before the sequence number.</small>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-2 border rounded bg-white">
+                                <span class="text-muted small d-block">ID Preview:</span>
+                                <span id="previewStudentID" class="text-primary fs-14 fw-semibold">ADM-0001</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff ID Section -->
+    <div class="col-xl-12 mb-2">
+        <div class="card shadow-tbl-outer h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="fs-14 mb-0">Staff ID Auto Generation</h6>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="chkStaffEnabled">
+                        <label class="form-check-label" for="chkStaffEnabled">Enable Auto Generation</label>
+                    </div>
+                </div>
+
+                <div class="bg-light rounded-3 p-3">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Prefix</label>
+                            <input type="text" id="txtStaffPrefix" class="form-control" placeholder="e.g. STF">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Digit Count</label>
+                            <select id="ddlStaffDigitCount" class="form-select form-control">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4" selected>4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start From</label>
+                            <input type="number" id="txtStaffStartNo" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Include System Fields (In Order)</label>
+                            <select id="ddlStaffFields" class="form-select" multiple>
+                                <!-- Populated dynamically -->
+                            </select>
+                            <small class="text-muted">Selected fields will be appended to the prefix before the sequence number.</small>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-2 border rounded bg-white">
+                                <span class="text-muted small d-block">ID Preview:</span>
+                                <span id="previewStaffID" class="text-primary fs-14 fw-semibold">STF-0001</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const IV = window.InlineFormValidation;
+    let studentChoice = null;
+    let staffChoice   = null;
+
+    $(document).ready(async () => {
+        initChoices();
+        await Promise.all([
+            loadSystemFields(),
+            loadCurrentSettings()
+        ]);
+        updatePreviews();
+        bindChangeEvents();
+    });
+
+    function initChoices() {
+        const config = { removeItemButton: true, placeholder: true, placeholderValue: 'Select fields to include' };
+        studentChoice = new Choices('#ddlStudentFields', config);
+        staffChoice   = new Choices('#ddlStaffFields', config);
+    }
+
+    async function loadSystemFields() {
+        try {
+            console.log('Fetching system fields...');
+            // Try plural form first (students/staff)
+            let [stdRes, stfRes] = await Promise.all([
+                fetch('/Settings/GetAllFields?belongsTo=students&isSystemField=true').then(r => r.json()),
+                fetch('/Settings/GetAllFields?belongsTo=staff&isSystemField=true').then(r => r.json())
+            ]);
+
+            console.log('Student fields response:', stdRes);
+            console.log('Staff fields response:', stfRes);
+
+            // If plural returns nothing, try singular
+            if (stdRes.success && (!stdRes.data || stdRes.data.length === 0)) {
+                console.log('Plural "students" returned no data, trying "student"...');
+                stdRes = await fetch('/Settings/GetAllFields?belongsTo=student&isSystemField=true').then(r => r.json());
+                console.log('Singular "student" response:', stdRes);
+            }
+
+            if (stdRes.success && stdRes.data) {
+                const stdOpts = stdRes.data.map(f => ({ value: f.fieldName, label: f.fieldName }));
+                studentChoice.setChoices(stdOpts, 'value', 'label', true);
+            }
+
+            if (stfRes.success && stfRes.data) {
+                const stfOpts = stfRes.data.map(f => ({ value: f.fieldName, label: f.fieldName }));
+                staffChoice.setChoices(stfOpts, 'value', 'label', true);
+            }
+        } catch (e) { 
+            console.error('Error loading fields:', e); 
+        }
+    }
+
+    async function loadCurrentSettings() {
+        try {
+            const res = await (await fetch('/Settings/GetIDAutoGenSettings')).json();
+            if (res.success && res.data) {
+                res.data.forEach(s => {
+                    if (s.entityType === 'Student') {
+                        $('#chkStudentEnabled').prop('checked', s.isEnabled);
+                        $('#txtStudentPrefix').val(s.prefix);
+                        $('#ddlStudentDigitCount').val(s.digitCount);
+                        $('#txtStudentStartNo').val(s.startNo);
+                        if (s.fieldsToInclude) {
+                            studentChoice.setChoiceByValue(s.fieldsToInclude.split(','));
+                        }
+                    } else if (s.entityType === 'Staff') {
+                        $('#chkStaffEnabled').prop('checked', s.isEnabled);
+                        $('#txtStaffPrefix').val(s.prefix);
+                        $('#ddlStaffDigitCount').val(s.digitCount);
+                        $('#txtStaffStartNo').val(s.startNo);
+                        if (s.fieldsToInclude) {
+                            staffChoice.setChoiceByValue(s.fieldsToInclude.split(','));
+                        }
+                    }
+                });
+            }
+        } catch (e) { console.error('Error loading settings:', e); }
+    }
+
+    function updatePreviews() {
+        // Student Preview
+        let stdP = $('#txtStudentPrefix').val() || '';
+        const stdFields = studentChoice.getValue(true);
+        if (stdFields.length > 0) stdP += '-' + stdFields.join('-');
+        const stdSeq = String($('#txtStudentStartNo').val() || 1).padStart($('#ddlStudentDigitCount').val(), '0');
+        $('#previewStudentID').text(stdP + (stdP ? '-' : '') + stdSeq);
+
+        // Staff Preview
+        let stfP = $('#txtStaffPrefix').val() || '';
+        const stfFields = staffChoice.getValue(true);
+        if (stfFields.length > 0) stfP += '-' + stfFields.join('-');
+        const stfSeq = String($('#txtStaffStartNo').val() || 1).padStart($('#ddlStaffDigitCount').val(), '0');
+        $('#previewStaffID').text(stfP + (stfP ? '-' : '') + stfSeq);
+    }
+
+    function bindChangeEvents() {
+        $('input, select').on('change input', updatePreviews);
+        $('#ddlStudentFields, #ddlStaffFields').on('change', updatePreviews);
+    }
+
+    async function saveAllSettings() {
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+        const studentData = {
+            entityType: 'Student',
+            isEnabled: $('#chkStudentEnabled').is(':checked'),
+            prefix: $('#txtStudentPrefix').val().trim(),
+            digitCount: parseInt($('#ddlStudentDigitCount').val()),
+            startNo: parseInt($('#txtStudentStartNo').val()),
+            fieldsToInclude: studentChoice.getValue(true)
+        };
+
+        const staffData = {
+            entityType: 'Staff',
+            isEnabled: $('#chkStaffEnabled').is(':checked'),
+            prefix: $('#txtStaffPrefix').val().trim(),
+            digitCount: parseInt($('#ddlStaffDigitCount').val()),
+            startNo: parseInt($('#txtStaffStartNo').val()),
+            fieldsToInclude: staffChoice.getValue(true)
+        };
+
+        try {
+            const [res1, res2] = await Promise.all([
+                fetch('/Settings/SaveIDAutoGenSettings', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(studentData)
+                }).then(r => r.json()),
+                fetch('/Settings/SaveIDAutoGenSettings', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(staffData)
+                }).then(r => r.json())
+            ]);
+
+            if (res1.success && res2.success) {
+                IV.setNotice('global', 'All settings saved successfully!', 'success');
+            } else {
+                IV.setNotice('global', (res1.message || res2.message || 'Error saving settings'), 'danger');
+            }
+        } catch (e) {
+            IV.setNotice('global', 'Network error while saving settings', 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+</script>
+}

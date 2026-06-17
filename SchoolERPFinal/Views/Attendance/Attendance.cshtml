@@ -1,0 +1,408 @@
+
+@{
+    ViewData["Title"] = "Attendance";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Student Attendance</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button id="btnSaveAttendance" class="btn btn-success d-inline-flex align-items-center">
+            <i class="ti ti-cloud me-1"></i>Save Attendance
+        </button>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search students..." style="min-width: 220px;">
+                    </div>
+                    @* <input type="text" id="txtSearch" class="form-control w-25 me-3" placeholder="Search students..." onkeyup="filterAttendanceTable()" /> *@
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                    <h6 class="mb-0 fw-bold">
+                                        Select Criteria
+                                    </h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <!-- <a href="javascript:void(0);" class="btn btn-light btn-md me-2 fw-medium" id="close-filter">Close</a> -->
+                                        <button type="button" id="btnFilterSearch" class="btn text-primary fs-6">Filter</button>
+                                    </div>
+                                </div>
+                                <form id="filterForm">
+                                    <div class="filter-body pb-0">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">
+                                                Class<span class="text-danger">*</span>
+                                            </label>
+                                            <select id="classSelect" class="form-select form-control select2" required>
+                                                <option value="">Select Class</option>
+                                                @if (ViewBag.ClassList != null)
+                                                {
+                                                    foreach (var c in ViewBag.ClassList)
+                                                    {
+                                                        <option value="@c.ClassID">@c.ClassName</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">
+                                                Section<span class="text-danger">*</span>
+                                            </label>
+                                            <select id="sectionSelect" class="form-select form-control select2" required>
+                                                <option value="">Select Section</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-header d-flex justify-content-between align-items-center">
+
+                    <div>
+                        <label class="form-label mb-1">Attendance Date</label>
+                        <input type="date" id="attendanceDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="text-end">
+                        <label class="form-label mb-1">Set attendance for all Students as</label>
+
+                    <div>
+                        <input type="radio" class="btn-check set-all" name="options-base" id="option5" data-status="1">
+                        <label class="btn btn-outline-success" for="option5">Present</label>
+
+                        <input type="radio" class="btn-check set-all" name="options-base" id="option6" data-status="2">
+                        <label class="btn btn-outline-warning" for="option6">Late</label>
+
+                        <input type="radio" class="btn-check set-all" name="options-base" id="option7" data-status="3">
+                        <label class="btn btn-outline-danger" for="option7">Absent</label>
+
+                        <input type="radio" class="btn-check set-all" name="options-base" id="option8" data-status="4">
+                        <label class="btn btn-outline-info" for="option8">Half Day</label>
+
+                        <input type="radio" class="btn-check set-all" name="options-base" id="option9" data-status="5">
+                        <label class="btn btn-outline-secondary" for="option9">Holiday</label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>
+                                    <div style="white-space: nowrap;">Admission No</div>
+                                </th>
+                                <th>Role No</th>
+                                <th>Name</th>
+                                <th>Attendance</th>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th class="text-end">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center">Select filters and click search to load students.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- end card-body -->
+        </div>
+        <!-- end card -->
+    </div>
+    <!-- end col -->
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.select2').select2({ dropdownParent: $('#filter-dropdown') });
+
+            // Stop dropdown from closing when clicking inside
+            $('#filter-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+
+            $('#classSelect').on('change', function () {
+                const classId = $(this).val();
+                if (classId) {
+                    $.get('/Attendance/GetSectionsByClass', { classId: classId }, function (res) {
+                        if (res.success) {
+                            let html = '<option value="">Select Section</option>';
+                            res.data.forEach(s => {
+                                html += `<option value="${s.sectionID}">${s.sectionName}</option>`;
+                            });
+                            $('#sectionSelect').html(html).trigger('change');
+                        }
+                    });
+                }
+            });
+
+            $('#btnFilterSearch').on('click', function (e) {
+                e.preventDefault();
+                loadAttendanceList();
+            });
+
+            $('#attendanceDate').on('change', function () {
+                const classId = $('#classSelect').val();
+                const sectionId = $('#sectionSelect').val();
+                if (classId && sectionId) {
+                    loadAttendanceList();
+                } else {
+                    renderFilterBadges();
+                }
+            });
+
+            $('#txtSearch').on('keyup', function () {
+                filterAttendanceTable();
+            });
+
+            $('.set-all').on('change', function () {
+                const status = $(this).data('status');
+                $(`input[type="radio"][value="${status}"]`).prop('checked', true);
+            });
+
+            $('#btnSaveAttendance').on('click', function () {
+                const classId = $('#classSelect').val();
+                const sectionId = $('#sectionSelect').val();
+                const date = $('#attendanceDate').val();
+
+                if (!classId || !sectionId || !date) {
+                    Swal.fire('Error', 'Please select all filters first', 'error');
+                    return;
+                }
+
+                const attendanceData = [];
+                $('#attendanceTableBody tr').each(function () {
+                    const studentId = $(this).attr('data-student-id');
+                    if (studentId) {
+                        const status = $(this).find('input[type="radio"]:checked').val();
+                        const note = $(this).find('.attendance-note').val();
+                        attendanceData.push({ 
+                            StudentID: parseInt(studentId), 
+                            Status: parseInt(status), 
+                            Note: note 
+                        });
+                    }
+                });
+
+                if (attendanceData.length === 0) {
+                    Swal.fire('Info', 'No students found to mark attendance', 'info');
+                    return;
+                }
+
+                const req = {
+                    classId: parseInt(classId),
+                    sectionId: parseInt(sectionId),
+                    attendanceDate: date,
+                    attendanceData: attendanceData
+                };
+
+                $.ajax({
+                    url: '/Attendance/SaveAttendance',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(req),
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire('Success', res.message, 'success');
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    }
+                });
+            });
+        });
+
+        function loadAttendanceList() {
+            const classId = $('#classSelect').val();
+            const sectionId = $('#sectionSelect').val();
+            const date = $('#attendanceDate').val();
+
+            if (!classId || !sectionId || !date) {
+                Swal.fire('Error', 'Please select class, section and date', 'error');
+                return;
+            }
+
+            $.get('/Attendance/GetAttendanceList', { classId: classId, sectionId: sectionId, date: date }, function (res) {
+                if (res.success) {
+                    let html = '';
+                    if (res.data.length === 0) {
+                        html = '<tr><td colspan="8" class="text-center">No students found for selected criteria.</td></tr>';
+                    } else {
+                        res.data.forEach((s, index) => {
+                            html += `
+                                <tr data-student-id="${s.studentID}" class="attendance-row">
+                                    <td>${index + 1}</td>
+                                    <td>${s.admissionNo}</td>
+                                    <td>${s.rollNo || '-'}</td>
+                                    <td>${s.studentName}</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="1" ${s.attendanceStatus == 1 ? 'checked' : ''}>
+                                                <label class="form-check-label">Present</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="2" ${s.attendanceStatus == 2 ? 'checked' : ''}>
+                                                <label class="form-check-label">Late</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="3" ${s.attendanceStatus == 3 ? 'checked' : ''}>
+                                                <label class="form-check-label">Absent</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="4" ${s.attendanceStatus == 4 ? 'checked' : ''}>
+                                                <label class="form-check-label">Half Day</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="5" ${s.attendanceStatus == 5 ? 'checked' : ''}>
+                                                <label class="form-check-label">Holiday</label>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${date}</td>
+                                    <td>Manual</td>
+                                    <td class="text-end">
+                                        <input type="text" style="width:200px" class="form-control attendance-note" value="${s.note || ''}">
+                                    </td>
+                                </tr>`;
+                        });
+                    }
+                    $('#attendanceTableBody').html(html);
+                    renderFilterBadges();
+                    $('.filter-dropdown').removeClass('show'); // Hide dropdown after filtering
+                }
+            });
+        }
+
+        // --- Filter Badges Logic ---
+        function filterAttendanceTable() {
+            const search = document.getElementById('txtSearch').value.toLowerCase();
+            document.querySelectorAll('.attendance-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(search) ? '' : 'none';
+            });
+            renderFilterBadges();
+        }
+
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearch', label: 'Search', type: 'text' },
+                { id: 'classSelect', label: 'Class', type: 'select' },
+                { id: 'sectionSelect', label: 'Section', type: 'select' },
+                { id: 'attendanceDate', label: 'Date', type: 'date' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'date') {
+                   // Only show if different from today maybe? or just show it
+                   if (value) {
+                       text = value;
+                       activeCount++;
+                   }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                if (filterId === 'txtSearch') filterAttendanceTable();
+                else loadAttendanceList();
+            } else {
+                el.value = '';
+                loadAttendanceList();
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('txtSearch').value = '';
+            document.getElementById('classSelect').value = '';
+            document.getElementById('sectionSelect').value = '';
+            // Reset date to today
+            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+            
+            filterAttendanceTable();
+            loadAttendanceList();
+        }
+    </script>
+}

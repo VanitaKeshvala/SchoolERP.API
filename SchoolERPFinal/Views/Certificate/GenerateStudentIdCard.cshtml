@@ -1,0 +1,363 @@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Generate Student ID Card";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canExport = PermHelper.HasPermissionByUrl("/Certificate/GenerateStudentIdCard", "Export");
+}
+
+<style>
+.dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Generate Student ID Card</h6>
+    </div>
+    <div>
+        <button type="button" class="btn btn-secondary" onclick="generateSelectedIDCards()">
+            <i class="ti ti-printer me-1"></i> Generate & Print
+        </button>
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-tbl-outer mb-2">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Class</label>
+                <select class="form-select select2" id="genClassId" onchange="loadSectionsForGen(this.value)">
+                    <option value="">Select Class</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold">Section</label>
+                <select class="form-select select2" id="genSectionId">
+                    <option value="">Select Section</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">ID Card Template</label>
+                <select class="form-select select2" id="genIDCardId">
+                    <option value="">Select Template</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-info w-100" onclick="searchStudentsForGen()">
+                    <i class="ti ti-search me-1"></i> Search Students
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-tbl">
+    <div class="card-body">
+        <div class="table-responsive" style="max-height: 600px;">
+            <table class="table" id="genStudentTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" class="form-check-input" id="selectAllStudents" onchange="toggleAllStudentsForGen(this.checked)">
+                        </th>
+                        <th>Admission No</th>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th>Class</th>
+                        <th>Father Name</th>
+                    </tr>
+                </thead>
+                <tbody id="genStudentList">
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function triggerExport(index) {
+        if ($.fn.DataTable.isDataTable('#genStudentTable')) {
+                const table = $('#genStudentTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+        let sicTable;
+$(document).ready(function () {
+         sicTable=   $('#genStudentTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false,
+                language: {
+                    emptyTable: "Please select filters and search to see students."
+                }
+        });
+})
+
+
+        window.loadClassesForGen = function () {
+            $.get('/Certificate/GetAllClasses', function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Class</option>';
+                    resp.data.forEach(function(item) {
+                        html += '<option value="' + item.classID + '">' + item.className + '</option>';
+                    });
+                    $('#genClassId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.loadSectionsForGen = function (classId) {
+            if (!classId) {
+                $('#genSectionId').html('<option value="">Select Section</option>').trigger('change');
+                return;
+            }
+            $.get('/Certificate/GetSectionsByClass?classId=' + classId, function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Section</option>';
+                    resp.data.forEach(function(item) {
+                        html += '<option value="' + item.sectionID + '">' + item.sectionName + '</option>';
+                    });
+                    $('#genSectionId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.loadTemplatesForGen = function () {
+            $.get('/Certificate/GetAllStudentIDCards', function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Template</option>';
+                    resp.data.forEach(function(item) {
+                        if (item.isActive) {
+                            html += '<option value="' + item.idCardID + '">' + item.idCardTitle + '</option>';
+                        }
+                    });
+                    $('#genIDCardId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.searchStudentsForGen = function () {
+
+            var classId = $('#genClassId').val();
+            var sectionId = $('#genSectionId').val();
+
+            if (!classId) {
+                alert('Please select a class.');
+                return;
+            }
+
+            $.get('/Certificate/GetStudentList',
+                {
+                    classId: classId,
+                    sectionId: sectionId
+                },
+                function (resp) {
+
+                    if (resp.success) {
+
+                        sicTable.clear();
+
+                        if (resp.data.length > 0) {
+
+                            resp.data.forEach(function (item) {
+
+                                sicTable.row.add([
+
+                                    '<input type="checkbox" class="form-check-input gen-student-check" value="' + item.studentID + '">',
+
+                                    (item.admissionNo || ''),
+
+                                    (item.rollNo || ''),
+
+                                    (item.fullName || ''),
+
+                                    (item.className || '') + ' (' + (item.sectionName || '') + ')',
+
+                                    (item.fatherName || '')
+
+                                ]);
+
+                            });
+
+                        }
+
+                        sicTable.draw();
+                    }
+                });
+        };
+
+        window.toggleAllStudentsForGen = function (c) { $('.gen-student-check').prop('checked', c); };
+
+        window.generateSelectedIDCards = async function () {
+            var templateId = $('#genIDCardId').val();
+            if (!templateId) { alert('Please select a template.'); return; }
+            var sIds = [];
+            $('.gen-student-check:checked').each(function() { sIds.push($(this).val()); });
+            if (sIds.length === 0) { alert('Please select at least one student.'); return; }
+
+            var $btn = $('button[onclick="generateSelectedIDCards()"]');
+            var originalBtnHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Generating...');
+
+            try {
+                var tResp = await $.get('/Certificate/GetStudentIDCardByID?id=' + templateId);
+                if (!tResp.success || !tResp.data) {
+                    alert('Failed to load template.');
+                    return;
+                }
+
+                var template = tResp.data;
+                var fullHtml = '<div class="id-card-print-container">';
+                
+                for (var i = 0; i < sIds.length; i++) {
+                    var sResp = await $.get('/Certificate/GetStudentByID?id=' + sIds[i]);
+                    if (sResp.success) {
+                        fullHtml += createIDCardHtml(sResp.data, template);
+                    }
+                }
+                fullHtml += '</div>';
+
+                if (fullHtml) {
+                    var pw = window.open('', '_blank');
+                    pw.document.write('<html><head><title>Print ID Cards</title>');
+                    pw.document.write('<style>');
+                    pw.document.write('body { margin: 0; padding: 20px; font-family: sans-serif; background: #f0f0f0; }');
+                    pw.document.write('.id-card-print-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }');
+                    
+                    // Horizontal Base
+                    pw.document.write('.id-card-horiz { width: 350px; min-height: 220px; height: auto; background: #fff; border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid #ddd; background-size: cover; background-position: center; page-break-inside: avoid; padding-bottom: 40px; }');
+                    pw.document.write('.id-card-horiz .id-card-header { padding: 10px; display: flex; align-items: center; gap: 10px; color: #fff; }');
+                    pw.document.write('.id-card-horiz .id-card-logo { width: 40px; height: 40px; border-radius: 50%; background: #fff; padding: 2px; }');
+                    pw.document.write('.id-card-horiz .id-card-school { flex: 1; font-size: 14px; font-weight: bold; line-height: 1.2; }');
+                    pw.document.write('.id-card-horiz .id-card-body { padding: 10px; display: flex; gap: 10px; }');
+                    pw.document.write('.id-card-horiz .id-card-photo { width: 80px; height: 100px; border: 2px solid #eee; background: #f9f9f9; display: flex; align-items: center; justify-content: center; overflow: hidden; }');
+                    pw.document.write('.id-card-horiz .id-card-photo img { width: 100%; height: 100%; object-fit: cover; }');
+                    pw.document.write('.id-card-horiz .id-card-info { flex: 1; font-size: 11px; line-height: 1.4; }');
+                    
+                    // Vertical Base
+                    pw.document.write('.id-card-vert { width: 240px; min-height: 380px; height: auto; background: #fff; border-radius: 10px; overflow: hidden; position: relative; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid #ddd; background-size: cover; background-position: center; page-break-inside: avoid; padding-bottom: 40px; }');
+                    pw.document.write('.id-card-vert .id-card-header { padding: 15px 10px; text-align: center; color: #fff; }');
+                    pw.document.write('.id-card-vert .id-card-logo { width: 50px; height: 50px; border-radius: 50%; background: #fff; padding: 2px; margin-bottom: 5px; }');
+                    pw.document.write('.id-card-vert .id-card-school { font-size: 14px; font-weight: bold; line-height: 1.2; }');
+                    pw.document.write('.id-card-vert .id-card-body { padding: 10px; text-align: center; }');
+                    pw.document.write('.id-card-vert .id-card-photo { width: 90px; height: 110px; border: 2px solid #eee; background: #f9f9f9; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0 auto 10px; }');
+                    pw.document.write('.id-card-vert .id-card-photo img { width: 100%; height: 100%; object-fit: cover; }');
+                    pw.document.write('.id-card-vert .id-card-info { font-size: 11px; line-height: 1.5; text-align: left; margin-top: 5px; }');
+
+                    pw.document.write('.info-row { display: flex; margin-bottom: 2px; } .info-label { width: 80px; font-weight: bold; color: #555; } .info-val { flex: 1; color: #000; }');
+                    pw.document.write('.id-card-footer { position: absolute; bottom: 0; width: 100%; padding: 5px 10px; font-size: 9px; color: #666; border-top: 1px solid #eee; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: space-between; }');
+                    pw.document.write('.signature-img { height: 30px; max-width: 80px; object-fit: contain; }');
+                    pw.document.write('@@media print { body { background: #fff; padding: 0; } .id-card-print-container { gap: 10px; } .id-card-horiz, .id-card-vert { box-shadow: none; border: 1px solid #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }');
+                    pw.document.write('<\/style><\/head><body>');
+                    pw.document.write(fullHtml);
+                    pw.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };<\/script>');
+                    pw.document.write('<\/body><\/html>');
+                    pw.document.close();
+                }
+            } catch (e) { 
+                console.error(e);
+                alert('Error generating ID cards.'); 
+            } finally {
+                $btn.prop('disabled', false).html(originalBtnHtml);
+            }
+        };
+
+        function createIDCardHtml(student, template) {
+            console.log(student);
+            console.log(template);
+            var bg = template.backgroundImageBase64 ? 'url(' + template.backgroundImageBase64 + ')' : 'none';
+            var logo = template.logoImageBase64 ? '<img src="' + template.logoImageBase64 + '" class="id-card-logo" />' : '';
+            var signature = template.signatureImageBase64 ? '<img src="' + template.signatureImageBase64 + '" class="signature-img" />' : '';
+            
+            var photo = '';
+            if (student.basicInfo.studentPhoto) {
+                photo = '<img src="data:' + (student.basicInfo.studentPhotoType || 'image/png') + ';base64,' + student.basicInfo.studentPhoto + '" />';
+            }
+
+            var isVertical = template.designType == 2;
+            var cardClass = isVertical ? 'id-card-vert' : 'id-card-horiz';
+            
+            var html = '<div class="' + cardClass + '" style="background-image:' + bg + '">';
+            
+            // Header
+            html += '<div class="id-card-header" style="background-color:' + (template.headerColor || '#007bff') + '">';
+            if (isVertical) {
+                html += logo + '<div class="id-card-school">' + (template.schoolName || 'SCHOOL NAME') + '</div>';
+                html += '<div style="font-size:10px; font-weight:normal; opacity:0.9;">' + (template.idCardTitle || '') + '</div>';
+            } else {
+                html += logo + '<div class="id-card-school">' + (template.schoolName || 'SCHOOL NAME') + '<div style="font-size:10px; font-weight:normal; opacity:0.9;">' + (template.idCardTitle || '') + '</div></div>';
+            }
+            html += '</div>';
+
+            // Body
+            html += '<div class="id-card-body">';
+            html += '<div class="id-card-photo">' + (photo || '<i class="ti ti-user" style="font-size:40px; color:#ccc;"></i>') + '</div>';
+            html += '<div class="id-card-info">';
+            
+            if (template.showStudentName) html += '<div class="info-row" style="font-size:13px; font-weight:bold; margin-bottom:5px;"><div class="info-val">' + (student.basicInfo.fullName || '') + '</div></div>';
+            if (template.showAdmissionNo) html += '<div class="info-row"><div class="info-label">Adm No:</div><div class="info-val">' + (student.basicInfo.rollNo || '') + '</div></div>';
+            if (template.showClass) html += '<div class="info-row"><div class="info-label">Class:</div><div class="info-val">' + (student.basicInfo.className || '') + ' (' + (student.basicInfo.sectionName || '') + ')</div></div>';
+            if (template.showFatherName) html += '<div class="info-row"><div class="info-label">Father:</div><div class="info-val">' + (student.basicInfo.fatherName || '') + '</div></div>';
+            if (template.showMotherName) html += '<div class="info-row"><div class="info-label">Mother:</div><div class="info-val">' + (student.basicInfo.motherName || '') + '</div></div>';
+            if (template.showDOB) html += '<div class="info-row"><div class="info-label">DOB:</div><div class="info-val">' + (student.basicInfo.dob ? new Date(student.basicInfo.dob).toLocaleDateString() : '') + '</div></div>';
+            if (template.showBloodGroup) html += '<div class="info-row"><div class="info-label">Blood:</div><div class="info-val">' + (student.basicInfo.bloodGroup || '') + '</div></div>';
+            if (template.showPhone) html += '<div class="info-row"><div class="info-label">Phone:</div><div class="info-val">' + (student.basicInfo.mobileNo || '') + '</div></div>';
+            if (template.showStudentAddress && student.addresses && student.addresses.length > 0) {
+                html += '<div class="info-row"><div class="info-label">Address:</div><div class="info-val" style="font-size:9px;">' + (student.addresses[0].addressDetails || '') + '</div></div>';
+            }
+
+            html += '</div></div>';
+
+            // Footer
+            html += '<div class="id-card-footer">';
+            html += '<div style="flex:1; max-height: 30px; overflow: hidden;">' + (template.addressPhoneEmail || '') + '</div>';
+            if (signature) {
+                html += '<div class="signature-box" style="text-align:right;">' + signature + '<div style="font-size:7px; margin-top:2px;">Principal Signature</div></div>';
+            }
+            html += '</div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        $(function () {
+            if ($.fn.select2) $('.select2').select2({ width: '100%' });
+            loadClassesForGen();
+            loadTemplatesForGen();
+        });
+    </script>
+}

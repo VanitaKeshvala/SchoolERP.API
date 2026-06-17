@@ -1,0 +1,412 @@
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Content Type Master";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/DownloadCenter/ContentType", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/DownloadCenter/ContentType", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/DownloadCenter/ContentType", "Delete");
+}
+
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Content Type List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <button class="btn btn-primary d-inline-flex align-items-center" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerBtn(4)">
+            <i class="ti ti-printer me-1"></i>Print
+        </button>
+        <div class="dropdown">
+            <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search by name..." style="min-width: 220px;" onkeyup="loadData()">
+                    </div>
+                    <!--<input type="text" id="txtSearch" class="form-control w-25 me-3" placeholder="Search by name..." onkeyup="loadData()" />-->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblContentType">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr>
+                                <td colspan="4" class="text-center py-4"><div class="spinner-border text-primary"></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="upsertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Content Type</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="saveData()">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="upsertForm">
+                    <input type="hidden" id="hdnId" value="0" />
+                    <div class="row row-gap-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" id="txtName" class="form-control" required placeholder="Enter content type name">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description</label>
+                            <textarea id="txtDescription" class="form-control" rows="3" placeholder="Optional description"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        let selectedId = 0;
+
+        $(document).ready(function () {
+            loadData();
+        });
+
+        function loadData() {
+
+            const search = $('#txtSearch').val();
+
+            selectedId = 0;
+
+            $('#btnEdit, #btnDelete').prop('disabled', true);
+
+            // Destroy existing datatable
+            if ($.fn.DataTable.isDataTable('#tblContentType')) {
+                $('#tblContentType').DataTable().destroy();
+            }
+
+            $.get('/DownloadCenter/GetContentTypeList',
+                {
+                    search: search
+                },
+                function (res) {
+
+                    let html = '';
+
+                    if (res.success && res.data.length > 0) {
+
+                        res.data.forEach(item => {
+
+                            html += `
+                                <tr onclick="selectRow(${item.contentTypeID}, this)" style="cursor:pointer">
+
+                                    <td class="ps-3">
+                                        <input type="checkbox"
+                                               name="rowSelect"
+                                               class="form-check-input student-checkbox"
+                                               value="${item.contentTypeID}">
+                                    </td>
+
+                                    <td>${item.typeName}</td>
+
+                                    <td>${item.description || '-'}</td>
+
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   ${item.isActive ? 'checked' : ''}
+                                                   onchange="toggleStatus(${item.contentTypeID})">
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            `;
+                        });
+
+                    }
+                    else {
+
+                        html = `
+                            <tr>
+                                <td colspan="4"
+                                    class="text-center py-4 text-muted">
+                                    No records found.
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    $('#listBody').html(html);
+
+                    // Initialize DataTable
+                    $('#tblContentType').DataTable({
+
+                        destroy: true,
+
+                        responsive: true,
+
+                        pageLength: 10,
+
+                        lengthMenu: [
+                            [10, 25, 50, 100],
+                            [10, 25, 50, 100]
+                        ],
+
+                        dom: 'Brtip',
+
+                        buttons: [
+
+                            {
+                                extend: 'copy',
+                                className: 'btn btn-secondary btn-sm',
+                                exportOptions: {
+                                    columns: [1, 2]
+                                }
+                            },
+
+                            {
+                                extend: 'csv',
+                                className: 'btn btn-info btn-sm',
+                                exportOptions: {
+                                    columns: [1, 2]
+                                }
+                            },
+
+                            {
+                                extend: 'excel',
+                                className: 'btn btn-success btn-sm',
+                                exportOptions: {
+                                    columns: [1, 2]
+                                }
+                            },
+
+                            {
+                                extend: 'pdf',
+                                className: 'btn btn-danger btn-sm',
+                                exportOptions: {
+                                    columns: [1, 2]
+                                }
+                            },
+
+                            {
+                                extend: 'print',
+                                className: 'btn btn-primary btn-sm',
+                                exportOptions: {
+                                    columns: [1, 2]
+                                }
+                            }
+                        ]
+                    });
+
+                });
+        }
+
+        function triggerBtn(index) {
+            if ($.fn.DataTable.isDataTable('#tblContentType')) {
+                const table = $('#tblContentType').DataTable();
+                table.button(index).trigger();
+            } else {
+                showToast('No data available to export', 'warning');
+            }
+        }
+
+        function selectRow(id, element) {
+            selectedId = id;
+            $('.student-item-row').removeClass('bg-light');
+            $(element).addClass('bg-light').siblings().removeClass('bg-light');
+            //$(element).find('input[type="radio"]').prop('checked', true);
+            $('#btnEdit, #btnDelete').prop('disabled', false);
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openAddModal() {
+            $('#hdnId').val(0);
+            $('#txtName').val('');
+            $('#txtDescription').val('');
+            $('#modalTitle').text('Add Content Type');
+            $('#upsertModal').modal('show');
+        }
+
+        function editSelected() {
+            if (selectedId <= 0) return;
+            $.get('/DownloadCenter/GetContentType', { id: selectedId }, function (res) {
+                if (res.success) {
+                    $('#hdnId').val(res.data.contentTypeID);
+                    $('#txtName').val(res.data.typeName);
+                    $('#txtDescription').val(res.data.description);
+                    $('#modalTitle').text('Edit Content Type');
+                    $('#upsertModal').modal('show');
+                }
+            });
+        }
+
+        function saveData() {
+            const name = $('#txtName').val().trim();
+            if (!name) {
+                showToast('Name is required', 'warning');
+                return;
+            }
+
+            const data = {
+                contentTypeID: parseInt($('#hdnId').val()),
+                typeName: name,
+                description: $('#txtDescription').val().trim()
+            };
+
+            $.ajax({
+                url: '/DownloadCenter/UpsertContentType',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        $('#upsertModal').modal('hide');
+                        loadData();
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteSelected() {
+            if (selectedId <= 0) return;
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                     url: '/DownloadCenter/DeleteContentType',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+
+        function toggleStatus(id) {
+            $.post('/DownloadCenter/ToggleStatus', { id: id }, function (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                } else {
+                    Swal.fire('Error!', res.message, 'error');
+                    loadData(); // Revert toggle
+                }
+            });
+        }
+    </script>
+}

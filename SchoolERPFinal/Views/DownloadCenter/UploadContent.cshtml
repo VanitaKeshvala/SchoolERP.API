@@ -1,0 +1,477 @@
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Upload & Share Content";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/DownloadCenter/UploadContent", "Add");
+    var canDelete = PermHelper.HasPermissionByUrl("/DownloadCenter/UploadContent", "Delete");
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Upload & Share Content</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+       
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete Selected
+            </button>
+        }
+        @if (canAdd)
+        {
+            <button class="btn btn-primary d-inline-flex align-items-center" onclick="openGenModal()">
+                <i class="ti ti-link me-1"></i>Generate URL
+            </button>
+            <button class="btn btn-dark d-inline-flex align-items-center" onclick="openUploadModal()">
+                <i class="ti ti-cloud-upload me-1"></i>Upload Content
+            </button>
+        }
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search by title..." style="min-width: 220px;" onkeyup="loadData()">
+                    </div>
+                    <div class="bg-white border border-muted rounded px-1 py-1 text-center d-flex align-items-center justify-content-center">
+                        <a href="#list-v" id="list-view-btn" class="btn rounded d-flex align-items-center justify-content-center active">
+                            <i class="ti ti-list fs-14 text-body"></i>
+                        </a>
+                        <a href="#card-v" id="card-view-btn" class="btn rounded d-flex align-items-center justify-content-center">
+                            <i class="ti ti-layout-grid fs-14 text-body"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12 d-none" id="card-v">
+        <div class="row" id="cardContainer">
+            <!-- Cards will be loaded here -->
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="list-v">
+        <div class="card shadow-tbl overflow-auto">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblContent">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">
+                                    <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleAllCheckboxes()">
+                                </th>
+                                <th>Document / Link</th>
+                                <th>Type</th>
+                                <th>Format</th>
+                                <th>Size</th>
+                                <th>Upload By</th>
+                                <th>Created On</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4"><div class="spinner-border text-primary"></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">Upload New Content</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="saveUpload()">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="row row-gap-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
+                            <input type="text" id="upTitle" class="form-control" required placeholder="Enter content title">
+                            <span class="text-danger small d-none" id="err-upTitle">Title is required.</span>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Content Type <span class="text-danger">*</span></label>
+                            <select id="upType" class="form-select form-control" required>
+                                <option value="">Select Type</option>
+                                @foreach (var t in ViewBag.ContentTypes)
+                                {
+                                    <option value="@t.ContentTypeID">@t.TypeName</option>
+                                }
+                            </select>
+                            <span class="text-danger small d-none" id="err-upType">Please select a content type.</span>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Upload File</label>
+                            <input type="file" id="upFile" class="form-control" onchange="clearLink()">
+                        </div>
+                        <div class="col-md-12 text-center my-1">
+                            <span class="badge bg-light text-dark px-3 border">OR</span>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Youtube / Video Link</label>
+                            <input type="url" id="upLink" class="form-control" placeholder="https://..." oninput="clearFile()">
+                            <span class="text-danger small d-none" id="err-upFile">Please upload a file or provide a link.</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate URL Modal -->
+<div class="modal fade" id="genModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">Generate Shareable URL</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="generateLink()">
+                        <i class="ti ti-link me-1"></i>Generate
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="row row-gap-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Share Title <span class="text-danger">*</span></label>
+                        <input type="text" id="genTitle" class="form-control" required placeholder="e.g., Weekly Assignments">
+                        <span class="text-danger small d-none" id="err-genTitle">Share title is required.</span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Share Date</label>
+                        <input type="date" id="genDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Valid Upto</label>
+                        <input type="date" id="genValid" class="form-control">
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label mb-2">Selected Documents (<span id="selCount">0</span>)</label>
+                        <div id="selList" class="rounded p-2 bg-light" style="max-height:150px; overflow-y:auto;">
+                            <span class="text-muted small">No documents selected.</span>
+                        </div>
+                    </div>
+                    <div id="resultBox" class="col-md-12 d-none">
+                        <label class="form-label text-success fw-bold">Generated Link:</label>
+                        <div class="input-group">
+                            <input type="text" id="genResult" class="form-control bg-white" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyResult()">Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            loadData();
+
+            $(document).on('change', '.content-check', function() {
+                const val = $(this).val();
+                const checked = $(this).prop('checked');
+                $(`.content-check[value="${val}"]`).prop('checked', checked);
+                updateSelection();
+            });
+
+            $('#list-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#card-v').addClass('d-none');
+                $('#list-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#card-view-btn').removeClass('active');
+                updateSelection();
+            });
+
+            $('#card-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#list-v').addClass('d-none');
+                $('#card-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#list-view-btn').removeClass('active');
+                updateSelection();
+            });
+        });
+
+        function loadData() {
+            const search = $('#txtSearch').val();
+            $.get('/DownloadCenter/GetContentList', { search }, function (res) {
+                let listHtml = '';
+                let cardHtml = '';
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(item => {
+                        listHtml += `
+                            <tr>
+                                <td class="ps-3"><input type="checkbox" name="rowCheck" class="form-check-input content-check" value="${item.contentID}" data-title="${item.title}"></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="ti ti-${item.fileType == 'File' ? 'file-description' : 'brand-youtube'} me-2 text-${item.fileType == 'File' ? 'info' : 'danger'}"></i>
+                                        <a href="${item.filePath}" target="_blank" class="">${item.title}</a>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border fw-normal">${item.contentTypeName}</span></td>
+                                <td>${item.fileType}</td>
+                                <td>${item.fileSize}</td>
+                                <td>${item.uploadBy}</td>
+                                <td>${new Date(item.createdOn).toLocaleString('en-GB')}</td>
+                            </tr>
+                        `;
+
+                        cardHtml += `
+                            <div class="col-xl-6 col-md-12 content-item-card">
+                                <div class="card shadow-tbl-outer mb-2">
+                                    <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3 position-relative">
+                                        <input type="checkbox" name="rowCheck" class="form-check-input content-check position-absolute" style="top:10px;left:10px;" value="${item.contentID}" data-title="${item.title}">
+                                        <div class="me-3 d-flex align-items-center ps-3">
+                                            <div class="file-icon-img d-flex align-items-center justify-content-center bg-light rounded" style="width: 60px; height: 60px;">
+                                                <i class="ti ti-${item.fileType == 'File' ? 'file-description' : 'brand-youtube'} fs-1 text-${item.fileType == 'File' ? 'info' : 'danger'}"></i>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fs-15">
+                                                <a href="${item.filePath}" target="_blank" class="text-primary">${item.title}</a>
+                                            </h6>
+                                            <div class="d-flex justify-content-between mb-1 gap-2">
+                                                <div class="flex-fill">
+                                                    <p class="mb-1 fs-13"><span class="text-dark">Type</span> : ${item.contentTypeName}</p>
+                                                    <p class="mb-1 fs-13"><span class="text-dark">Format</span> : ${item.fileType}</p>
+                                                    <p class="mb-1 fs-13"><span class="text-dark">Size</span> : ${item.fileSize}</p>
+                                                </div>
+                                                <div class="flex-fill">
+                                                    <p class="mb-1 fs-13"><span class="text-dark">Upload By</span> : ${item.uploadBy}</p>
+                                                    <p class="mb-1 fs-13"><span class="text-dark">Date</span> : ${new Date(item.createdOn).toLocaleDateString('en-GB')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    listHtml = '<tr><td colspan="7" class="text-center py-4 text-muted">No content found.</td></tr>';
+                    cardHtml = '<div class="col-12 text-center py-4 text-muted">No content found.</div>';
+                }
+                $('#listBody').html(listHtml);
+                $('#cardContainer').html(cardHtml);
+                updateSelection();
+            });
+        }
+
+        function toggleAllCheckboxes() {
+            const isChecked = $('#checkAll').is(':checked');
+            $('.content-check').prop('checked', isChecked);
+            updateSelection();
+        }
+
+        function updateSelection() {
+            const selected = $('#list-v:visible, #card-v:visible').find('.content-check:checked');
+            $('#btnDelete').prop('disabled', selected.length === 0);
+            
+            let html = '';
+            selected.each(function () {
+                html += `<div class="p-1 border-bottom small"><i class="ti ti-check text-success me-1"></i> ${$(this).data('title')}</div>`;
+            });
+            $('#selList').html(html || '<span class="text-muted small">No documents selected.</span>');
+            $('#selCount').text(selected.length);
+        }
+
+        function openUploadModal() {
+            $('#uploadForm')[0].reset();
+            $('#uploadModal').modal('show');
+        }
+
+        function clearLink() { $('#upLink').val(''); }
+        function clearFile() { $('#upFile').val(''); }
+
+        function saveUpload() {
+            const title = $('#upTitle').val().trim();
+            const type = $('#upType').val();
+            const file = $('#upFile')[0].files[0];
+            const link = $('#upLink').val().trim();
+
+            // Reset errors
+            $('#err-upTitle').addClass('d-none');
+            $('#err-upType').addClass('d-none');
+            $('#err-upFile').addClass('d-none');
+            $('#upTitle').removeClass('is-invalid');
+            $('#upType').removeClass('is-invalid');
+            $('#upLink').removeClass('is-invalid');
+            $('#upFile').removeClass('is-invalid');
+
+            let isValid = true;
+
+            if (!title) {
+                $('#err-upTitle').removeClass('d-none');
+                $('#upTitle').addClass('is-invalid');
+                isValid = false;
+            }
+            if (!type) {
+                $('#err-upType').removeClass('d-none');
+                $('#upType').addClass('is-invalid');
+                isValid = false;
+            }
+            if (!file && !link) {
+                $('#err-upFile').removeClass('d-none');
+                $('#upLink').addClass('is-invalid');
+                $('#upFile').addClass('is-invalid');
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('contentTypeId', type);
+            if (file) formData.append('file', file);
+            if (link) formData.append('videoLink', link);
+
+            $.ajax({
+                url: '/DownloadCenter/SaveUploadContent',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        $('#uploadModal').modal('hide');
+                        loadData();
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function openGenModal() {
+            const selected = $('#list-v:visible, #card-v:visible').find('.content-check:checked');
+            if (selected.length === 0) {
+                Swal.fire('Selection Required', 'Please select at least one document to share.', 'warning');
+                return;
+            }
+            $('#resultBox').addClass('d-none');
+            $('#genModal').modal('show');
+        }
+
+        function generateLink() {
+            const title = $('#genTitle').val().trim();
+            
+            // Reset errors
+            $('#err-genTitle').addClass('d-none');
+            $('#genTitle').removeClass('is-invalid');
+
+            if (!title) {
+                $('#err-genTitle').removeClass('d-none');
+                $('#genTitle').addClass('is-invalid');
+                return;
+            }
+
+            const ids = [];
+            $('#list-v:visible, #card-v:visible').find('.content-check:checked').each(function () {
+                ids.push(parseInt($(this).val()));
+            });
+
+            const data = {
+                title: title,
+                shareDate: $('#genDate').val(),
+                validUpto: $('#genValid').val(),
+                contentIDs: ids
+            };
+
+            $.ajax({
+                url: '/DownloadCenter/GenerateSharedLink',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        const publicUrl = window.location.origin + '/Public/SharedContent?token=' + res.token;
+                        $('#genResult').val(publicUrl);
+                        $('#resultBox').removeClass('d-none');
+                        showToast('Link generated successfully', 'success');
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function copyResult() {
+            const el = document.getElementById('genResult');
+            el.select();
+            document.execCommand('copy');
+            showToast('Link copied to clipboard', 'info');
+        }
+
+        function deleteSelected() {
+            const selected = $('#list-v:visible, #card-v:visible').find('.content-check:checked');
+            if (selected.length === 0) return;
+
+            Swal.fire({
+                title: 'Delete Selected?',
+                text: `You are about to delete ${selected.length} items.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete!',
+                customClass: { confirmButton: 'btn btn-danger me-2', cancelButton: 'btn btn-secondary' },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let count = 0;
+                    selected.each(function () {
+                        $.post('/DownloadCenter/DeleteContent', { id: $(this).val() }, function () {
+                            count++;
+                            if (count === selected.length) {
+                                showToast('Items deleted successfully', 'success');
+                                loadData();
+                            }
+                        });
+                    });
+                }
+            });
+        }
+    </script>
+}

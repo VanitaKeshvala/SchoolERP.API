@@ -1,0 +1,146 @@
+@*
+    ======================================================================
+    VIEW: Settings / Translations.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@model Dictionary<string, string>
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    string selectedLanguage = ViewData["SelectedLanguage"]?.ToString() ?? "";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Translations (@System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(selectedLanguage.Replace("_", " ")))</h4>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <a href="/Settings/Languages" class="btn btn-outline-secondary d-inline-flex align-items-center">
+            <i class="ti ti-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="ti ti-search text-muted"></i></span>
+                            <input type="text" id="translationSearch" class="form-control" placeholder="Search keys or values...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-hover mb-0" id="translationsTable">
+                        <thead class="sticky-top bg-white">
+                            <tr>
+                                <th style="width: 30%;">Key</th>
+                                <th style="width: 70%;">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kvp in Model)
+                            {
+                                <tr class="translation-row">
+                                    <td class="key-cell text-muted fw-medium" style="font-size: 0.85rem;">@kvp.Key</td>
+                                    <td>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control translation-input" 
+                                                   value="@kvp.Value" 
+                                                   data-key="@kvp.Key"
+                                                   data-original="@kvp.Value"
+                                                   @(canEdit ? "" : "readonly disabled")>
+                                            @if (canEdit)
+                                            {
+                                                <button class="btn btn-primary d-none save-btn" type="button">
+                                                    <i class="ti ti-check"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+        $(document).ready(function() {
+            // Search functionality
+            $('#translationSearch').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#translationsTable tbody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+
+            // Show save button when value changes
+            $('.translation-input').on('input', function() {
+                if (!permCanEdit) return;
+                var btn = $(this).siblings('.save-btn');
+                if ($(this).val() !== $(this).data('original')) {
+                    btn.removeClass('d-none');
+                } else {
+                    btn.addClass('d-none');
+                }
+            });
+
+            // Save functionality
+            $('.save-btn').on('click', function() {
+                if (!permCanEdit) return;
+                var btn = $(this);
+                var input = btn.siblings('.translation-input');
+                var key = input.data('key');
+                var value = input.val();
+                var language = '@selectedLanguage';
+
+                // Invokes LocalizationService cache bust and file system write via UpdateTranslation payload
+                $.ajax({
+                    url: '/Settings/UpdateTranslation',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        Language: language,
+                        Key: key,
+                        Value: value
+                    }),
+                    success: function(response) {
+                            input.data('original', value);
+                            btn.addClass('d-none');
+                            showToast('Translation updated successfully!', 'success');
+                        } else {
+                            showToast(response.message || 'Error updating translation', 'error');
+                        }
+                    },
+                    error: function() {
+                        showToast('Error communicating with server', 'error');
+                    }
+                });
+            });
+        });
+    </script>
+}

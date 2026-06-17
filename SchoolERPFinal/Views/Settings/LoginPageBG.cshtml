@@ -1,0 +1,95 @@
+@*
+    ======================================================================
+    VIEW: Settings / LoginPageBG.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Login Page Background</h6>
+    </div>
+    @* <button class="btn btn-primary" onclick="openAddModal()">
+        <i class="ti ti-plus me-1"></i> Add
+    </button> *@
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            @* <div class="card-header">
+                <h5 class="card-title">
+                    Login Page Background
+                </h5>
+            </div> *@
+            <div class="card-body">
+                <div class="row">
+
+                    <div class="col-xl-4">
+                        <div class="card p-3">
+                            <h6>
+                                Admin Panel <span class="text-primary small">
+                                    (1460 <i class="ti ti-x"></i> 1080)
+                                </span>
+                            </h6>
+                            <div class="bg-light img-size mb-2">
+                            </div>
+                            
+
+                            @if (canEdit)
+                            {
+                                <div class='file mt-2'>
+                                    <label for='input-file'>
+                                        <i class="ti ti-cloud-upload">
+                                        </i>Update
+                                    </label>
+                                    <input id='input-file' type='file' />
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="col-xl-4">
+                        <div class="card p-3">
+                            <h6>
+                                User Panel <span class="text-primary small">
+                                    (1460 <i class="ti ti-x"></i> 1080)
+                                </span>
+                            </h6>
+                            <div class="bg-light img-size mb-2">
+                            </div>
+                            
+
+                            @if (canEdit)
+                            {
+                                <div class='file mt-2'>
+                                    <label for='input-file'>
+                                        <i class="ti ti-cloud-upload">
+                                        </i>Update
+                                    </label>
+                                    <input id='input-file' type='file' />
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

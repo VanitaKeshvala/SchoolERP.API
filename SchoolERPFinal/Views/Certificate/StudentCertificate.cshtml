@@ -1,0 +1,526 @@
+@model SchoolERP.Net.Models.StudentCertificatePageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Student Certificate";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canPrint = PermHelper.HasPermissionByUrl("/Certificate/StudentCertificate", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Certificate/StudentCertificate", "Export");
+}
+
+<style>
+.dt-buttons { display: none !important; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Student Certificate Management</h6>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        <button class="btn btn-primary" onclick="openAddModal()"><i class="ti ti-plus me-1"></i>Add</button>
+        <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()"><i class="ti ti-pencil me-1"></i>Edit</button>        
+        <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()"><i class="ti ti-trash me-1"></i>Delete</button>
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+        <button id="btnPreview" class="btn btn-teal" disabled onclick="previewSelected()"><i class="ti ti-eye me-1"></i>Preview</button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="certificateTable">
+                        <thead>
+                            <tr class="bg-light">
+                                <th style="width: 50px;">Select</th>
+                                <th>Certificate Name</th>
+                                <th>Background Image</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Certificates != null && Model.Certificates.Any())
+                            {
+                                foreach (var item in Model.Certificates)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@item.CertificateID, this)" style="cursor: pointer;">
+                                        <td class="text-center">
+                                            <input type="checkbox" name="selectedCertificate"
+                                                   class="form-check-input student-checkbox"
+                                                   value="@item.CertificateID">
+                                            
+                                        </td>
+                                        <td>@item.CertificateName</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.BackgroundImageBase64))
+                                            {
+                                                <img src="@item.BackgroundImageBase64" style="width:50px;height:50px;" class="rounded border" alt="Background" />
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">No Image</span>
+                                            }
+                                        </td>
+                                        <td class="text-center" onclick="event.stopPropagation()">
+                                            <div class="form-check form-switch d-flex justify-content-center">
+                                                <input class="form-check-input" type="checkbox" @(item.IsActive ? "checked" : "") onclick="toggleStatus(@item.CertificateID, this.checked)">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">No certificates found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!----Upsert Modal----->
+<div class="modal fade" id="upsertModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex align-items-center">
+                <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add Student Certificate</h5>
+                <div class="ms-auto d-flex align-items-center gap-1">
+                    <button type="button" class="btn btn-success" onclick="saveCertificate()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-danger ms-1" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <form id="upsertForm" class="row g-3">
+                    <input type="hidden" id="CertificateID" name="CertificateID" value="0" />
+                    
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Certificate Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="CertificateName" name="CertificateName" required>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Header Left Text</label>
+                        <input type="text" class="form-control" id="HeaderLeftText" name="HeaderLeftText">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Header Center Text</label>
+                        <input type="text" class="form-control" id="HeaderCenterText" name="HeaderCenterText">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Header Right Text</label>
+                        <input type="text" class="form-control" id="HeaderRightText" name="HeaderRightText">
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Body Text <span class="text-danger">*</span></label>
+                        <textarea id="BodyText" name="BodyText" class="form-control"></textarea>
+                        <div class="mt-2 p-2 bg-light rounded border small text-muted">
+                            <strong>Available Placeholders:</strong> 
+                            [name], [dob], [present_address], [guardian], [created_at], [admission_no], [roll_no], [class], [section], [gender], [admission_date], [category], [cast], [father_name], [mother_name], [religion], [email], [phone], [student_photo]
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Footer Left Text</label>
+                        <input type="text" class="form-control" id="FooterLeftText" name="FooterLeftText">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Footer Center Text</label>
+                        <input type="text" class="form-control" id="FooterCenterText" name="FooterCenterText">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Footer Right Text</label>
+                        <input type="text" class="form-control" id="FooterRightText" name="FooterRightText">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Header Height (px)</label>
+                        <input type="number" step="0.01" class="form-control" id="HeaderHeight" name="HeaderHeight">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Footer Height (px)</label>
+                        <input type="number" step="0.01" class="form-control" id="FooterHeight" name="FooterHeight">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Body Height (px)</label>
+                        <input type="number" step="0.01" class="form-control" id="BodyHeight" name="BodyHeight">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Body Width (px)</label>
+                        <input type="number" step="0.01" class="form-control" id="BodyWidth" name="BodyWidth">
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="EnableStudentPhoto" name="EnableStudentPhoto">
+                            <label class="form-check-label fw-bold" for="EnableStudentPhoto">Enable Student Photo</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Background Image</label>
+                        <input type="file" class="form-control" id="BackgroundImageFile" onchange="handleImageUpload(this)">
+                        <input type="hidden" id="BackgroundImage" name="BackgroundImage">
+                        <input type="hidden" id="BackgroundImageType" name="BackgroundImageType">
+                        <input type="hidden" id="BackgroundImageName" name="BackgroundImageName">
+                        <div id="imagePreview" class="mt-2 d-none">
+                            <img src="" width="100" class="rounded border" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!----Preview Modal----->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 90vw;">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex align-items-center bg-light">
+                <h5 class="modal-title fw-bold mb-0">Certificate Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-secondary bg-opacity-10 d-flex justify-content-center overflow-auto" style="min-height: 500px;">
+                <div id="previewContainer" class="shadow bg-white"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+
+function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#certificateTable')) {
+                const table = $('#certificateTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+$(document).ready(function () {
+            $('#certificateTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2] } },
+                { extend: 'csv', exportOptions: { columns: [1, 2] } },
+                { extend: 'excel', exportOptions: { columns: [1, 2] } },
+                { extend: 'pdf', exportOptions: { columns: [1, 2] } },
+                { extend: 'print', exportOptions: { columns: [1, 2] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false
+        });
+})
+
+
+        var certificateEditor = null;
+        var selectedCertificateId = 0;
+
+        window.selectItem = function(id, row) {
+            selectedCertificateId = id;
+            document.querySelectorAll('#certificateTable tbody .item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            
+            
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnPreview').disabled = false;
+            document.getElementById('btnDelete').disabled = false;
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        };
+
+        window.openAddModal = function() {
+            $('#upsertForm')[0].reset();
+            $('#CertificateID').val(0);
+            $('#modalTitle').text('Add Student Certificate');
+            if (certificateEditor) {
+                certificateEditor.setData('');
+            }
+            $('#imagePreview').addClass('d-none').find('img').attr('src', '');
+            $('#upsertModal').modal('show');
+        };
+
+        window.editSelected = function() {
+            if (selectedCertificateId === 0) return;
+            editCertificate(selectedCertificateId);
+        };
+
+        window.previewSelected = function() {
+            if (selectedCertificateId === 0) return;
+            $.get('/Certificate/GetStudentCertificateByID?id=' + selectedCertificateId, function (resp) {
+                if (resp.success && resp.data) {
+                    var template = resp.data;
+                    
+                    var dummyData = {
+                        '\\[name\\]': 'John Doe',
+                        '\\[dob\\]': '15-08-2010',
+                        '\\[present_address\\]': '123 Main Street, City, Country',
+                        '\\[guardian\\]': 'Robert Doe',
+                        '\\[created_at\\]': new Date().toLocaleDateString('en-GB'),
+                        '\\[admission_no\\]': 'ADM-2024-001',
+                        '\\[roll_no\\]': '101',
+                        '\\[class\\]': 'X',
+                        '\\[section\\]': 'A',
+                        '\\[gender\\]': 'Male',
+                        '\\[admission_date\\]': '01-04-2024',
+                        '\\[category\\]': 'General',
+                        '\\[cast\\]': 'None',
+                        '\\[father_name\\]': 'Robert Doe',
+                        '\\[mother_name\\]': 'Jane Doe',
+                        '\\[religion\\]': 'Christianity',
+                        '\\[email\\]': 'student@example.com',
+                        '\\[phone\\]': '9876543210',
+                        '\\[student_photo\\]': template.enableStudentPhoto ? '<img src="/assets/images/default-user.png" style="width:100px; height:100px; object-fit:cover; border-radius:5px; border:1px solid #ccc;" />' : ''
+                    };
+                    
+                    var bodyHtml = template.bodyText || '';
+                    for (const [key, value] of Object.entries(dummyData)) {
+                        bodyHtml = bodyHtml.replace(new RegExp(key, 'gi'), value);
+                    }
+                    
+                    var previewHtml = createCertificatePage(bodyHtml, template);
+                    $('#previewContainer').html(previewHtml);
+                    $('#previewModal').modal('show');
+                } else {
+                    alert('Failed to load template for preview.');
+                }
+            });
+        };
+
+        function createCertificatePage(bodyHtml, template) {
+            var bg = template.backgroundImageBase64 ? 'url(' + template.backgroundImageBase64 + ')' : 'none';
+            
+            // Container: Fixed Dimensions + Flex Stack
+            var containerStyle = 'width:' + (template.bodyWidth || 800) + 'px;' +
+                                 'height:' + (template.bodyHeight || 600) + 'px;' +
+                                 'background-image:' + bg + ';' +
+                                 'display: flex; flex-direction: column;';
+
+            // Header Segment
+            var headerStyle = 'height:' + (template.headerHeight || 0) + 'px; flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; box-sizing: border-box; padding: 0 15px; align-items: center;';
+            
+            // Footer Segment
+            var footerStyle = 'height:' + (template.footerHeight || 0) + 'px; flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; box-sizing: border-box; padding: 0 15px; align-items: center;';
+
+            // Start Building HTML
+            var html = '<div class="certificate-container" style="' + containerStyle + ' margin: 0 auto; overflow: hidden; background-repeat: no-repeat; background-size: 100% 100%; box-sizing: border-box; position: relative;">';
+            
+            // 1. Header (3 Segments)
+            html += '<div style="' + headerStyle + '">' +
+                    '<div style="text-align: left;">' + (template.headerLeftText || '') + '</div>' +
+                    '<div style="text-align: center;">' + (template.headerCenterText || '') + '</div>' +
+                    '<div style="text-align: right;">' + (template.headerRightText || '') + '</div>' +
+                    '</div>';
+
+            // 2. Dynamic Body (Fills remaining space)
+            html += '<div style="flex: 1; overflow: hidden; padding: 20px; box-sizing: border-box;">' + bodyHtml + '</div>';
+
+            // 3. Footer (3 Segments)
+            html += '<div style="' + footerStyle + '">' +
+                    '<div style="text-align: left;">' + (template.footerLeftText || '') + '</div>' +
+                    '<div style="text-align: center;">' + (template.footerCenterText || '') + '</div>' +
+                    '<div style="text-align: right;">' + (template.footerRightText || '') + '</div>' +
+                    '</div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        window.deleteSelected = function() {
+            if (selectedCertificateId === 0) return;
+            deleteCertificate(selectedCertificateId);
+        };
+
+        window.handleImageUpload = function(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64 = e.target.result;
+                    const parts = base64.split(',');
+                    $('#BackgroundImage').val(parts[1]);
+                    $('#BackgroundImageType').val(parts[0].split(':')[1].split(';')[0]);
+                    $('#BackgroundImageName').val(file.name);
+                    
+                    $('#imagePreview').removeClass('d-none').find('img').attr('src', base64);
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        window.saveCertificate = function() {
+            var data = {
+                CertificateID: parseInt($('#CertificateID').val()) || 0,
+                CertificateName: $('#CertificateName').val(),
+                HeaderLeftText: $('#HeaderLeftText').val(),
+                HeaderCenterText: $('#HeaderCenterText').val(),
+                HeaderRightText: $('#HeaderRightText').val(),
+                BodyText: $("#BodyText").val(),
+                FooterLeftText: $('#FooterLeftText').val(),
+                FooterCenterText: $('#FooterCenterText').val(),
+                FooterRightText: $('#FooterRightText').val(),
+                HeaderHeight: $('#HeaderHeight').val() ? parseFloat($('#HeaderHeight').val()) : null,
+                FooterHeight: $('#FooterHeight').val() ? parseFloat($('#FooterHeight').val()) : null,
+                BodyHeight: $('#BodyHeight').val() ? parseFloat($('#BodyHeight').val()) : null,
+                BodyWidth: $('#BodyWidth').val() ? parseFloat($('#BodyWidth').val()) : null,
+                EnableStudentPhoto: $('#EnableStudentPhoto').is(':checked'),
+                BackgroundImage: $('#BackgroundImage').val(),
+                BackgroundImageType: $('#BackgroundImageType').val(),
+                BackgroundImageName: $('#BackgroundImageName').val(),
+                IsActive: true
+            };
+
+            if (!data.CertificateName || !data.BodyText) {
+                
+                alert('Please fill all mandatory fields.');
+                return;
+            }
+
+            $.ajax({
+                url: '/Certificate/UpsertStudentCertificate',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (resp) {
+                    if (resp.success) {
+                        location.reload();
+                    } else {
+                        alert(resp.message);
+                    }
+                },
+                error: function() {
+                    alert('Error saving certificate template.');
+                }
+            });
+        };
+
+        window.editCertificate = function(id) {
+            $.get('/Certificate/GetStudentCertificateByID?id=' + id, function (resp) {
+                if (resp.success) {
+                    var data = resp.data;
+                    $('#CertificateID').val(data.certificateID);
+                    $('#CertificateName').val(data.certificateName);
+                    $('#HeaderLeftText').val(data.headerLeftText);
+                    $('#HeaderCenterText').val(data.headerCenterText);
+                    $('#HeaderRightText').val(data.headerRightText);
+                    $('#BodyText').val(data.bodyText);
+                    
+                    $('#FooterLeftText').val(data.footerLeftText);
+                    $('#FooterCenterText').val(data.footerCenterText);
+                    $('#FooterRightText').val(data.footerRightText);
+                    $('#HeaderHeight').val(data.headerHeight);
+                    $('#FooterHeight').val(data.footerHeight);
+                    $('#BodyHeight').val(data.bodyHeight);
+                    $('#BodyWidth').val(data.bodyWidth);
+                    $('#EnableStudentPhoto').prop('checked', data.enableStudentPhoto);
+                    
+                    if (data.backgroundImageBase64) {
+                        $('#imagePreview').removeClass('d-none').find('img').attr('src', data.backgroundImageBase64);
+                    } else {
+                        $('#imagePreview').addClass('d-none');
+                    }
+
+                    $('#modalTitle').text('Edit Student Certificate');
+                    $('#upsertModal').modal('show');
+                }
+            });
+        };
+
+        window.toggleStatus = function(id, isActive) {
+            $.post('/Certificate/ToggleStudentCertificateStatus?id=' + id + '&isActive=' + isActive, function (resp) {
+                if (!resp.success) alert(resp.message);
+            });
+        };
+
+        window.deleteCertificate = function(id) {
+
+                    let selectedIds = [];
+         $('.student-checkbox:checked').each(function () {
+                  selectedIds.push(parseInt($(this).val()));
+              });
+         if (selectedIds.length === 0) {
+                  alert("Please select at least one student.");
+                  return;
+              }
+          Swal.fire({
+              title: 'Are you sure?',
+              text: "You are about to delete this student record. This action cannot be undone!",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#d33',
+              cancelButtonColor: '#3085d6',
+              confirmButtonText: 'Yes, delete it!',
+              customClass: {
+                  confirmButton: 'btn btn-danger me-2',
+                  cancelButton:  'btn btn-secondary'
+              },
+              buttonsStyling: false
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  $.ajax({
+                               url: '/Certificate/DeleteStudentCertificate',
+                      type: 'POST',
+                      contentType: 'application/json',
+                      data: JSON.stringify(selectedIds),
+                      success: function (res) {
+                          if (res.success) {
+                              Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                  .then(() => location.reload());
+                          } else {
+                              Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                          }
+                      },
+                      error: function () {
+                          Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                      }
+                  });
+              }
+          });
+        };
+
+    </script>
+}

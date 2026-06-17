@@ -1,0 +1,533 @@
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Video Tutorial Master";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/DownloadCenter/VideoTutorial", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/DownloadCenter/VideoTutorial", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/DownloadCenter/VideoTutorial", "Delete");
+}
+
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Video Tutorial List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <button class="btn btn-primary d-inline-flex align-items-center" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerBtn(4)">
+            <i class="ti ti-printer me-1"></i>Print
+        </button>
+        <div class="dropdown">
+            <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0);" onclick="triggerBtn(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                               placeholder="Search by title..." style="min-width: 220px;" onkeyup="loadData()">
+                    </div>
+                    <!--<input type="text" id="txtSearch" class="form-control w-25 me-3" placeholder="Search by title..." onkeyup="loadData()" />-->
+                    
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                                    <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="button" class="btn text-primary fs-6" onclick="loadData()">Apply Filter</button>
+                                    </div>
+                                </div>
+                                <div class="filter-body pb-0 p-3">
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Class</label>
+                                        <select id="ddlFilterClass" class="form-select form-control select2">
+                                            <option value="">All Classes</option>
+                                            @foreach (var c in ViewBag.Classes)
+                                            {
+                                                <option value="@c.ClassID">@c.ClassName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Section</label>
+                                        <select id="ddlFilterSection" class="form-select form-control select2">
+                                            <option value="">All Sections</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblVideoTutorial">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Title</th>
+                                <th>Video Link</th>
+                                <th>Shared By</th>
+                                <th>Share Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listBody">
+                            <tr>
+                                <td colspan="7" class="text-center py-4"><div class="spinner-border text-primary"></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="upsertModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Video Tutorial</h5>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="saveData()">
+                        <i class="ti ti-cloud me-1"></i>Save
+                    </button>
+                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="upsertForm">
+                    <input type="hidden" id="hdnId" value="0" />
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Class <span class="text-danger">*</span></label>
+                            <select id="ddlClass" class="form-select form-control" required onchange="onClassChange('ddlClass', 'ddlSection')">
+                                <option value="">Select Class</option>
+                                @foreach (var c in ViewBag.Classes)
+                                {
+                                    <option value="@c.ClassID">@c.ClassName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Section <span class="text-danger">*</span></label>
+                            <select id="ddlSection" class="form-select form-control" required>
+                                <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
+                            <input type="text" id="txtTitle" class="form-control" required placeholder="Enter video title">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Video Link <span class="text-danger">*</span></label>
+                            <input type="url" id="txtLink" class="form-control" required placeholder="https://www.youtube.com/watch?v=...">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Description</label>
+                            <textarea id="txtDescription" class="form-control" rows="3" placeholder="Optional description"></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        let selectedId = 0;
+
+        $(document).ready(function () {
+            loadData();
+
+            $('#ddlFilterClass').change(function () {
+                onClassChange('ddlFilterClass', 'ddlFilterSection', true);
+            });
+
+            $(document).on('change', '.status-toggle', function () {
+                const id = $(this).data('id');
+                toggleStatus(id);
+            });
+
+            $(document).on('click', '.status-toggle', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        function onClassChange(classId, sectionId, isFilter = false) {
+            const cId = $('#' + classId).val();
+            const $sec = $('#' + sectionId);
+            $sec.empty().append(`<option value="">${isFilter ? 'All Sections' : 'Select Section'}</option>`);
+            
+            if (cId) {
+                $.get('/DownloadCenter/GetSections', { classId: cId }, function (res) {
+                    res.forEach(s => {
+                        $sec.append(`<option value="${s.sectionID}">${s.sectionName}</option>`);
+                    });
+                });
+            }
+        }
+
+        function triggerBtn(index) {
+            if ($.fn.DataTable.isDataTable('#tblVideoTutorial')) {
+                const table = $('#tblVideoTutorial').DataTable();
+                table.button(index).trigger();
+            } else {
+                showToast('No data available to export', 'warning');
+            }
+        }
+
+        function loadData() {
+            const search = $('#txtSearch').val();
+            const classId = $('#ddlFilterClass').val();
+            const sectionId = $('#ddlFilterSection').val();
+            
+            selectedId = 0;
+            $('#btnEdit, #btnDelete').prop('disabled', true);
+
+            if ($.fn.DataTable.isDataTable('#tblVideoTutorial')) {
+                $('#tblVideoTutorial').DataTable().destroy();
+            }
+
+            $.get('/DownloadCenter/GetVideoTutorialList', { classId, sectionId, search }, function (res) {
+                let html = '';
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(item => {
+                        html += `
+                            <tr onclick="selectRow(${item.videoID}, this)" style="cursor:pointer">
+                                <td class="ps-3"><input type="radio" name="rowSelect" class="form-check-input" value="${item.videoID}"></td>
+                                <td>${item.title}</td>
+                                <td><a href="${item.videoLink}" target="_blank" class="text-primary"><i class="ti ti-brand-youtube me-1"></i>Watch</a></td>
+                                <td>${item.sharedBy || 'System'}</td>
+                                <td>${new Date(item.createdOn).toLocaleDateString('en-GB')}</td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input status-toggle" type="checkbox" ${item.isActive ? 'checked' : ''} data-id="${item.videoID}">
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html = '<tr><td colspan="7" class="text-center py-4 text-muted">No records found.</td></tr>';
+                }
+                $('#listBody').html(html);
+                
+                if (res.success && res.data.length > 0) {
+                    $('#tblVideoTutorial').DataTable({
+                        destroy: true,
+                        responsive: true,
+                        pageLength: 10,
+                        lengthMenu: [
+                            [10, 25, 50, 100],
+                            [10, 25, 50, 100]
+                        ],
+                        dom: 'Brtip',
+                        buttons: [
+                            {
+                                extend: 'copy',
+                                className: 'btn btn-secondary btn-sm',
+                                exportOptions: {
+                                    columns: [1, 3, 4]
+                                }
+                            },
+                            {
+                                extend: 'csv',
+                                className: 'btn btn-info btn-sm',
+                                exportOptions: {
+                                    columns: [1, 3, 4]
+                                }
+                            },
+                            {
+                                extend: 'excel',
+                                className: 'btn btn-success btn-sm',
+                                exportOptions: {
+                                    columns: [1, 3, 4]
+                                }
+                            },
+                            {
+                                extend: 'pdf',
+                                className: 'btn btn-danger btn-sm',
+                                exportOptions: {
+                                    columns: [1, 3, 4]
+                                }
+                            },
+                            {
+                                extend: 'print',
+                                className: 'btn btn-primary btn-sm',
+                                exportOptions: {
+                                    columns: [1, 3, 4]
+                                }
+                            }
+                        ]
+                    });
+                }
+
+                renderFilterBadges();
+            });
+        }
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearch', label: 'Search', type: 'text' },
+                { id: 'ddlFilterClass', label: 'Class', type: 'select' },
+                { id: 'ddlFilterSection', label: 'Section', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            el.value = '';
+
+            if (filterId === 'ddlFilterClass') {
+                onClassChange('ddlFilterClass', 'ddlFilterSection', true);
+            }
+
+            loadData();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('txtSearch').value = '';
+            document.getElementById('ddlFilterClass').value = '';
+            onClassChange('ddlFilterClass', 'ddlFilterSection', true);
+            
+            loadData();
+        }
+
+        function selectRow(id, element) {
+            selectedId = id;
+            $(element).addClass('bg-light').siblings().removeClass('bg-light');
+            $(element).find('input[type="radio"]').prop('checked', true);
+            $('#btnEdit, #btnDelete').prop('disabled', false);
+        }
+
+        function openAddModal() {
+            $('#hdnId').val(0);
+            $('#upsertForm')[0].reset();
+            $('#ddlSection').empty().append('<option value="">Select Section</option>');
+            $('#modalTitle').text('Add Video Tutorial');
+            $('#upsertModal').modal('show');
+        }
+
+        function editSelected() {
+            if (selectedId <= 0) return;
+            $.get('/DownloadCenter/GetVideoTutorial', { id: selectedId }, function (res) {
+                if (res.success) {
+        
+                    $('#hdnId').val(res.data.videoID);
+                    $('#txtTitle').val(res.data.title);
+                    $('#txtLink').val(res.data.videoLink);
+                    $('#txtDescription').val(res.data.description);
+                    $('#ddlClass').val(res.data.classID);
+                    
+                    // Load sections then set value
+                    const $sec = $('#ddlSection');
+                    $sec.empty().append('<option value="">Select Section</option>');
+                    $.get('/DownloadCenter/GetSections', { classId: res.data.classID }, function (sections) {
+                        sections.forEach(s => {
+                            $sec.append(`<option value="${s.sectionID}" ${s.sectionID == res.data.sectionID ? 'selected' : ''}>${s.sectionName}</option>`);
+                        });
+                        $('#modalTitle').text('Edit Video Tutorial');
+                        $('#upsertModal').modal('show');
+                    });
+                }
+            });
+        }
+
+        function saveData() {
+            const title = $('#txtTitle').val().trim();
+            const link = $('#txtLink').val().trim();
+            const classId = $('#ddlClass').val();
+            const sectionId = $('#ddlSection').val();
+
+            if (!title || !link || !classId || !sectionId) {
+                showToast('Please fill all required fields', 'warning');
+                return;
+            }
+
+            const data = {
+                videoID: parseInt($('#hdnId').val()),
+                title: title,
+                videoLink: link,
+                description: $('#txtDescription').val().trim(),
+                classID: parseInt(classId),
+                sectionID: parseInt(sectionId)
+            };
+
+            $.ajax({
+                url: '/DownloadCenter/UpsertVideoTutorial',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        $('#upsertModal').modal('hide');
+                        loadData();
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function deleteSelected() {
+            if (selectedId <= 0) return;
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This video tutorial will be deleted!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete it!',
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'btn btn-danger me-2',
+                    cancelButton: 'btn btn-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/DownloadCenter/DeleteVideoTutorial', { id: selectedId }, function (res) {
+                        if (res.success) {
+                            showToast(res.message, 'success');
+                            loadData();
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function toggleStatus(id) {
+            $.post('/DownloadCenter/ToggleVideoStatus', { id: id }, function (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                } else {
+                    Swal.fire('Error!', res.message, 'error');
+                    loadData();
+                }
+            });
+        }
+    </script>
+}

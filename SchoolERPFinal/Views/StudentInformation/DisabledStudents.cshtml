@@ -1,0 +1,441 @@
+@model StudentListPageViewModel
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Disabled Students";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+}
+
+@section Styles {
+    <style>
+        .dt-buttons { display: none !important; }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Disabled Students</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerExport(4)">
+            <i class="ti ti-printer me-1"></i>Print
+        </button>
+        <div class="dropdown d-inline-flex">
+            <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-download me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <form method="post" action="/StudentInformation/DisabledStudents" id="filterForm">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" name="search" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search by name, roll, admission..." value="@Model.SearchTerm" />
+                        </div>
+                        <!--<input type="text" name="search" id="txtSearchInput" class="form-control w-25 me-3" placeholder="Search by name, roll, admission..." value="@Model.SearchTerm" />-->
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn text-primary fs-6">Apply Filter</button>
+                                        </div>
+                                    </div>
+                                    <div class="filter-body pb-0 p-3">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Class</label>
+                                            <select name="classId" id="classSelect" class="form-select form-control select2">
+                                                <option value="">All Classes</option>
+                                                @foreach (var c in ViewBag.Classes)
+                                                {
+                                                    <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Section</label>
+                                            <select name="sectionId" id="sectionSelect" class="form-select form-control select2">
+                                                <option value="">All Sections</option>
+                                                @foreach (var s in ViewBag.Sections)
+                                                {
+                                                    <option value="@s.SectionID" selected="@(Model.SelectedSectionId == s.SectionID)">@s.SectionName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-muted rounded px-1 py-1 text-center d-flex align-items-center justify-content-center">
+                                <a href="#list-v" id="list-view-btn" class="btn rounded d-flex align-items-center justify-content-center active">
+                                    <i class="ti ti-list fs-14 text-body"></i>
+                                </a>
+                                <a href="#card-v" id="card-view-btn" class="btn rounded d-flex align-items-center justify-content-center">
+                                    <i class="ti ti-layout-grid fs-14 text-body"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12 d-none" id="card-v">
+        <div class="row">
+            @foreach (var student in Model.Students)
+            {
+                <div class="col-xl-6 col-md-12 student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                    <div class="card shadow-tbl-outer">
+                        <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
+                            <div class="me-3 d-flex align-items-center">
+                                <input type="radio" name="selectedStudent" class="form-check-input me-3 position-absolute" style="left:5px;top:5px;" value="@student.StudentID">
+                                <div class="doctor-profile-img">
+                                    @if (student.StudentPhoto != null)
+                                    {
+                                        <img src="data:@(student.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(student.StudentPhoto)" class="rounded" alt="Student Photo" style="width: 100%;" />
+                                    }
+                                    else
+                                    {
+                                        <img src="/assets/img/profiles/avatar-01.jpg" class="rounded" alt="Default Photo" style="width: 100%;" />
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="mb-2 fs-15">
+                                    <a href="/StudentInformation/Details/@student.StudentID" class="text-primary">@student.FullName</a>
+                                    <span class="badge bg-danger fw-normal rounded-pill fs-10 ms-1">Disabled</span>
+                                </h6>
+                                <div class="d-flex justify-content-between gap-2">
+                                    <div class="flex-fill">
+                                        <p class="mb-1 fs-13"><span class="text-dark">Reason</span> : <span class="text-danger">@(student.DisableReasonName ?? "Not Specified")</span></p>
+                                        <p class="mb-1 fs-13"><span class="text-dark">Date</span> : @(student.DisableDate?.ToString("dd-MM-yyyy") ?? "-")</p>
+                                        <p class="mb-0 fs-13 text-muted">@student.ClassName (@student.SectionName)</p>
+                                    </div>
+                                    <div class="flex-fill border-start ps-3">
+                                        <p class="mb-1 fs-13"><span class="text-dark">Roll No</span> : @(student.RollNo ?? "-")</p>
+                                        <p class="mb-1 fs-13"><span class="text-dark">Father</span> : @(student.FatherName ?? "-")</p>
+                                        <p class="mb-0 fs-13"><span class="text-dark">Mobile</span> : @(student.MobileNo ?? "-")</p>
+                                    </div>
+                                </div>
+                            </div>
+                           
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!Model.Students.Any())
+            {
+                <div class="col-12 text-center py-5">
+                    <h5 class="text-muted">No disabled students found.</h5>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="list-v">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblStudents">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="ps-3">Select</th>
+                                <th>Student Name</th>
+                                <th>Disable Reason</th>
+                                <th>Disable Date</th>
+                                <th>Roll No.</th>
+                                <th>Class</th>
+                                <th>Father Name</th>
+                                <th>Mobile Number</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var student in Model.Students)
+                            {
+                                <tr class="student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="radio" name="selectedStudent" class="form-check-input" value="@student.StudentID">
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <a href="/StudentInformation/Details/@student.StudentID" class="text-primary fw-semibold">
+                                                @student.FullName
+                                            </a>
+                                        </div>
+                                    </td>
+                                    <td><span class="text-danger">@student.DisableReasonName</span></td>
+                                    <td>@(student.DisableDate?.ToString("dd-MM-yyyy") ?? "-")</td>
+                                    <td>@student.RollNo</td>
+                                    <td>@student.ClassName (@student.SectionName)</td>
+                                    <td>@student.FatherName</td>
+                                    <td>@student.MobileNo</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        let selectedStudentId = 0;
+
+        function selectStudent(id, element) {
+            selectedStudentId = id;
+            
+            $('.student-item-row .card').removeClass('border-primary shadow-sm bg-light');
+            $('.student-item-row').removeClass('bg-light');
+            
+            const $row = $(element);
+            if ($row.hasClass('col-xl-6')) { // Card view
+                $row.find('.card').addClass('border-primary shadow-sm bg-light');
+            } else { // List view
+                $row.addClass('bg-light');
+            }
+            
+            $row.find('input[type="radio"]').prop('checked', true);
+        }
+
+        function viewDetails() {
+            if (selectedStudentId > 0) {
+                window.location.href = '/StudentInformation/Details/' + selectedStudentId;
+            }
+        }
+
+        function enableSelected() {
+            if (selectedStudentId <= 0) return;
+
+            Swal.fire({
+                title: 'Enable Student?',
+                text: "This will restore the student's active status and re-enable their login account.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Enable!',
+                customClass: {
+                    confirmButton: 'btn btn-success me-2',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = {
+                        studentID: selectedStudentId,
+                        isActive: true
+                    };
+
+                    $.ajax({
+                        url: '/StudentInformation/ToggleStatus',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function (res) {
+                            if (res.success) {
+                                showToast(res.message, 'success');
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                Swal.fire('Error!', res.message, 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblStudents')) {
+                const table = $('#tblStudents').DataTable();
+                table.button(index).trigger();
+            } else {
+                Swal.fire('Info', 'No data available to export', 'info');
+            }
+        }
+
+        $(document).ready(function () {
+            // Initialize DataTable
+            $('#tblStudents').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+            renderFilterBadges();
+            
+            $('#list-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#card-v').addClass('d-none');
+                $('#list-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#card-view-btn').removeClass('active');
+            });
+
+            $('#card-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#list-v').addClass('d-none');
+                $('#card-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#list-view-btn').removeClass('active');
+            });
+
+            // Real-time Search
+            $('#txtSearchInput').on('keyup', function() {
+                var q = $(this).val().toLowerCase();
+                
+                // Filter Table
+                $('#tblStudents tbody tr').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+                
+                // Filter Cards
+                $('#card-v .student-item-row').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+                renderFilterBadges();
+            });
+
+            $('#classSelect').change(function () {
+                var classId = $(this).val();
+                $('#sectionSelect').empty().append('<option value="">All Sections</option>');
+                if (classId) {
+                    $.get('/StudentInformation/GetSections', { classId: classId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $('#sectionSelect').append('<option value="' + item.id + '">' + item.name + '</option>');
+                        });
+                    });
+                }
+            });
+        });
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearchInput', label: 'Search', type: 'text' },
+                { id: 'classSelect', label: 'Class', type: 'select' },
+                { id: 'sectionSelect', label: 'Section', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                $('#txtSearchInput').trigger('keyup');
+            } else {
+                el.value = '';
+                if (window.jQuery && jQuery(el).data('select2')) {
+                    jQuery(el).trigger('change.select2');
+                }
+                $('#filterForm').submit();
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('txtSearchInput').value = '';
+            document.getElementById('classSelect').value = '';
+            document.getElementById('sectionSelect').value = '';
+            
+            if (window.jQuery) {
+                $('.select2').trigger('change.select2');
+            }
+            
+            $('#filterForm').submit();
+        }
+    </script>
+}

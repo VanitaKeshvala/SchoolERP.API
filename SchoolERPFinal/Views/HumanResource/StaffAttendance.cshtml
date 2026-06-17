@@ -1,0 +1,380 @@
+@model SchoolERP.Net.Models.HRStaffPageViewModel
+@{
+    ViewData["Title"] = "Staff Attendance";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Staff Attendance</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <a href="javascript:void(0);" class="btn btn-success d-inline-flex align-items-center" onclick="saveAttendance()">
+            <i class="ti ti-cloud me-1"></i>Save Attendance
+        </a>
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search staff members..." onkeyup="filterTable()" />
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <div class="dropdown">
+                            <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                               data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                    <h6 class="mb-0">Select Criteria</h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="button" class="btn text-primary fs-6 fw-medium" onclick="loadStaff()">Filter</button>
+                                    </div>
+                                </div>
+                                <form onsubmit="return false;">
+                                    <div class="filter-body pb-0 p-3">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Role<span class="text-danger">*</span></label>
+                                            <select class="form-select form-control select2" id="ddlRole">
+                                                <option value="">Select Role</option>
+                                                @foreach (var role in Model.Roles)
+                                                {
+                                                    <option value="@role.RoleID">@role.RoleName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                        <label for="" class="form-label">Attendance Date</label>
+                        <input type="date" class="form-control" id="mainDate" value="@DateTime.Now.ToString("yyyy-MM-dd")" onchange="loadStaff()">
+                    </div>
+                    <div>
+                        <label for="" class="form-label">Set attendance for all Staff as</label>
+                        <div>
+                            <input type="radio" class="btn-check" name="options-base" id="option5" onchange="setAllAttendance('P')">
+                            <label class="btn" for="option5">Present</label>
+
+                            <input type="radio" class="btn-check" name="options-base" id="option6" onchange="setAllAttendance('L')">
+                            <label class="btn" for="option6">Late</label>
+
+                            <input type="radio" class="btn-check" name="options-base" id="option7" onchange="setAllAttendance('A')">
+                            <label class="btn" for="option7">Absent</label>
+
+                            <input type="radio" class="btn-check" name="options-base" id="option8" onchange="setAllAttendance('HD')">
+                            <label class="btn" for="option8">Half Day</label>
+
+                            <input type="radio" class="btn-check" name="options-base" id="option9" onchange="setAllAttendance('H')">
+                            <label class="btn" for="option9">Holiday</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblAttendance">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>
+                                    <div style="white-space: nowrap;">Staff ID</div>
+                                </th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Attendance</th>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th class="text-end">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Select criteria and click Filter to load staff.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- end card-body -->
+        </div>
+        <!-- end card -->
+    </div>
+    <!-- end col -->
+</div>
+<!-- end row -->
+
+@section Scripts {
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({ width: '100%' });
+
+        // Prevent dropdown from closing when clicking inside the filter body
+        $('#filter-dropdown').on('click', function (e) {
+            e.stopPropagation();
+        });
+
+        renderFilterBadges();
+    });
+
+    async function loadStaff() {
+        const date = $('#mainDate').val();
+        const roleId = $('#ddlRole').val();
+
+        if (!date) {
+            showToast("Please select a date", "danger");
+            return;
+        }
+
+        $('#mainDate').val(date);
+        $('#attendanceBody').html(`<tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>`);
+
+        try {
+            const response = await fetch(`/HumanResource/GetStaffAttendance?date=${date}&roleId=${roleId || ''}`);
+            const res = await response.json();
+
+            if (res.success) {
+                renderTable(res.data);
+                renderFilterBadges();
+                const toggle = document.getElementById('btnFilterToggle');
+                if (toggle) {
+                    bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+                }
+            } else {
+                showToast(res.message || "Failed to load staff", "danger");
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("An error occurred", "danger");
+        }
+    }
+
+    function renderTable(data) {
+        if (!data || data.length === 0) {
+            $('#attendanceBody').html(`<tr><td colspan="8" class="text-center py-4 text-danger">No staff members found.</td></tr>`);
+            return;
+        }
+
+        let html = '';
+        data.forEach((item, index) => {
+            console.log(item);
+            const val = item.staffAttendance;
+            html += `
+                <tr data-staff-id="${item.staffID}">
+                    <td>${index + 1}</td>
+                    <td>${item.staffCode}</td>
+                    <td><div style="white-space: nowrap;">${item.staffName}</div></td>
+                    <td>${item.roleName}</td>
+                    <td>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" id="pst_${item.staffID}" class="form-check-input check-p" name="atd_${item.staffID}" value="P" ${val === 'P' || !val ? 'checked' : ''}>
+                                <label for="pst_${item.staffID}" class="form-check-label">Present</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" id="late_${item.staffID}" class="form-check-input check-l" name="atd_${item.staffID}" value="L" ${val === 'L' ? 'checked' : ''}>
+                                <label for="late_${item.staffID}" class="form-check-label">Late</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" id="abs_${item.staffID}" class="form-check-input check-a" name="atd_${item.staffID}" value="A" ${val === 'A' ? 'checked' : ''}>
+                                <label for="abs_${item.staffID}" class="form-check-label">Absent</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" id="hday_${item.staffID}" class="form-check-input check-hd" name="atd_${item.staffID}" value="HD" ${val === 'HD' ? 'checked' : ''}>
+                                <label for="hday_${item.staffID}" class="form-check-label">Half Day</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" id="holiday_${item.staffID}" class="form-check-input check-h" name="atd_${item.staffID}" value="H" ${val === 'H' ? 'checked' : ''}>
+                                <label for="holiday_${item.staffID}" class="form-check-label">Holiday</label>
+                            </div>
+                        </div>
+                    </td>
+                                    <td>${item.staffAttendanceDate ? new Date(item.staffAttendanceDate).toLocaleDateString() : '-'}</td>
+                    <td>${item.staffAttendanceSource || 'N/A'}</td>
+                    <td class="text-end">
+                        <input type="text" class="form-control txt-note" value="${item.staffAttendanceNote || ''}">
+                    </td>
+                </tr>
+            `;
+        });
+        $('#attendanceBody').html(html);
+    }
+
+    function setAllAttendance(status) {
+        $(`.check-${status.toLowerCase()}`).prop('checked', true);
+    }
+
+    function filterTable() {
+        const val = $('#txtSearchInput').val().toLowerCase();
+        $('#attendanceBody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
+        });
+        renderFilterBadges();
+    }
+
+    // --- Filter Badges Logic ---
+    function renderFilterBadges() {
+        const container = document.getElementById('badgeContainer');
+        const mainContainer = document.getElementById('activeFilterBadges');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const filters = [
+            { id: 'txtSearchInput', label: 'Search', type: 'text' },
+            { id: 'ddlRole', label: 'Role', type: 'select' },
+            { id: 'mainDate', label: 'Date', type: 'text' }
+        ];
+
+        let activeCount = 0;
+
+        filters.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (!el) return;
+
+            let value = el.value;
+            let text = '';
+
+            if (f.type === 'text') {
+                if (value.trim()) {
+                    text = value;
+                    activeCount++;
+                }
+            } else if (f.type === 'select') {
+                if (value && value !== 'all' && value !== '') {
+                    const selectedOption = el.options[el.selectedIndex];
+                    if (selectedOption && selectedOption.value !== "") {
+                        text = selectedOption.text;
+                        activeCount++;
+                    }
+                }
+            }
+
+            if (text) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                container.appendChild(badge);
+            }
+        });
+
+        if (activeCount > 0) {
+            mainContainer.style.display = 'block';
+        } else {
+            mainContainer.style.display = 'none';
+        }
+    }
+
+    function removeFilter(filterId) {
+        const el = document.getElementById(filterId);
+        if (!el) return;
+
+        if (el.tagName === 'INPUT' && filterId === 'txtSearchInput') {
+            el.value = '';
+            filterTable();
+        } else {
+            el.value = '';
+            if (window.jQuery && jQuery(el).data('select2')) {
+                jQuery(el).trigger('change.select2');
+            }
+            loadStaff();
+        }
+    }
+
+    function resetAllFilters() {
+        document.getElementById('txtSearchInput').value = '';
+        document.getElementById('ddlRole').value = '';
+        // document.getElementById('mainDate').value = '@DateTime.Now.ToString("yyyy-MM-dd")';
+        
+        $('.select2').trigger('change.select2');
+        filterTable();
+        loadStaff();
+    }
+
+    async function saveAttendance() {
+        const date = $('#mainDate').val();
+        if (!date) {
+            showToast("Please select a date", "danger");
+            return;
+        }
+
+        const data = [];
+        $('#attendanceBody tr[data-staff-id]').each(function() {
+            const staffId = $(this).data('staff-id');
+            const status = $(this).find(`input[name="atd_${staffId}"]:checked`).val();
+            const note = $(this).find('.txt-note').val();
+
+            data.push({
+                staffID: staffId,
+                attendanceDate: date,
+                attendance: status,
+                source: 'Manual',
+                note: note
+            });
+        });
+
+        if (data.length === 0) {
+            showToast("No staff members to save", "warning");
+            return;
+        }
+
+        try {
+            const response = await fetch('/HumanResource/SaveStaffAttendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const res = await response.json();
+
+            if (res.success) {
+                showToast(res.message, "success");
+            } else {
+                showToast(res.message, "danger");
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("An error occurred", "danger");
+        }
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 4000);
+    }
+</script>
+}

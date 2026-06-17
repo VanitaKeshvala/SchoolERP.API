@@ -1,0 +1,839 @@
+@model SchoolERP.Net.Models.FOAdmissionInquiryPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Admission Enquiry";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/FrontOffice/AdmissionInquiry", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/FrontOffice/AdmissionInquiry", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/FrontOffice/AdmissionInquiry", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/FrontOffice/AdmissionInquiry", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/FrontOffice/AdmissionInquiry", "Export");
+
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Admission Enquiry</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <button onclick="resetInquiryForm()" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="ti ti-plus me-1"></i> Add</button>
+        }
+        @if (canEdit)
+        {
+            <button onclick="editSelectedInquiry()" class="btn btn-info"><i class="ti ti-pencil me-1"></i> Edit</button>
+        }
+        @if (canDelete)
+        {
+            <button onclick="deleteSelectedInquiry()" class="btn btn-danger"><i class="ti ti-trash me-1"></i> Delete</button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+
+        @if (canEdit)
+        {
+            <button onclick="followUpSelectedInquiry()" class="btn btn-apply"><i class="ti ti-phone-ringing me-1"></i> Follow Up</button>
+        }
+    </div>
+</div>
+
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <form id="filterForm" method="get">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" class="form-control border-0 ps-2" id="tableSearch"
+                                   placeholder="Search..." style="min-width: 220px;">
+                        </div>
+                        <!--<input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." />-->
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn text-primary fs-6">Filter</button>
+                                        </div>
+                                    </div>
+                                    <div class="filter-body pb-0 row p-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Class</label>
+                                            <select name="classId" id="filterClass" class="form-select form-control select2">
+                                                <option value="0">All</option>
+                                                @foreach (var item in Model.Classes)
+                                                {
+                                                    <option value="@item.ClassID">@item.ClassName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Source</label>
+                                            <select name="sourceId" id="filterSource" class="form-select form-control select2">
+                                                <option value="0">All</option>
+                                                @foreach (var item in Model.Sources)
+                                                {
+                                                    <option value="@item.SourceID">@item.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Enquiry From Date</label>
+                                            <input type="date" name="fromDate" id="filterFromDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Enquiry To Date</label>
+                                            <input type="date" name="toDate" id="filterToDate" class="form-control">
+                                        </div>
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label mb-1">Status</label>
+                                            <select name="status" id="filterStatus" class="form-select form-control select2">
+                                                <option value="">All</option>
+                                                <option value="Active">Active</option>
+                                                <option value="Passive">Passive</option>
+                                                <option value="Dead">Dead</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="inquiryTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Phone</th>
+                                <th>Source</th>
+                                <th>Enquiry Date</th>
+                                <th>Last Follow Up</th>
+                                <th>Next Follow Up</th>
+                                <th>Status</th>
+                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Inquiries)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="selectedInquiry"
+                                               class="form-check-input student-checkbox"
+                                               value="@item.InquiryID">
+                                        
+                                    <td>@item.Name</td>
+                                    <td>@item.Phone</td>
+                                    <td>@item.SourceName</td>
+                                    <td>@item.Date.ToString("dd-MM-yyyy")</td>
+                                    <td>@(item.LastFollowUpDate?.ToString("dd-MM-yyyy") ?? "-")</td>
+                                    <td>@(item.NextFollowUpDate?.ToString("dd-MM-yyyy") ?? "-")</td>
+                                    <td>
+                                        @{
+                                            var badgeClass = item.Status == "Active" ? "bg-success" : (item.Status == "Passive" ? "bg-warning" : "bg-danger");
+                                        }
+                                        <span class="badge @badgeClass rounded-pill">@item.Status</span>
+                                    </td>
+                                   
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="addModal">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <form id="inquiryForm">
+                <input type="hidden" name="InquiryID" id="InquiryID" value="0" />
+                <div class="modal-header d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title" id="modalTitle">Admission Enquiry</h5>
+                    <div>
+                        <button type="submit" class="btn btn-success"><i class="ti ti-cloud me-1"></i> Save</button>
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="Name" id="InqName" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Phone <span class="text-danger">*</span></label>
+                            <input type="text" name="Phone" id="InqPhone" class="form-control" required maxlength="10">
+                            <div id="errPhone" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Email</label>
+                            <input type="text" name="Email" id="InqEmail" class="form-control">
+                            <div id="errEmail" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Address</label>
+                            <textarea name="Address" id="InqAddress" class="form-control"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Description</label>
+                            <textarea name="Description" id="InqDescription" class="form-control"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Note</label>
+                            <textarea name="Note" id="InqNote" class="form-control"></textarea>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" name="Date" id="InqDate" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Next Follow Up Date</label>
+                            <input type="date" name="NextFollowUpDate" id="InqNextFollowUpDate" class="form-control">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Assign To</label>
+                            <select name="AssignedTo" id="InqAssignedTo" class="form-select select2">
+                                <option value="">Select</option>
+                                @foreach (var st in Model.Staff)
+                                {
+                                    <option value="@st.StaffID">@($"{st.FirstName} {st.LastName} ({st.StaffID})")</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Reference</label>
+                            <select name="ReferenceID" id="InqReferenceID" class="form-select select2">
+                                <option value="">Select</option>
+                                @foreach (var r in Model.References)
+                                {
+                                    <option value="@r.ReferenceID">@r.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Source</label>
+                            <select name="SourceID" id="InqSourceID" class="form-select select2">
+                                <option value="">Select</option>
+                                @foreach (var s in Model.Sources)
+                                {
+                                    <option value="@s.SourceID">@s.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Class</label>
+                            <select name="ClassID" id="InqClassID" class="form-select select2">
+                                <option value="">Select</option>
+                                @foreach (var c in Model.Classes)
+                                {
+                                    <option value="@c.ClassID">@c.ClassName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Number Of Child </label>
+                            <input type="number" name="NoOfChild" id="InqNoOfChild" class="form-control" value="1">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="Status" id="InqStatus" class="form-select select2">
+                                <option value="Active">Active</option>
+                                <option value="Passive">Passive</option>
+                                <option value="Dead">Dead</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Follow Up Modal -->
+<div class="modal fade" id="followUpModal">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">Inquiry Follow Up</h5>
+                <div>
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <div class="col-lg-7 p-4 border-end">
+                        <form id="followUpForm">
+                            <input type="hidden" name="InquiryID" id="FollowUpInquiryID" />
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Follow Up Date <span class="text-danger">*</span></label>
+                                    <input type="date" name="FollowUpDate" id="FollowUpDate" class="form-control" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Next Follow Up Date <span class="text-danger">*</span></label>
+                                    <input type="date" name="NextFollowUpDate" id="FollowUpNextDate" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Response <span class="text-danger">*</span></label>
+                                    <textarea name="Response" id="FollowUpResponse" class="form-control" rows="3" required></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Note</label>
+                                    <textarea name="Note" id="FollowUpNote" class="form-control" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-success px-4"><i class="ti ti-cloud me-1"></i> Save Follow Up</button>
+                            </div>
+                        </form>
+
+                        <div class="mt-4">
+                            <h6 class="fw-bold mb-3">Timeline</h6>
+                            <div id="followUpTimeline" class="timeline">
+                                <!-- Timeline items injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5 p-4 bg-light">
+                        <div class="summary-sidebar">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-0" id="SideName">Summary</h5>
+                                    <small class="text-muted" id="SideAssigned">Assigned: -</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary" id="SideStatus">Active</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <p class="mb-2"><strong>Phone:</strong> <span id="SidePhone">-</span></p>
+                                <p class="mb-2"><strong>Email:</strong> <span id="SideEmail">-</span></p>
+                                <p class="mb-2"><strong>Address:</strong> <span id="SideAddress">-</span></p>
+                                <p class="mb-2"><strong>Class:</strong> <span id="SideClass">-</span></p>
+                                <p class="mb-2"><strong>Source:</strong> <span id="SideSource">-</span></p>
+                                <p class="mb-2"><strong>Reference:</strong> <span id="SideReference">-</span></p>
+                                <p class="mb-2"><strong>Child Count:</strong> <span id="SideChild">-</span></p>
+                                <hr />
+                                <p class="mb-2"><strong>Enquiry Date:</strong> <span id="SideEnqDate">-</span></p>
+                                <p class="mb-2"><strong>Next Follow Up:</strong> <span id="SideNextDate">-</span></p>
+                                <p class="mb-2"><strong>Description:</strong> <br /><span id="SideDesc" class="small text-muted">-</span></p>
+                                <p class="mb-2"><strong>Note:</strong> <br /><span id="SideNote" class="small text-muted">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/inline-form-validation.js"></script>
+    <script>
+        // jQuery helper to serialize form to JSON object
+        $.fn.serializeObject = function () {
+            var o = {};
+            var a = this.serializeArray();
+            $.each(a, function () {
+                if (o[this.name]) {
+                    if (!o[this.name].push) {
+                        o[this.name] = [o[this.name]];
+                    }
+                    o[this.name].push(this.value || '');
+                } else {
+                    o[this.name] = this.value || '';
+                }
+            });
+            return o;
+        };
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#inquiryTable')) {
+                const table = $('#inquiryTable').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+        $(document).ready(function () {
+            $('#inquiryTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4,5,6,7] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6,7] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6,7] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6,7] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6,7] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+        })
+
+
+        $(document).ready(function () {
+            // Modal Select2
+            $('#addModal .select2').select2({
+                dropdownParent: $('#addModal')
+            });
+
+            // Filter Select2
+            $('#filterForm .select2').select2();
+
+            // Inquiry Form Submission
+            $('#inquiryForm').on('submit', function (e) {
+                e.preventDefault();
+                
+                // Reset and validate
+                InlineFormValidation.clearMap({ 'InqPhone': 'errPhone', 'InqEmail': 'errEmail' });
+                const isPhoneValid = InlineFormValidation.validateMobile('InqPhone', 'errPhone', true);
+                const isEmailValid = InlineFormValidation.validateEmail('InqEmail', 'errEmail', false);
+                
+                if (!this.checkValidity() || !isPhoneValid || !isEmailValid) {
+                    this.reportValidity();
+                    return;
+                }
+
+                const data = $(this).serializeObject();
+                
+                $.ajax({
+                    url: '/FrontOffice/SaveInquiry',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (r) {
+                        if (r.success) {
+                            showToast(r.message, 'success');
+                            $('#addModal').modal('hide');
+                            loadInquiryTable();
+                        } else {
+                            showToast(r.message, 'error');
+                        }
+                    }
+                });
+            });
+
+            // Follow Up Form Submission
+            $('#followUpForm').on('submit', function (e) {
+                e.preventDefault();
+                const data = $(this).serializeObject();
+
+                $.ajax({
+                    url: '/FrontOffice/SaveFollowUp',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (r) {
+                        if (r.success) {
+                            showToast(r.message, 'success');
+                            openFollowUp(data.InquiryID); // Refresh timeline
+                        } else {
+                            showToast(r.message, 'error');
+                        }
+                    }
+                });
+            });
+
+            // Table Search
+            $('#tableSearch').on('keyup', function () {
+                const val = $(this).val().toLowerCase();
+                $("#inquiryTable tbody tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1)
+                });
+                renderFilterBadges();
+            });
+
+            // Handle Filter Form
+            $('#filterForm').on('submit', function (e) {
+                e.preventDefault();
+                loadInquiryTable();
+                $('.dropdown-toggle').dropdown('hide'); // Close filter dropdown
+            });
+
+            // Prevent dropdown from closing when clicking inside
+            $('.filter-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        function loadInquiryTable() {
+            const formData = $('#filterForm').serializeObject();
+            const query = $.param(formData);
+            
+            $.get('/FrontOffice/GetAllInquiriesJson?' + query, function (r) {
+                if (r.success) {
+                    let html = '';
+                    r.data.forEach(item => {
+                        const badgeClass = item.status === "Active" ? "bg-success" : (item.status === "Passive" ? "bg-warning" : "bg-danger");
+                        const enqDate = item.date ? new Date(item.date).toLocaleDateString('en-GB').replace(/\//g, '-') : '-';
+                        const lastDate = item.lastFollowUpDate ? new Date(item.lastFollowUpDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '-';
+                        const nextDate = item.nextFollowUpDate ? new Date(item.nextFollowUpDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '-';
+
+                        html += `
+                            <tr>
+                                <td>
+                                <input type="checkbox" name="selectedInquiry" class="form-check-input student-checkbox" value="${item.inquiryID}"></td>
+                                <td>${item.name}</td>
+                                <td>${item.phone}</td>
+                                <td>${item.sourceName || '-'}</td>
+                                <td>${enqDate}</td>
+                                <td>${lastDate}</td>
+                                <td>${nextDate}</td>
+                                <td><span class="badge ${badgeClass} rounded-pill">${item.status}</span></td>
+                               
+                            </tr>`;
+                    });
+                    $('#inquiryTable tbody').html(html || '<tr><td colspan="9" class="text-center">No records found</td></tr>');
+                    renderFilterBadges();
+                }
+            });
+        }
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'tableSearch', label: 'Search', type: 'text' },
+                { id: 'filterClass', label: 'Class', type: 'select' },
+                { id: 'filterSource', label: 'Source', type: 'select' },
+                { id: 'filterStatus', label: 'Status', type: 'select' },
+                { id: 'filterFromDate', label: 'From', type: 'date' },
+                { id: 'filterToDate', label: 'To', type: 'date' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text' || f.type === 'date') {
+                    if (value && value.trim() && value !== '0') {
+                        text = value;
+                        if (f.type === 'date') {
+                            const parts = value.split('-');
+                            if (parts.length === 3) {
+                                text = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            }
+                        }
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '' && value !== '0') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                if (filterId === 'tableSearch') {
+                    $('#tableSearch').trigger('keyup');
+                } else {
+                    loadInquiryTable();
+                }
+            } else {
+                el.value = (filterId === 'filterClass' || filterId === 'filterSource') ? '0' : '';
+                if (window.jQuery && jQuery(el).data('select2')) {
+                    jQuery(el).trigger('change.select2');
+                }
+                loadInquiryTable();
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('tableSearch').value = '';
+            document.getElementById('filterClass').value = '0';
+            document.getElementById('filterSource').value = '0';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterFromDate').value = '';
+            document.getElementById('filterToDate').value = '';
+            
+            $('.select2').trigger('change.select2');
+            
+            $('#tableSearch').trigger('keyup');
+            loadInquiryTable();
+        }
+
+        function resetInquiryForm() {
+            $('#inquiryForm')[0].reset();
+            $('#InquiryID').val(0);
+            $('#modalTitle').text('Add Admission Enquiry');
+            $('.select2').val('').trigger('change');
+            $('#InqDate').val(new Date().toISOString().split('T')[0]);
+        }
+
+        function editSelectedInquiry() {
+            const checked = $('.student-checkbox:checked');
+            if (checked.length !== 1) {
+                showToast('Please select a record to edit', 'warning');
+                return;
+            }
+            loadInquiry(checked.val());
+        }
+
+        function followUpSelectedInquiry() {
+            const checked = $('.student-checkbox:checked');
+            if (checked.length !== 1) {
+                showToast('Please select a record for follow up', 'warning');
+                return;
+            }
+            openFollowUp(checked.val());
+        }
+
+        function loadInquiry(id) {
+            $.get('/FrontOffice/GetInquiry/' + id, function (r) {
+                if (r.success) {
+                    const d = r.data;
+                    $('#InquiryID').val(d.inquiryID);
+                    $('#InqName').val(d.name);
+                    $('#InqPhone').val(d.phone);
+                    $('#InqEmail').val(d.email);
+                    $('#InqAddress').val(d.address);
+                    $('#InqDescription').val(d.description);
+                    $('#InqNote').val(d.note);
+                    $('#InqDate').val(d.date ? d.date.split('T')[0] : '');
+                    $('#InqNextFollowUpDate').val(d.nextFollowUpDate ? d.nextFollowUpDate.split('T')[0] : '');
+                    $('#InqAssignedTo').val(d.assignedTo).trigger('change');
+                    $('#InqReferenceID').val(d.referenceID).trigger('change');
+                    $('#InqSourceID').val(d.sourceID).trigger('change');
+                    $('#InqClassID').val(d.classID).trigger('change');
+                    $('#InqNoOfChild').val(d.noOfChild);
+                    $('#InqStatus').val(d.status).trigger('change');
+
+                    $('#modalTitle').text('Edit Admission Enquiry');
+                    $('#addModal').modal('show');
+                }
+            });
+        }
+
+        function deleteSelectedInquiry() {
+            const checked = $('.student-checkbox:checked');
+            if (checked.length === 0) {
+                showToast('Please select a record to delete', 'warning');
+                return;
+            }
+
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: '/FrontOffice/DeleteInquiry',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+
+        function openFollowUp(id) {
+            $.get('/FrontOffice/GetInquiry/' + id, function (r) {
+                if (r.success) {
+                    const d = r.data;
+                    $('#FollowUpInquiryID').val(d.inquiryID);
+                    $('#FollowUpDate').val(new Date().toISOString().split('T')[0]);
+                    $('#FollowUpNextDate').val('');
+                    $('#FollowUpResponse').val('');
+                    $('#FollowUpNote').val('');
+
+                    // Update Sidebar
+                    $('#SideName').text(d.name);
+                    $('#SideAssigned').text('Assigned: ' + (d.assignedToName || '-'));
+                    $('#SideStatus').text(d.status);
+                    $('#SidePhone').text(d.phone);
+                    $('#SideEmail').text(d.email || '-');
+                    $('#SideAddress').text(d.address || '-');
+                    $('#SideClass').text(d.className || '-');
+                    $('#SideSource').text(d.sourceName || '-');
+                    $('#SideReference').text(d.referenceName || '-');
+                    $('#SideChild').text(d.noOfChild);
+                    $('#SideEnqDate').text(d.date ? d.date.split('T')[0] : '-');
+                    $('#SideNextDate').text(d.nextFollowUpDate ? d.nextFollowUpDate.split('T')[0] : '-');
+                    $('#SideDesc').text(d.description || '-');
+                    $('#SideNote').text(d.note || '-');
+
+                    // Build Timeline
+                    let html = '';
+                    if (d.followUps && d.followUps.length > 0) {
+                        d.followUps.forEach(f => {
+                            html += `
+                                <div class="timeline-item mb-3 p-2 bg-white border rounded shadow-sm">
+                                    <div class="d-flex justify-content-between small">
+                                        <span class="fw-bold text-primary">${f.followUpDate.split('T')[0]}</span>
+                                        <span class="text-muted">Next: ${f.nextFollowUpDate.split('T')[0]}</span>
+                                    </div>
+                                    <div class="mt-1">${f.response}</div>
+                                    ${f.note ? `<div class="small text-muted mt-1 italic border-top pt-1">Note: ${f.note}</div>` : ''}
+                                </div>`;
+                        });
+                    } else {
+                        html = '<div class="text-muted small">No follow-ups recorded yet.</div>';
+                    }
+                    $('#followUpTimeline').html(html);
+
+                    $('#followUpModal').modal('show');
+                }
+            });
+        }
+    </script>
+}
+
+<style>
+    .timeline {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    .timeline-item {
+        border-left: 3px solid #0d6efd !important;
+    }
+    .btn-apply {
+        background-color: #345a67;
+        color: white;
+    }
+    .btn-apply:hover {
+        background-color: #2a4852;
+        color: white;
+    }
+    .bg-light { background-color: #f8f9fa !important; }
+</style>

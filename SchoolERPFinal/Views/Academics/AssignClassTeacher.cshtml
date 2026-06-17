@@ -1,0 +1,412 @@
+@model SchoolERP.Net.Models.AssignClassTeacherPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Class Teachers";
+    var currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Export");
+
+    var groupedAssignments = Model.Assignments
+        .GroupBy(a => new { a.ClassID, a.ClassName, a.SectionID, a.SectionName })
+        .Select(g => new {
+            g.Key.ClassID,
+            g.Key.ClassName,
+            g.Key.SectionID,
+            g.Key.SectionName,
+            Teachers = string.Join(", ", g.Select(t => t.StaffName)),
+            StaffIDs = g.Select(t => t.StaffID).ToList()
+        }).ToList();
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Class Teachers</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0);" class="btn btn-primary" onclick="openAddModal()"><i class="ti ti-plus me-1"></i> Assign Teacher</a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()"><i class="ti ti-pencil me-1"></i>Edit</button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()"><i class="ti ti-trash me-1"></i>Delete</button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="tableSearch" style="min-width: 220px;" placeholder="Search..." />
+                    </div>
+                </div>
+                @* <div class="d-flex align-items-center justify-content-between">
+                    <input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." />
+                </div> *@
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card overflow-auto shadow-tbl">
+            <div class="card-body p-0 overflow-auto">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="assignmentsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Class</th>
+                                <th>Section</th>
+                                <th>Class Teacher</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (groupedAssignments.Any())
+                            {
+                                foreach (var item in groupedAssignments)
+                                {
+                                    <tr class="item-row" style="cursor: pointer;" onclick="selectItem(this)" 
+                                        data-class-id="@item.ClassID" 
+                                        data-section-id="@item.SectionID" 
+                                        data-staff-ids='@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(item.StaffIDs))'>
+                                        <td>
+                                            <input type="checkbox"
+                                                   class="form-check-input student-checkbox"
+                                                   data-class-id="@item.ClassID"
+                                                   data-section-id="@item.SectionID">
+                                            
+                                        </td>
+                                        <td>@item.ClassName</td>
+                                        <td>@item.SectionName</td>
+                                        <td>@item.Teachers</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center">No assignments found</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="itemModal">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Assign Class Teacher</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveAssignment()"><i class="ti ti-cloud me-1"></i> Save</button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i>Close</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="txtOriginalClassId" value="0">
+                <input type="hidden" id="txtOriginalSectionId" value="0">
+                <div class="row row-gap-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Class <span class="text-danger">*</span></label>
+                        <select id="modalClassID" class="form-select form-control" onchange="onClassChange()">
+                            <option value="">Select</option>
+                            @foreach (var item in Model.Classes)
+                            {
+                                <option value="@item.ClassID">@item.ClassName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Section <span class="text-danger">*</span></label>
+                        <select id="modalSectionID" class="form-select form-control">
+                            <option value="">Select</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Class Teacher <span class="text-danger">*</span></label>
+                        <select class="form-control" id="choices-multiple-remove-button" multiple>
+                            @foreach (var s in Model.Staff)
+                            {
+                                <option value="@s.StaffID">@s.FirstName @s.LastName (@s.StaffCode)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .dt-buttons { display: none !important; }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#assignmentsTable')) {
+                const table = $('#assignmentsTable').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+        let teacherChoices;
+        let selectedRow = null;
+
+        $(document).ready(function () {
+            $('#assignmentsTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+
+            // Initialize Choices manually
+            const element = document.querySelector('#choices-multiple-remove-button');
+            if (element) {
+                teacherChoices = new Choices(element, {
+                    removeItemButton: true,
+                    placeholderValue: 'Select Teachers',
+                    searchPlaceholderValue: 'Search teachers...'
+                });
+            }
+
+            // Search functionality
+            $("#tableSearch").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("#assignmentsTable tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+
+        function selectItem(row) {
+            selectedRow = $(row);
+            $(".item-row").removeClass("bg-light");
+            selectedRow.addClass("bg-light");
+            
+            
+            $("#btnEdit").prop("disabled", false);
+            $("#btnDelete").prop("disabled", false);
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openAddModal() {
+            $('#modalTitle').text('Assign Class Teacher');
+            $('#txtOriginalClassId').val('0');
+            $('#txtOriginalSectionId').val('0');
+            $('#modalClassID').val('').prop('disabled', false);
+            $('#modalSectionID').empty().append('<option value="">Select</option>').prop('disabled', false);
+            teacherChoices.removeActiveItems();
+            teacherChoices.setChoiceByValue([]);
+            $('#itemModal').modal('show');
+        }
+
+        function onClassChange() {
+            const classId = $('#modalClassID').val();
+            const sectionSelect = $('#modalSectionID');
+            sectionSelect.empty().append('<option value="">Select</option>');
+            
+            if (classId) {
+                $.get('/Academics/GetSectionsByClass/' + classId, function (res) {
+                    if (res.success) {
+                        res.data.forEach(s => {
+                            sectionSelect.append(`<option value="${s.sectionID}">${s.sectionName}</option>`);
+                        });
+                    }
+                });
+            }
+        }
+
+        function editSelected() {
+            if (!selectedRow) return;
+            
+            const classId = selectedRow.data("class-id");
+            const sectionId = selectedRow.data("section-id");
+            const staffIds = selectedRow.data("staff-ids");
+
+            $('#modalTitle').text('Edit Class Teacher Assignment');
+            $('#txtOriginalClassId').val(classId);
+            $('#txtOriginalSectionId').val(sectionId);
+            $('#modalClassID').val(classId).prop('disabled', false);
+            
+            $.get('/Academics/GetSectionsByClass/' + classId, function (res) {
+                if (res.success) {
+                    const sectionSelect = $('#modalSectionID');
+                    sectionSelect.empty().append('<option value="">Select</option>');
+                    res.data.forEach(s => {
+                        sectionSelect.append(`<option value="${s.sectionID}">${s.sectionName}</option>`);
+                    });
+                    sectionSelect.val(sectionId).prop('disabled', false);
+                    
+                    teacherChoices.removeActiveItems();
+                    teacherChoices.setChoiceByValue(staffIds.map(String));
+                    
+                    $('#itemModal').modal('show');
+                }
+            });
+        }
+
+        function saveAssignment() {
+            const classId = $('#modalClassID').val();
+            const sectionId = $('#modalSectionID').val();
+            const staffIds = teacherChoices.getValue(true);
+
+            const originalClassId = parseInt($('#txtOriginalClassId').val());
+            const originalSectionId = parseInt($('#txtOriginalSectionId').val());
+
+            if (!classId || !sectionId || !staffIds || staffIds.length === 0) {
+                alert('Please fill all required fields (Class, Section, and at least one Teacher).');
+                return;
+            }
+
+            const data = {
+                ClassID: parseInt(classId),
+                SectionID: parseInt(sectionId),
+                StaffIDs: staffIds.map(Number)
+            };
+
+            const performSave = () => {
+                $.ajax({
+                    url: '/Academics/SaveClassTeacher',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            alert(res.message);
+                        }
+                    }
+                });
+            };
+
+            // If Class or Section changed, delete the old assignment first
+            if (originalClassId > 0 && originalSectionId > 0 && (originalClassId !== parseInt(classId) || originalSectionId !== parseInt(sectionId))) {
+                $.ajax({
+                    url: `/Academics/DeleteClassTeacherByClassSection?classId=${originalClassId}&sectionId=${originalSectionId}`,
+                    type: 'POST',
+                    success: function (res) {
+                        if (res.success) {
+                            performSave();
+                        } else {
+                            alert('Failed to update old assignment: ' + res.message);
+                        }
+                    }
+                });
+            } else {
+                performSave();
+            }
+        }
+
+        function deleteSelected() {           
+
+                 var classIds = [];
+                 var sectionIds = [];
+                $('.student-checkbox:checked').each(function () {
+                    classIds.push($(this).data('class-id'));
+                    sectionIds.push($(this).data('section-id'));
+                });
+
+                if (classIds.length === 0) {
+                    alert('Please select at least one record.');
+                    return;
+                }
+
+                 Swal.fire({
+                title: 'Are you sure?',
+                text: "You are about to delete this class teachers record. This action cannot be undone!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                customClass: {
+                    confirmButton: 'btn btn-danger me-2',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                         url: '/Academics/DeleteClassTeacherByClassSection',
+                        type: 'POST',
+                        traditional: true,
+                        data: {
+                            classId: classIds,
+                            sectionId: sectionIds
+                        },
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Deleted!', 'Class teachers record has been deleted.', 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Error!', res.message || 'Failed to delete class teachers.', 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                        }
+                    });
+                }
+            });
+
+        }
+    </script>
+}

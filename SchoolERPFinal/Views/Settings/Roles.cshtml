@@ -1,0 +1,508 @@
+@*
+    ======================================================================
+    VIEW: Settings / Roles.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.RolesPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canAdd = PermHelper.HasPermissionByUrl("/Settings", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+    var canView = PermHelper.HasPermissionByUrl("/Settings", "View");
+}
+<link rel="stylesheet" href="~/css/treeview.css" />
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Roles & Permissions</h4>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        @if (canAdd)
+        {
+            <button type="button" class="btn btn-primary" onclick="openRoleModal(0, '', '')">
+                <i class="fas fa-plus me-1"></i>Add New Role
+            </button>
+        }
+    </div>
+</div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-items-center mb-0">
+                            <thead>
+                                <tr>
+                                    @* <th><div class="form-check"><input type="radio" class="form-check-input" /></div> All</th> *@
+                                    <th>Role Name</th>
+                                    <th>Description</th>
+                                    <th>Status</th> 
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var role in Model.Roles)
+                                {
+                                    <tr>
+                                        @* <td>
+                                            <div class="form-check"><input type="radio" class="form-check-input" /></div>
+                                        </td> *@
+                                        <td>
+                                            @role.RoleName
+                                        </td>
+                                        <td>
+                                            @role.Description
+                                        </td>
+                                        <td class="align-middle">
+                                            @if (role.IsActive)
+                                            {
+                                            <span class="badge badge-boxed badge-outline-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                            <span class="badge badge-boxed badge-outline-primary">Inactive</span>
+                                            }
+                                        </td>
+                                        <td class="align-middle">
+                                        <div class="dropdown dropstart d-inline-block">
+                                            <a class="drop-arrow-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="ti ti-dots-vertical fs-18 text-muted"></i>
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-menu-right">
+                                                @if (canView || canEdit)
+                                                {
+                                                    <li><a class="dropdown-item" href="#" onclick="managePermissions(@role.RoleID, '@role.RoleName')">Permissions</a></li>
+                                                }
+                                                @if (canEdit)
+                                                {
+                                                    <li><a class="dropdown-item" href="#" onclick="openRoleModal(@role.RoleID, '@role.RoleName', '@role.Description')">Edit</a></li>
+                                                }
+                                            </ul>
+                                        </div>
+                                           @*  <button class="btn btn-link text-info px-2 mb-0" onclick="managePermissions(@role.RoleID, '@role.RoleName')">
+                                                <i class="fas fa-key me-1"></i> Permissions
+                                            </button>
+                                            <button class="btn btn-link text-secondary px-2 mb-0" onclick="openRoleModal(@role.RoleID, '@role.RoleName', '@role.Description')">
+                                                <i class="fas fa-edit me-1"></i> Edit
+                                            </button> *@
+                                        </td> 
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Role Upsert Modal -->
+<div class="modal fade" id="roleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom bg-light d-flex align-items-center">
+                <h5 class="modal-title fw-bold mb-0" id="roleModalTitle">Add New Role</h5>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Cancel</button>
+                    @if (canAdd || canEdit)
+                    {
+                        <button type="button" class="btn btn-sm btn-primary px-3" onclick="saveRole()">Save Role</button>
+                    }
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                @* Local alert div removed in favor of global toast system *@
+                <input type="hidden" id="roleId" value="0" />
+                <div class="mb-3">
+                    <input type="text" id="roleName" class="form-control" placeholder="Enter role name" />
+                    <div class="invalid-feedback" id="errRoleName"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-sm fw-bold">Description</label>
+                    <textarea id="roleDescription" class="form-control" rows="3" placeholder="Enter role description"></textarea>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Permissions Management Sidebar/Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="permissionsOffcanvas" aria-labelledby="permissionsOffcanvasLabel" style="width: 500px;-height:80vh">
+    <div class="offcanvas-header bg-light">
+        <h5 class="offcanvas-title fw-bold" id="permissionsOffcanvasLabel">Manage Permissions</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="text-primary text-xs">Manage access for:</span>
+                <h6 class="mb-0" id="currentRoleName">Role Name</h6>
+            </div>
+            @if (canEdit)
+            {
+                <button type="button" class="btn btn-success btn-sm shadow-none" onclick="savePermissions()">
+                    <i class="fas fa-save me-1"></i> Save Changes
+                </button>
+            }
+        </div>
+        <input type="hidden" id="currentRoleId" value="0" />
+        <div id="permissionsLoading" class="text-center py-5 d-none">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        <div id="permissionsContainer" class="p-0">
+            <div class="tree-grid-container" style="border:none; border-radius:0;">
+                <table class="table table-borderless tree-grid">
+                    <thead>
+                        <tr id="treeHeaderRow">
+                            <th class="id-column">ID</th>
+                            <th>Menu Name</th>
+                            @* Dynamic columns injected here *@
+                        </tr>
+                    </thead>
+                    <tbody id="treeGridBody">
+                        <!-- JS injected -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+        const permCanView = @Html.Raw(JsonSerializer.Serialize(canView));
+        const IV = window.InlineFormValidation;
+        const roleFieldMap = { roleName: 'errRoleName' };
+        const roleModal = new bootstrap.Modal(document.getElementById('roleModal'));
+
+        function clearRoleModalValidation() {
+            IV.clearMap(roleFieldMap);
+            IV.clearNotice('roleModalNotice');
+        }
+
+        IV.bindAutoClear(roleFieldMap);
+        const permissionsOffcanvas = new bootstrap.Offcanvas(document.getElementById('permissionsOffcanvas'));
+
+        function openRoleModal(id, name, desc) {
+            if (id === 0 && !permCanAdd) {
+                showToast('You do not have permission to add roles.', 'warning');
+                return;
+            }
+            if (id > 0 && !permCanEdit) {
+                showToast('You do not have permission to edit roles.', 'warning');
+                return;
+            }
+            clearRoleModalValidation();
+            document.getElementById('roleId').value = id;
+            document.getElementById('roleName').value = name;
+            document.getElementById('roleDescription').value = desc;
+            document.getElementById('roleModalTitle').innerText = id === 0 ? 'Add New Role' : 'Edit Role';
+            roleModal.show();
+        }
+
+        async function saveRole() {
+            const rid = parseInt(document.getElementById('roleId').value);
+            if (rid === 0 && !permCanAdd) {
+                showToast('You do not have permission to add roles.', 'warning');
+                return;
+            }
+            if (rid > 0 && !permCanEdit) {
+                IV.setNotice('roleModalNotice', 'You do not have permission to edit roles.');
+                return;
+            }
+            clearRoleModalValidation();
+
+            const roleName = document.getElementById('roleName').value.trim();
+            const description = document.getElementById('roleDescription').value.trim();
+
+            if (!roleName) {
+                IV.setFieldError('roleName', 'errRoleName', 'Role name is required.');
+                return;
+            }
+
+            const data = {
+                RoleID: rid,
+                RoleName: roleName,
+                Description: description
+            };
+
+            try {
+                const response = await fetch('/Settings/SaveRole', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    IV.setNotice('roleModalNotice', result.message || 'Save failed.');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error saving role', 'error');
+            }
+        }
+
+        async function managePermissions(roleId, roleName) {
+            if (!permCanView && !permCanEdit) {
+                showToast('You do not have permission to view role permissions.', 'warning');
+                return;
+            }
+            document.getElementById('currentRoleId').value = roleId;
+            document.getElementById('currentRoleName').innerText = roleName;
+            document.getElementById('treeGridBody').innerHTML = '';
+            document.getElementById('permissionsLoading').classList.remove('d-none');
+            permissionsOffcanvas.show();
+
+            try {
+                const response = await fetch(`/Settings/GetPermissions?roleId=${roleId}`);
+                const result = await response.json();
+                document.getElementById('permissionsLoading').classList.add('d-none');
+
+                if (result.success) {
+                    renderTree(result.permissions);
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error loading permissions', 'error');
+            }
+        }
+
+        function renderTree(matrix) {
+            const body = document.getElementById('treeGridBody');
+            body.innerHTML = '';
+
+            // 1. Group matrix by Menu and find unique permissions
+            const menus = {};
+            const uniquePerms = [];
+            const permIdsSeen = new Set();
+            matrix.forEach(item => {
+                if (!menus[item.menuID]) {
+                    menus[item.menuID] = {
+                        id: item.menuID,
+                        name: item.menuName,
+                        parentID: item.parentID,
+                        permissions: {} 
+                    };
+                }
+                menus[item.menuID].permissions[item.permissionID] = item.hasAccess;
+
+                if (!permIdsSeen.has(item.permissionID)) {
+                    permIdsSeen.add(item.permissionID);
+                    uniquePerms.push({
+                        id: item.permissionID,
+                        label: item.displayLabel || item.permissionName,
+                        name: item.permissionName
+                    });
+                }
+            });
+
+            // 2. Sort permissions (View first, then ID)
+            uniquePerms.sort((a, b) => {
+                if (a.name === 'View') return -1;
+                if (b.name === 'View') return 1;
+                return a.id - b.id;
+            });
+            const viewPermId = uniquePerms.length > 0 ? uniquePerms[0].id : null;
+
+            // 3. Update Header
+            const headerRow = document.getElementById('treeHeaderRow');
+            headerRow.innerHTML = `<th class="id-column">ID</th><th>Menu Name</th>`;
+            uniquePerms.forEach(p => {
+                headerRow.innerHTML += `<th class="matrix-col">${p.label}</th>`;
+            });
+
+            const menuArray = Object.values(menus);
+            const rootMenus = menuArray.filter(m => !m.parentID);
+
+            const buildRows = (list, depth = 0) => {
+                list.forEach((m, index) => {
+                    const children = menuArray.filter(c => c.parentID === m.id);
+                    const isParent = children.length > 0;
+                    const isLast = index === list.length - 1;
+
+                    const tr = document.createElement('tr');
+                    tr.className = `tree-row depth-${depth} ${isParent ? 'parent-node collapsed' : 'leaf-node'}`;
+                    tr.dataset.id = m.id;
+                    if (m.parentID) tr.dataset.parentId = m.parentID;
+                    
+                    let html = `<td class="id-column">${m.id}</td>`;
+                    
+                    // Toggle Logic
+                    let toggleHtml = '';
+                    if (isParent) {
+                        toggleHtml = `<span class="tree-toggle" onclick="toggleNode(${m.id}, event)">
+                                        <i class="fas fa-plus"></i>
+                                     </span>`;
+                    } else {
+                        toggleHtml = `<span style="width: 20px; display:inline-block;"></span>`;
+                    }
+
+                    html += `<td class="tree-cell">`;
+                    for (let i = 0; i < depth; i++) {
+                        html += `<span class="tree-indent"><span class="tree-line-v"></span></span>`;
+                    }
+                    if (depth > 0) {
+                        html += `<span class="tree-indent">
+                                    <span class="tree-line-v ${isLast ? 'last' : ''}"></span>
+                                    <span class="tree-line-h"></span>
+                                 </span>`;
+                    }
+
+                    // MASTER CHECKBOX
+                    html += `<input type="checkbox" class="row-master-check me-2" onchange="onToggleRow(this, ${m.id})"${permCanEdit ? '' : ' disabled'}>`;
+
+                    html += toggleHtml;
+
+                    html += `<i class="fas ${isParent ? 'fa-folder folder' : 'fa-file-alt file'} tree-icon"></i>`;
+                    html += `<span class="tree-label text-sm">${m.name}</span></td>`;
+
+                    // Dynamic Matrix Columns
+                    uniquePerms.forEach(p => {
+                        const hasPerm = m.permissions[p.id];
+                        if (hasPerm !== undefined) {
+                            html += `<td class="matrix-col">
+                                <input type="checkbox" class="form-check-input perm-checkbox" 
+                                       data-menu="${m.id}" data-perm="${p.id}" ${hasPerm ? 'checked' : ''}${permCanEdit ? '' : ' disabled'}>
+                             </td>`;
+                        } else {
+                            html += `<td class="matrix-col">-</td>`;
+                        }
+                    });
+
+                    tr.innerHTML = html;
+                    body.appendChild(tr);
+                    if (isParent) buildRows(children, depth + 1);
+                });
+            };
+
+            buildRows(rootMenus);
+        }
+
+        function toggleNode(menuId, event) {
+            event.stopPropagation();
+            const row = document.querySelector(`.tree-row[data-id="${menuId}"]`);
+            const isExpanded = row.classList.contains('expanded');
+            row.classList.toggle('expanded');
+            row.classList.toggle('collapsed');
+            const icon = row.querySelector('.tree-toggle i');
+            icon.classList.toggle('fa-minus');
+            icon.classList.toggle('fa-plus');
+
+            const descendants = document.querySelectorAll(`.tree-row[data-parent-id="${menuId}"]`);
+            descendants.forEach(d => {
+                if (isExpanded) {
+                    hideDescendants(d.dataset.id);
+                    d.style.display = 'none';
+                } else {
+                    d.style.display = 'table-row';
+                }
+            });
+        }
+
+        function hideDescendants(parentId) {
+            const descendants = document.querySelectorAll(`.tree-row[data-parent-id="${parentId}"]`);
+            descendants.forEach(d => {
+                d.style.display = 'none';
+                hideDescendants(d.dataset.id);
+            });
+        }
+
+        function onToggleRow(cb, menuId) {
+            const sameRowCheckboxes = document.querySelectorAll(`.tree-row[data-id="${menuId}"] .perm-checkbox`);
+            sameRowCheckboxes.forEach(mcb => mcb.checked = cb.checked);
+
+            const children = document.querySelectorAll(`.tree-row[data-parent-id="${menuId}"] .row-master-check`);
+            children.forEach(childCb => {
+                childCb.checked = cb.checked;
+                onToggleRow(childCb, childCb.closest('.tree-row').dataset.id);
+            });
+        }
+
+        async function savePermissions() {
+            if (!permCanEdit) {
+                showToast('You do not have permission to save role permissions.', 'warning');
+                return;
+            }
+            const roleId = parseInt(document.getElementById('currentRoleId').value);
+            const selected = [];
+            document.querySelectorAll('.perm-checkbox:checked').forEach(cb => {
+                selected.push({
+                    MenuID: parseInt(cb.dataset.menu),
+                    PermissionID: parseInt(cb.dataset.perm)
+                });
+            });
+
+            try {
+                const response = await fetch('/Settings/SaveRolePermissions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ RoleID: roleId, SelectedPermissions: selected })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast('Permissions updated successfully!', 'success');
+                    permissionsOffcanvas.hide();
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error saving permissions', 'error');
+            }
+        }
+    </script>
+}
+
+<style>
+    .bg-gradient-success {
+        background: linear-gradient(310deg, #2dce89, #2dcecc);
+    }
+    .bg-gradient-secondary {
+        background: linear-gradient(310deg, #627594, #a8b8d8);
+    }
+    .badge-sm {
+        padding: 0.45em 0.75em;
+        font-size: 0.75rem;
+    }
+    .text-xxs {
+        font-size: 0.65rem;
+    }
+    .font-weight-bolder {
+        font-weight: 700 !important;
+    }
+    .btn-link {
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
+    .offcanvas-body::-webkit-scrollbar {
+        width: 5px;
+    }
+    .offcanvas-body::-webkit-scrollbar-thumb {
+        background: #e9ecef;
+        border-radius: 10px;
+    }
+</style>

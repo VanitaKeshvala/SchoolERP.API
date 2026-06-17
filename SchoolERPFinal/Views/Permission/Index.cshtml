@@ -1,0 +1,458 @@
+@*
+    ======================================================================
+    VIEW: Permission / Index.cshtml
+    PURPOSE: User interface rendering for the Permission module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MstUserManagementPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Permission Management";
+    
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+    {
+        PermHelper.LoadPermissions(currentUserId);
+    }
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Permission", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Permission", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Permission", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Permission", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Permission", "Export");
+}
+
+@* Local alert div removed in favor of global toast system *@
+
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Permission Management</h6>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        <button class="btn btn-primary shadow-sm" id="btnAddPermission" onclick="openAddModal()" asp-permission="Add" asp-permission-url="/Permission">
+            <i class="ti ti-plus me-1"></i>Add
+        </button>
+        <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()" asp-permission="Edit" asp-permission-url="/Permission">
+            <i class="ti ti-pencil me-1"></i>Edit
+        </button>
+        <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()" asp-permission="Delete" asp-permission-url="/Permission">
+            <i class="ti ti-trash me-1"></i>Delete
+        </button>
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search permission..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+   @*  <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div>
+                    <h4 class="fw-bold mb-1"><i class="fas fa-key me-2 text-primary"></i>Permission Management</h4>
+                    <p class="text-muted mb-0">Define system-level action permissions (View, Add, Edit, Delete, Export, etc.)</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-primary px-4 shadow-sm" onclick="openAddModal()">
+                        <i class="fas fa-plus me-2"></i>Add
+                    </button>
+                    <button id="btnEdit" class="btn btn-outline-primary px-4 shadow-sm" disabled onclick="editSelected()">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </button>
+                    <button id="btnDelete" class="btn btn-outline-danger px-4 shadow-sm" disabled onclick="deleteSelected()">
+                        <i class="fas fa-trash me-2"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div> *@
+
+    <div class="row">
+        <div class="col-xl-12">
+        <div class="card shadow-tbl">
+               @*  <div class="card-header bg-white py-3 border-bottom-0">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <h5 class="mb-0 fw-bold text-dark">Master Permissions (Actions)</h5>
+                        <div class="position-relative">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" class="form-control form-control-sm ps-4" id="searchInput" placeholder="Search permissions...">
+                        </div>
+                    </div>
+                </div> *@
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table align-items-center mb-0" id="permissionsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">Select</th>
+                                    <th style="width:220px;">Permission Name (Action)</th>
+                                    <th style="width:220px;">Display Label</th>
+                                    <th>Status</th>
+                                    <th>Created On</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.Permissions)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@p.PermissionID, this)" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                        <input type="checkbox" name="selectedPermission"
+                                               class="form-check-input student-checkbox"
+                                               value="@p.PermissionID">
+                                            
+                                        </td>
+                                        <td>
+                                            @p.PermissionName
+                                        </td>
+                                        <td>@p.DisplayLabel</td>
+                                        <td>                                            
+                                            <span class="badge @(p.IsActive ? "bg-success" : "bg-secondary")" asp-permission="View" asp-permission-url="/Permission" asp-permission-negate="true">@(p.IsActive ? "Active" : "Inactive")</span>
+                                        </td>
+                                        <td><span class="text-xs">@p.CreatedOn.ToString("dd MMM yyyy")</span></td>
+                                    <td onclick="event.stopPropagation()">
+                                        <div class="form-check form-switch" asp-permission="Edit" asp-permission-url="/Permission">
+                                            <input class="form-check-input" type="checkbox" checked="@p.IsActive" onchange="toggleStatus(@p.PermissionID, this.checked)">
+                                        </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!---Add Permission---->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add Permission</h5>
+                <div class="ms-auto d-flex align-items-center gap-1">
+                    @* <button type="button" class="btn btn-sm btn-light" id="btnCancel" data-bs-dismiss="modal">Cancel</button> *@
+                    <button type="button" class="btn btn-sm btn-success shadow-sm" id="btnSave" onclick="saveItem()"><i class="ti ti-cloud me-1"></i> Save</button>                    
+                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                @* Local alert div removed in favor of global toast system *@
+                <form id="itemForm" class="row">
+                    <input type="hidden" id="txtItemId" value="0">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Permission Name (Standard Action) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtPermissionName" placeholder="e.g. View / Add / Export" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtPermissionName"></div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Display Label <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtDisplayLabel" placeholder="e.g. View Records" autocomplete="off">
+                        <div class="invalid-feedback" id="errTxtDisplayLabel"></div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="isActive" checked>
+                            <label class="form-check-label fw-bold" for="isActive">Active</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+        let selectedPermissionId = 0;
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
+        const IV = window.InlineFormValidation;
+        const permFieldMap = {
+            txtPermissionName: 'errTxtPermissionName',
+            txtDisplayLabel: 'errTxtDisplayLabel'
+        };
+
+        function clearPermModalValidation() {
+            IV.clearMap(permFieldMap);
+            IV.clearNotice('permModalNotice');
+        }
+
+        function selectItem(id, row) {
+            IV.clearNotice('permPageNotice');
+            selectedPermissionId = id;
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            //row.querySelector('input[type="radio"]').checked = true;
+            const btnEdit = document.getElementById('btnEdit');
+            const btnDelete = document.getElementById('btnDelete');
+            if (btnEdit && permCanEdit) btnEdit.disabled = false;
+            if (btnDelete && permCanDelete) btnDelete.disabled = false;
+
+                    let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        IV.bindAutoClear(permFieldMap);
+
+        function validatePermissionNameField() {
+            const name = document.getElementById('txtPermissionName').value.trim();
+            if (!name) {
+                IV.setFieldError('txtPermissionName', 'errTxtPermissionName', 'Permission name is required.');
+                return false;
+            }
+            if (!/^[a-zA-Z][a-zA-Z0-9_ ]*$/.test(name)) {
+                IV.setFieldError('txtPermissionName', 'errTxtPermissionName', 'Start with a letter. Only letters, numbers, spaces, and underscore are allowed.');
+                return false;
+            }
+            if (name.length > 50) {
+                IV.setFieldError('txtPermissionName', 'errTxtPermissionName', 'Permission name must be 50 characters or less.');
+                return false;
+            }
+            IV.clearFieldError('txtPermissionName', 'errTxtPermissionName');
+            return true;
+        }
+
+        function validateDisplayLabelField() {
+            const label = document.getElementById('txtDisplayLabel').value.trim();
+            if (!label) {
+                IV.setFieldError('txtDisplayLabel', 'errTxtDisplayLabel', 'Display label is required.');
+                return false;
+            }
+            if (label.length > 100) {
+                IV.setFieldError('txtDisplayLabel', 'errTxtDisplayLabel', 'Display label must be 100 characters or less.');
+                return false;
+            }
+            IV.clearFieldError('txtDisplayLabel', 'errTxtDisplayLabel');
+            return true;
+        }
+
+        function openAddModal() {
+            if (!permCanAdd) {
+                IV.setNotice('permPageNotice', 'You do not have permission to add.');
+                return;
+            }
+            IV.clearNotice('permPageNotice');
+            clearPermModalValidation();
+            document.getElementById('modalTitle').textContent = 'Add Permission';
+            document.getElementById('itemForm').reset();
+            document.getElementById('txtItemId').value = "0";
+            itemModal.show();
+        }
+
+        async function editSelected() {
+            if (!permCanEdit) {
+                IV.setNotice('permPageNotice', 'You do not have permission to edit.');
+                return;
+            }
+            if (selectedPermissionId === 0) return;
+            IV.clearNotice('permPageNotice');
+            clearPermModalValidation();
+            const resp = await fetch(`/Permission/GetPermission?permissionId=${selectedPermissionId}`);
+            const res = await resp.json();
+            if (res.success) {
+                document.getElementById('modalTitle').textContent = 'Edit Permission';
+                document.getElementById('txtItemId').value = res.permission.permissionID;
+                document.getElementById('txtPermissionName').value = res.permission.permissionName;
+                document.getElementById('txtDisplayLabel').value = res.permission.displayLabel || '';
+                document.getElementById('isActive').checked = res.permission.isActive;
+                itemModal.show();
+            } else {
+                IV.setNotice('permPageNotice', res.message || 'Could not load permission.');
+            }
+        }
+
+        async function deleteSelected() {
+            if (!permCanDelete) {
+                IV.setNotice('permPageNotice', 'You do not have permission to delete.');
+                return;
+            }
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this permission record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: '/Permission/Delete',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Permission record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete permission.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+
+        function validatePermissionForm() {
+            clearPermModalValidation();
+            const isNameValid = validatePermissionNameField();
+            const isLabelValid = validateDisplayLabelField();
+            return isNameValid && isLabelValid;
+        }
+
+        document.getElementById('txtPermissionName')?.addEventListener('blur', validatePermissionNameField);
+        document.getElementById('txtDisplayLabel')?.addEventListener('blur', validateDisplayLabelField);
+
+        async function saveItem() {
+            const isNew = parseInt(document.getElementById('txtItemId').value, 10) === 0;
+            if (isNew && !permCanAdd) {
+                IV.setNotice('permModalNotice', 'You do not have permission to add.');
+                return;
+            }
+            if (!isNew && !permCanEdit) {
+                IV.setNotice('permModalNotice', 'You do not have permission to edit.');
+                return;
+            }
+            if (!validatePermissionForm()) return;
+
+            const data = {
+                permissionID: parseInt(document.getElementById('txtItemId').value),
+                permissionName: document.getElementById('txtPermissionName').value.trim(),
+                displayLabel: document.getElementById('txtDisplayLabel').value.trim(),
+                isActive: document.getElementById('isActive').checked
+            };
+            const resp = await fetch('/Permission/Save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const res = await resp.json();
+            if (res.success) location.reload();
+            else IV.setNotice('permModalNotice', res.message || 'Save failed.');
+        }
+
+        async function toggleStatus(id, isActive) {
+            if (!permCanEdit) {
+                IV.setNotice('permPageNotice', 'You do not have permission to change status.');
+                return;
+            }
+            IV.clearNotice('permPageNotice');
+            const resp = await fetch(`/Permission/ToggleStatus?permissionId=${id}&isActive=${isActive}`, { method: 'POST' });
+            const res = await resp.json();
+            if (!res.success) {
+                IV.setNotice('permPageNotice', res.message || 'Could not update status.');
+                location.reload();
+            }
+        }
+
+        let exportTable;
+        $(document).ready(function () {
+            if ($.fn.DataTable.isDataTable('#permissionsTable')) {
+                $('#permissionsTable').DataTable().destroy();
+            }
+            exportTable = $('#permissionsTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 4], rows: ':visible' } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 4], rows: ':visible' } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 4], rows: ':visible' } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 4], rows: ':visible' } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 4], rows: ':visible' } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false
+            });
+        });
+
+        function triggerExport(type) {
+            if (!exportTable) return;
+            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+            else if (type === 'print') exportTable.button('.buttons-print').trigger();
+        }
+
+        document.getElementById('txtSearchInput')?.addEventListener('input', function () {
+            const q = this.value.toLowerCase().trim();
+            document.querySelectorAll('#permissionsTable tbody .item-row').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(q) ? '' : 'none';
+            });
+        });
+    </script>
+}

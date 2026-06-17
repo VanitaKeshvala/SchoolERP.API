@@ -1,0 +1,419 @@
+@model SchoolERP.Net.Models.AddTimeTablePageViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Add Class Timetable";
+    var days = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+}
+
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Add Class Timetable</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button onclick="saveAllTimeTable()" class="btn btn-success"><i class="ti ti-cloud me-1"></i> Save</button>
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body">
+                <form id="filterForm" method="post" action="/Academics/AddTimeTable">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." />
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn text-primary fs-6">Filter</button>
+                                        </div>
+                                    </div>
+                                    <div class="filter-body pb-0 p-3">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
+                                            <select name="classId" id="FilterClassID" class="form-select form-control select2" required>
+                                                <option value="">Select</option>
+                                                @foreach (var item in Model.Classes)
+                                                {
+                                                    <option value="@item.ClassID" selected="@(Model.SelectedClassId == item.ClassID)">@item.ClassName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
+                                            <select name="sectionId" id="FilterSectionID" class="form-select form-control select2" required>
+                                                <option value="">Select</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Subject Group<span class="text-danger">*</span></label>
+                                            <select name="subjectGroupId" id="FilterSubjectGroupID" class="form-select form-control select2">
+                                                <option value="">Select</option>
+                                                @foreach (var item in Model.SubjectGroups)
+                                                {
+                                                    <option value="@item.SubjectGroupID" selected="@(Model.SelectedSubjectGroupId == item.SubjectGroupID)">@item.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <!-- Parameter Generator Card -->
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-header">
+                <h6 class="card-title">Select parameter to generate time table quickly</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 align-items-end">
+                    <div class="flex-grow-1">
+                        <label class="form-label">Period Start Time <span class="text-danger">*</span></label>
+                        <input type="time" id="GenStartTime" class="form-control">
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Duration (minute) <span class="text-danger">*</span></label>
+                        <input type="number" id="GenDuration" class="form-control">
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Interval (minute) <span class="text-danger">*</span></label>
+                        <input type="number" id="GenInterval" class="form-control">
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Room No <span class="text-danger">*</span></label>
+                        <input type="text" id="GenRoomNo" class="form-control">
+                    </div>
+                    <button type="button" onclick="applyGenParameters()" class="btn btn-teal mb-1">Apply</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Table Tabs Card -->
+        <div class="card shadow-tbl-outer">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <ul class="nav nav-pills gap-2" id="dayTabs">
+                    @for (int i = 0; i < days.Length; i++)
+                    {
+                        <li class="nav-item">
+                            <a href="#day-@i" data-bs-toggle="pill" class="nav-link @(i == 0 ? "active" : "")">@days[i]</a>
+                        </li>
+                    }
+                </ul>
+                <button type="button" onclick="addNewRow()" class="btn btn-primary"><i class="ti ti-plus"></i> Add New</button>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="tabContent">
+                    @for (int i = 0; i < days.Length; i++)
+                    {
+                        var dayName = days[i];
+                        var daySlots = Model.TimeTableSlots.Where(x => x.Day == dayName).ToList();
+                        <div class="tab-pane @(i == 0 ? "active" : "")" id="day-@i" data-day="@dayName">
+                            <div class="slots-container">
+                                @if (daySlots.Any())
+                                {
+                                    foreach (var slot in daySlots)
+                                    {
+                                        <div class="slot-row d-flex gap-2 align-items-end mb-3">
+                                            <div class="flex-grow-1">
+                                                <label class="form-label">Subject</label>
+                                                <select name="SubjectID" class="form-select form-control select2-dynamic">
+                                                    <option value="">Select</option>
+                                                    @foreach (var s in Model.Subjects) { 
+                                                        <option value="@s.SubjectID" selected="@(slot.SubjectID == s.SubjectID)">@s.SubjectName</option> 
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="form-label">Teacher</label>
+                                                <select name="StaffID" class="form-select form-control select2-dynamic">
+                                                    <option value="">Select</option>
+                                                    @foreach (var st in Model.Staff) { 
+                                                        <option value="@st.StaffID" selected="@(slot.StaffID == st.StaffID)">@st.FirstName @st.LastName</option> 
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="form-label">Time From <span class="text-danger">*</span></label>
+                                                <input type="time" name="StartTime" class="form-control" value="@slot.StartTime">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <label class="form-label">Time To <span class="text-danger">*</span></label>
+                                                <input type="time" name="EndTime" class="form-control" value="@slot.EndTime">
+                                            </div>
+                                            <div class="flex-grow-2">
+                                                <label class="form-label">Room No <span class="text-danger">*</span></label>
+                                                <input type="text" name="RoomNo" class="form-control" value="@slot.RoomNo">
+                                            </div>
+                                            <button type="button" class="btn btn-danger mb-1" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <!-- Initial row if none exist -->
+                                    <div class="slot-row d-flex gap-2 align-items-end mb-3">
+                                        <div class="flex-grow-1">
+                                            <label class="form-label">Subject</label>
+                                            <select name="SubjectID" class="form-select form-control select2-dynamic">
+                                                <option value="">Select</option>
+                                                @foreach (var s in Model.Subjects) { <option value="@s.SubjectID">@s.SubjectName</option> }
+                                            </select>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <label class="form-label">Teacher</label>
+                                            <select name="StaffID" class="form-select form-control select2-dynamic">
+                                                <option value="">Select</option>
+                                                @foreach (var st in Model.Staff) { <option value="@st.StaffID">@st.FirstName @st.LastName</option> }
+                                            </select>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <label class="form-label">Time From <span class="text-danger">*</span></label>
+                                            <input type="time" name="StartTime" class="form-control">
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <label class="form-label">Time To <span class="text-danger">*</span></label>
+                                            <input type="time" name="EndTime" class="form-control">
+                                        </div>
+                                        <div class="flex-grow-2">
+                                            <label class="form-label">Room No <span class="text-danger">*</span></label>
+                                            <input type="text" name="RoomNo" class="form-control">
+                                        </div>
+                                        <button type="button" class="btn btn-danger py-2" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="slotTemplate">
+    <div class="slot-row d-flex gap-2 align-items-end mb-3">
+        <div class="flex-grow-1">
+            <label class="form-label">Subject</label>
+            <select name="SubjectID" class="form-select form-control">
+                <option value="">Select</option>
+                @foreach (var s in Model.Subjects) { <option value="@s.SubjectID">@s.SubjectName</option> }
+            </select>
+        </div>
+        <div class="flex-grow-1">
+            <label class="form-label">Teacher</label>
+            <select name="StaffID" class="form-select form-control">
+                <option value="">Select</option>
+                @foreach (var st in Model.Staff) { <option value="@st.StaffID">@st.FirstName @st.LastName</option> }
+            </select>
+        </div>
+        <div class="flex-grow-1">
+            <label class="form-label">Time From <span class="text-danger">*</span></label>
+            <input type="time" name="StartTime" class="form-control">
+        </div>
+        <div class="flex-grow-1">
+            <label class="form-label">Time To <span class="text-danger">*</span></label>
+            <input type="time" name="EndTime" class="form-control">
+        </div>
+        <div class="flex-grow-2">
+            <label class="form-label">Room No <span class="text-danger">*</span></label>
+            <input type="text" name="RoomNo" class="form-control">
+        </div>
+        <button type="button" class="btn btn-danger py-2" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+    </div>
+</template>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('.select2').select2();
+            initDynamicSelect2();
+
+            $('#FilterClassID').on('change', function () {
+                loadSections($(this).val(), '#FilterSectionID');
+                $('#FilterSubjectGroupID').html('<option value="">Select</option>');
+            });
+
+            $('#FilterSectionID').on('change', function () {
+                loadSubjectGroups($('#FilterClassID').val(), $(this).val());
+            });
+
+            // Handle Filter click
+            $('.filter-dropdown').on('click', function (e) { e.stopPropagation(); });
+
+            // Search
+            $('#tableSearch').on('keyup', function () {
+                const val = $(this).val().toLowerCase();
+                $('.slot-row').filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1)
+                });
+            });
+
+            // Initial load for sections and groups
+            const classId = '@Model.SelectedClassId';
+            const sectionId = '@Model.SelectedSectionId';
+            const subjectGroupId = '@Model.SelectedSubjectGroupId';
+            if (classId > 0) {
+                loadSections(classId, '#FilterSectionID', sectionId);
+                if (sectionId > 0) {
+                    loadSubjectGroups(classId, sectionId, subjectGroupId);
+                }
+            }
+        });
+
+        function initDynamicSelect2() {
+            $('.select2-dynamic').select2();
+        }
+
+        function loadSections(classId, targetSelector, selectedId = null) {
+            if (!classId) { $(targetSelector).html('<option value="">Select</option>').trigger('change'); return; }
+            $.get('/Academics/GetSectionsByClass/' + classId, function (r) {
+                if (r.success) {
+                    let html = '<option value="">Select</option>';
+                    r.data.forEach(s => {
+                        const selected = s.sectionID == selectedId ? 'selected' : '';
+                        html += `<option value="${s.sectionID}" ${selected}>${s.sectionName}</option>`;
+                    });
+                    $(targetSelector).html(html).trigger('change');
+                }
+            });
+        }
+
+
+
+        function loadSubjectGroups(classId, sectionId, selectedId = null) {
+            if (!classId || !sectionId) { $('#FilterSubjectGroupID').html('<option value="">Select</option>').trigger('change'); return; }
+            $.get('/Academics/GetSubjectGroups', { classId: classId, sectionId: sectionId }, function (r) {
+                if (r.success) {
+                    let html = '<option value="">Select</option>';
+                    r.data.forEach(g => {
+                        const selected = g.subjectGroupID == selectedId ? 'selected' : '';
+                        html += `<option value="${g.subjectGroupID}" ${selected}>${g.name}</option>`;
+                    });
+                    $('#FilterSubjectGroupID').html(html).trigger('change');
+                }
+            });
+        }
+
+        function addNewRow() {
+            const activePane = $('.tab-pane.active .slots-container');
+            const template = document.getElementById('slotTemplate').innerHTML;
+            const $newRow = $(template);
+            activePane.append($newRow);
+            $newRow.find('select').select2();
+        }
+
+        function deleteRow(btn) {
+            $(btn).closest('.slot-row').remove();
+        }
+
+        function applyGenParameters() {
+            const startTime = $('#GenStartTime').val();
+            const duration = parseInt($('#GenDuration').val());
+            const interval = parseInt($('#GenInterval').val());
+            const roomNo = $('#GenRoomNo').val();
+
+            if (!startTime || isNaN(duration)) {
+                showToast('Please provide Start Time and Duration', 'warning');
+                return;
+            }
+
+            $('.tab-pane.active .slot-row').each(function(index) {
+                const currentStartTime = index === 0 ? startTime : calculateNextTime(lastEndTime, interval);
+                const currentEndTime = calculateEndTime(currentStartTime, duration);
+                
+                $(this).find('input[name="StartTime"]').val(currentStartTime);
+                $(this).find('input[name="EndTime"]').val(currentEndTime);
+                $(this).find('input[name="RoomNo"]').val(roomNo);
+                
+                lastEndTime = currentEndTime;
+            });
+        }
+
+        function calculateEndTime(startTime, minutes) {
+            const [h, m] = startTime.split(':').map(Number);
+            const date = new Date(0, 0, 0, h, m + minutes);
+            return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        }
+
+        function calculateNextTime(endTime, interval) {
+            const [h, m] = endTime.split(':').map(Number);
+            const date = new Date(0, 0, 0, h, m + (interval || 0));
+            return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
+        }
+
+        let lastEndTime = "";
+
+        async function saveAllTimeTable() {
+            const classId = $('#FilterClassID').val();
+            const sectionId = $('#FilterSectionID').val();
+            if (!classId || !sectionId) {
+                showToast('Please select Class and Section', 'warning');
+                return;
+            }
+
+            const data = [];
+            $('.tab-pane').each(function() {
+                const day = $(this).data('day');
+                $(this).find('.slot-row').each(function() {
+                    const slot = {
+                        TimeTableID: 0,
+                        ClassID: parseInt(classId),
+                        SectionID: parseInt(sectionId),
+                        Day: day,
+                        SubjectID: parseInt($(this).find('select[name="SubjectID"]').val()),
+                        StaffID: parseInt($(this).find('select[name="StaffID"]').val()),
+                        StartTime: $(this).find('input[name="StartTime"]').val(),
+                        EndTime: $(this).find('input[name="EndTime"]').val(),
+                        RoomNo: $(this).find('input[name="RoomNo"]').val()
+                    };
+                    if (slot.SubjectID && slot.StartTime && slot.EndTime) {
+                        data.push(slot);
+                    }
+                });
+            });
+
+            if (data.length === 0) {
+                showToast('No valid slots to save', 'warning');
+                return;
+            }
+
+            // Since our API currently takes a single object, we might need a Bulk Save API or loop.
+            // However, to keep it simple and follow project patterns, we'll try to save them one by one
+            // OR I should update the API to handle a list.
+            // For now, let's assume a loop is acceptable but a bulk API is better.
+            
+            showToast('Saving...', 'info');
+            let successCount = 0;
+            for (const item of data) {
+                const res = await fetch('/Academics/SaveTimeTable', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                }).then(r => r.json());
+                if (res.success) successCount++;
+            }
+
+            if (successCount > 0) {
+                showToast(`Successfully saved ${successCount} slots`, 'success');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Failed to save any slots', 'error');
+            }
+        }
+    </script>
+}

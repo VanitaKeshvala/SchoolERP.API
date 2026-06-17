@@ -1,0 +1,1137 @@
+@*
+    ======================================================================
+    VIEW: Shared / _Layout.cshtml
+    PURPOSE: User interface rendering for the Shared module.
+    ======================================================================
+*@
+@using SchoolERP.Net.Services
+
+@* 
+    INJECTED SERVICES:
+    - ILocalizationService: Hooks into high-speed MemoryCache to render standard UI tokens dynamically.
+    - IMenuService: Queries 'sp_Menus_GetAll' recursively to construct the access-controlled sidebar.
+*@
+@inject ILocalizationService Localizer
+@* @inject IMenuService MenuService *@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject IConfiguration Configuration
+@{
+    var baseUrl = Configuration["AppSettings:BaseUrl"];
+}
+@* @inject PermissionHelper PermHelper *@
+<!DOCTYPE html>
+<html lang="@Localizer.GetCurrentLanguage()">
+
+<head>
+
+    <!-- Meta Tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>@ViewData["Title"] - @Localizer.GetString("school_name")</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Dreams Technologies">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="~/assets/img/favicon.png">
+
+    <!-- Theme Config Js -->
+    <script src="~/assets/js/theme-script.js"></script>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/assets/css/bootstrap.min.css">
+
+    <!-- Datetimepicker CSS -->
+    <link rel="stylesheet" href="~/assets/css/bootstrap-datetimepicker.min.css">
+
+    <!-- Daterangepikcer CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/daterangepicker/daterangepicker.css">
+
+    <!-- Fontawesome CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/fontawesome/css/all.min.css">
+
+    <!-- Tabler Icon CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/tabler-icons/tabler-icons.min.css">
+
+    <!-- Simplebar CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/simplebar/simplebar.min.css">
+
+    <!-- Choices CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/choices.js/public/assets/styles/choices.min.css">
+
+
+    <!-- DataTable CSS -->
+    <link rel="stylesheet" href="~/assets/css/jquery.dataTables.min.css" />
+
+    <link rel="stylesheet" href="~/assets/css/buttons.dataTables.min.css" />
+
+    <link href="~/assets/css/select2.min.css" rel="stylesheet" />
+
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="~/assets/css/style.css" id="app-style">
+
+    @RenderSection("Styles", required: false)
+
+</head>
+
+<body>
+
+    <!-- Begin Wrapper -->
+    <div class="main-wrapper">
+
+        <!-- Topbar Start -->
+        <header class="navbar-header">
+            <div class="page-container topbar-menu">
+                <div class="d-flex align-items-center gap-2">
+
+                    <!-- Logo -->
+                    <a href="index.html" class="logo">
+
+                        <!-- Logo Normal -->
+                        <span class="logo-light">
+                            <span class="logo-lg"><img src="~/assets/img/logo.svg" alt="logo"></span>
+                            <span class="logo-sm"><img src="~/assets/img/logo-small.svg" alt="small logo"></span>
+                        </span>
+
+                        <!-- Logo Dark -->
+                        <span class="logo-dark">
+                            <span class="logo-lg"><img src="~/assets/img/logo-white.svg" alt="dark logo"></span>
+                        </span>
+                    </a>
+
+                    <!-- Sidebar Mobile Button -->
+                    <a id="mobile_btn" class="mobile-btn" href="#sidebar">
+                        <i class="ti ti-menu-deep fs-24"></i>
+                    </a>
+
+                    <button class="sidenav-toggle-btn btn border-0 p-0 active" id="toggle_btn2">
+                        <i class="ti ti-arrow-right"></i>
+                    </button>
+
+                  @*   <button class="me-1 fw-bold btn btn-primary" data-bs-toggle="modal" data-bs-target="#session-year" type="button">
+                        <span id="activeSessionTitle">—</span> <i class="ti ti-pencil ms-1 fs-15 align-middle"></i>
+                    </button> *@
+
+                    <div class="me-1">
+                        <select id="ddlSessionYear"
+                                class="form-select fw-bold"
+                                style="min-width:140px;">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <button class="me-1 fw-bold btn btn-info" data-bs-toggle="modal" data-bs-target="#company-selection" type="button">
+                        <span id="activeCompanyTitle">—</span> <i class="ti ti-building ms-1 fs-15 align-middle"></i>
+                    </button>
+
+                    @* <!-- Search -->
+                    <div class="me-auto d-flex align-items-center header-search d-lg-flex d-none">
+                        <!-- Search -->
+                        <div class="input-icon-start position-relative me-2">
+                            <span class="input-icon-addon">
+                                <i class="ti ti-search"></i>
+                            </span>
+                            <input type="text" id="txtGlobalSearch" class="form-control shadow-sm" placeholder="@Localizer.GetString("search_by_student_name")" style="width: 500px;">
+                            <!-- <span class="input-icon-addon text-dark shadow fs-18 d-inline-flex p-0 header-search-icon"><i class="ti ti-command"></i></span> -->
+                        </div>
+                        <!-- /Search -->
+                    </div> *@
+
+                </div>
+
+                <div class="d-flex align-items-center">
+
+                    <!-- Search for Mobile -->
+                    <!--<div class="header-item d-flex d-lg-none me-2">
+                        <button class="topbar-link btn btn-icon" data-bs-toggle="modal" data-bs-target="#searchModal" type="button">
+                            <i class="ti ti-search fs-16"></i>
+                        </button>
+                    </div>-->
+
+
+                   @*  <div class="header-item">
+                        <button class="me-3 fw-bold btn btn-primary" data-bs-toggle="modal" data-bs-target="#session-year">
+                            2024-2025 <i class="ti ti-pencil ms-1 fs-15 align-middle"></i>
+                        </button>
+                    </div> *@
+
+
+                    <div class="header-item d-none d-sm-flex me-2">
+                        <button class="topbar-link btn btn-icon" type="button">
+                            <i class="ti ti-calendar-week fs-16"></i>
+                        </button>
+                    </div>
+
+                   
+                    <!-- Light/Dark Mode Button -->
+                    <div class="header-item d-none d-sm-flex me-2">
+                        <button class="topbar-link btn btn-icon topbar-link" id="light-dark-mode" type="button">
+                            <i class="ti ti-moon fs-16"></i>
+                        </button>
+                    </div>
+
+                    <!-- Language Switcher -->
+                    <div class="header-item">
+                        <div class="dropdown me-2">
+                            <button class="topbar-link btn btn-icon dropdown-toggle drop-arrow-none" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="ti ti-language fs-18"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end p-2" style="max-height: 300px; overflow-y: auto;">
+                                @foreach (var lang in Localizer.GetAvailableLanguages().OrderBy(l => l))
+                                {
+                                    <li>
+                                        <form asp-controller="Language" asp-action="SetLanguage" method="post">
+                                            <input type="hidden" name="language" value="@lang" />
+                                            <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                                            <button type="submit" class="dropdown-item @(Localizer.GetCurrentLanguage() == lang ? "active" : "")">
+                                                @System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(lang.Replace("_", " "))
+                                            </button>
+                                        </form>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+
+
+                    <!-- Notification Dropdown -->
+                    <div class="header-item">
+                        <div class="dropdown me-2">
+
+                            <button class="topbar-link btn btn-icon topbar-link dropdown-toggle drop-arrow-none" data-bs-toggle="dropdown" data-bs-offset="0,24" type="button" aria-haspopup="false" aria-expanded="false">
+                                <i class="ti ti-bell-check fs-16 animate-ring"></i>
+                                <span class="notification-badge"></span>
+                            </button>
+
+                            <div class="dropdown-menu p-0 dropdown-menu-end dropdown-menu-lg" style="min-height: 300px;">
+
+                                <div class="p-2 border-bottom">
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <h6 class="m-0 fs-16 fw-semibold"> @Localizer.GetString("notifications")</h6>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Notification Body -->
+                                <div class="notification-body position-relative z-2 rounded-0" data-simplebar>
+
+                                    <!-- Item-->
+                                    <div class="dropdown-item notification-item py-3 text-wrap border-bottom" id="notification-1">
+                                        <div class="d-flex">
+                                            <div class="me-2 position-relative flex-shrink-0">
+                                                <img src="assets/img/doctors/doctor-01.jpg" class="avatar-md rounded-circle" alt="">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <p class="mb-0 fw-medium text-dark">Dr. Smith</p>
+                                                <p class="mb-1 text-wrap">
+                                                    updated the <span class="fw-medium text-dark">surgery</span> schedule.
+                                                </p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fs-12"><i class="ti ti-clock me-1"></i>4 min ago</span>
+                                                    <div class="notification-action d-flex align-items-center float-end gap-2">
+                                                        <a href="javascript:void(0);" class="notification-read rounded-circle bg-danger" data-bs-toggle="tooltip" title="" data-bs-original-title="Make as Read" aria-label="Make as Read"></a>
+                                                        <button class="btn rounded-circle p-0" data-dismissible="#notification-1">
+                                                            <i class="ti ti-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item-->
+                                    <div class="dropdown-item notification-item py-3 text-wrap border-bottom" id="notification-2">
+                                        <div class="d-flex">
+                                            <div class="me-2 position-relative flex-shrink-0">
+                                                <img src="assets/img/doctors/doctor-06.jpg" class="avatar-md rounded-circle" alt="">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <p class="mb-0 fw-medium text-dark">Dr. Patel</p>
+                                                <p class="mb-1 text-wrap">
+                                                    completed a <span class="fw-medium text-dark">follow-up</span> report for patient <span class="fw-medium text-dark">Emily</span>.
+                                                </p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fs-12"><i class="ti ti-clock me-1"></i>8 min ago</span>
+                                                    <div class="notification-action d-flex align-items-center float-end gap-2">
+                                                        <a href="javascript:void(0);" class="notification-read rounded-circle bg-danger" data-bs-toggle="tooltip" title="" data-bs-original-title="Make as Read" aria-label="Make as Read"></a>
+                                                        <button class="btn rounded-circle p-0" data-dismissible="#notification-2">
+                                                            <i class="ti ti-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item-->
+                                    <div class="dropdown-item notification-item py-3 text-wrap border-bottom" id="notification-3">
+                                        <div class="d-flex">
+                                            <div class="me-2 position-relative flex-shrink-0">
+                                                <img src="assets/img/doctors/doctor-02.jpg" class="avatar-md rounded-circle" alt="">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <p class="mb-0 fw-medium text-dark">Emily</p>
+                                                <p class="mb-1 text-wrap">
+                                                    booked an appointment with <span class="fw-medium text-dark">Dr. Patel</span> for <span class="fw-medium text-dark">April 15</span>
+                                                </p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fs-12"><i class="ti ti-clock me-1"></i>15 min ago</span>
+                                                    <div class="notification-action d-flex align-items-center float-end gap-2">
+                                                        <a href="javascript:void(0);" class="notification-read rounded-circle bg-danger" data-bs-toggle="tooltip" title="" data-bs-original-title="Make as Read" aria-label="Make as Read"></a>
+                                                        <button class="btn rounded-circle p-0" data-dismissible="#notification-3">
+                                                            <i class="ti ti-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Item-->
+                                    <div class="dropdown-item notification-item py-3 text-wrap" id="notification-4">
+                                        <div class="d-flex">
+                                            <div class="me-2 position-relative flex-shrink-0">
+                                                <img src="assets/img/doctors/doctor-07.jpg" class="avatar-md rounded-circle" alt="">
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <p class="mb-0 fw-medium text-dark">Amelia</p>
+                                                <p class="mb-1 text-wrap">
+                                                    completed the <span class="fw-medium text-dark">pre-visit</span> health questionnaire.
+                                                </p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fs-12"><i class="ti ti-clock me-1"></i>20 min ago</span>
+                                                    <div class="notification-action d-flex align-items-center float-end gap-2">
+                                                        <a href="javascript:void(0);" class="notification-read rounded-circle bg-danger" data-bs-toggle="tooltip" title="" data-bs-original-title="Make as Read" aria-label="Make as Read"></a>
+                                                        <button class="btn rounded-circle p-0" data-dismissible="#notification-4">
+                                                            <i class="ti ti-x"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- View All-->
+                                <div class="p-2 rounded-bottom border-top text-center">
+                                    <a href="notifications.html" class="text-center text-decoration-underline fs-14 mb-0">
+                                        @Localizer.GetString("view_all")
+                                    </a>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="header-item d-none d-sm-flex me-2">
+                        <button class="topbar-link btn btn-icon topbar-link" id="light-dark-mode" type="button">
+                            <i class="ti ti-replace-user fs-16"></i>
+                        </button>
+                    </div>
+
+                    <!-- User Dropdown -->
+                    <div class="dropdown profile-dropdown d-flex align-items-center justify-content-center">
+                        <a href="javascript:void(0);" class="topbar-link dropdown-toggle drop-arrow-none position-relative" data-bs-toggle="dropdown" data-bs-offset="0,22" aria-haspopup="false" aria-expanded="false">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="~/assets/img/users/user-01.jpg" width="32" class="rounded-circle d-flex" alt="user-image">
+                                @* <span class="online text-success"><i class="ti ti-circle-filled d-flex bg-white rounded-circle border border-1 border-white"></i></span> *@
+                                <span class="fw-semibold username-header">@User.Identity.Name <i class="ti ti-chevron-down"></i></span>
+                            </div>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-2">
+
+                            <div class="d-flex align-items-center bg-light rounded-3 p-2 mb-2">
+                                <img src="~/assets/img/users/user-01.jpg" class="rounded-circle" width="42" height="42" alt="">
+                                <div class="ms-2">
+                                    <p class="fw-medium text-dark mb-0">@User.Identity.Name</p>
+                                    
+                                </div>
+                            </div>
+
+                            <!-- Item-->
+                            <a href="#" class="dropdown-item">
+                                <i class="ti ti-user-circle me-1 align-middle"></i>
+                                <span class="align-middle">@Localizer.GetString("profile")</span>
+                            </a>
+
+                            <!-- Item-->
+                            <a href="#" class="dropdown-item">
+                                <i class="ti ti-settings me-1 align-middle"></i>
+                                <span class="align-middle">@Localizer.GetString("system_setting")</span>
+                            </a>
+
+                            <!-- item -->
+                           @*  <div class="form-check form-switch form-check-reverse d-flex align-items-center justify-content-between dropdown-item mb-0">
+                                <label class="form-check-label" for="notify"><i class="ti ti-bell me-1"></i>Notifications</label>
+                                <input class="form-check-input me-0" type="checkbox" role="switch" id="notify">
+                            </div> *@
+
+                            <!-- Item-->
+                            <!-- <a href="transactions.html" class="dropdown-item">
+                                <i class="ti ti-transition-right me-1 align-middle"></i>
+                                <span class="align-middle">Transactions</span>
+                            </a> -->
+                            <!-- Item-->
+                            <div class="pt-2 mt-2 border-top">
+                                <a href="/Auth/Logout" class="dropdown-item text-danger">
+                                    <i class="ti ti-logout me-1 fs-17 align-middle"></i>
+                                    <span class="align-middle">@Localizer.GetString("logout")</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+        <!-- Topbar End -->
+        <!-----Change Session------->
+        
+
+        
+
+        <!-- Sidenav Menu Start -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-logo">
+                <a href="/" class="logo logo-normal">
+                    <img src="~/assets/img/logo.svg" alt="Logo">
+                </a>
+                <button class="sidenav-toggle-btn btn border-0 p-0 active" id="toggle_btn"> 
+                    <i class="ti ti-arrow-left text-body"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-inner" data-simplebar>
+                <div id="sidebar-menu" class="sidebar-menu">
+                    <ul class="sidebar-menu">                        
+                        @* Added Menu View Component invocation to render dynamic sidebar menu.
+                         Uses Component.InvokeAsync("Menu")
+                         Executes MenuViewComponent asynchronously
+                         Retrieves menu data from API/service
+                         Renders menu using Default.cshtml
+                         Keeps layout clean and reusable
+                         Supports dynamic menu generation *@
+                        @await Component.InvokeAsync("Menu")
+                    </ul>                    
+                </div>
+            </div>
+        </div>
+        <!-- Sidenav Menu End -->
+
+        <div class="page-wrapper">
+            <div class="content pb-0">
+                @RenderBody()
+            </div>
+
+            <!-- Footer Start -->
+            <div class="footer text-center bg-white p-2 border-top position-sticky bottom-0">
+                <p class="text-dark mb-0">Copyright &copy; @DateTime.Now.Year - All right reserved Shivkarma Infotech Solutions.</p>
+            </div>
+            <!-- Footer End -->
+
+        </div>
+
+    </div>
+    <!-- End Wrapper -->
+
+
+
+    <!----Session Year Modal--->
+    @* <div class="modal fade" id="session-year">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header justify-content-between align-items-center">
+                    <h6 class="modal-title">@Localizer.GetString("current_session")</h6>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-success btn-sm" id="btnSaveSession"><i class="ti ti-cloud me-1"></i> @Localizer.GetString("save")</button>
+
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="" class="form-label">@Localizer.GetString("session")</label>
+                        <select name="ddlSessionYear" id="ddlSessionYear" class="form-select mb-3">
+                            <option value="">Loading…</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> *@
+
+
+    <!----company-selection Year Modal--->
+    <div class="modal fade" id="company-selection">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header justify-content-between align-items-center">
+                    <h6 class="modal-title">Select Company</h6>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-success btn-sm" id="btnSaveCompany"><i class="ti ti-cloud me-1"></i> Save</button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="" class="form-label">Company</label>
+                        <select name="ddlCompanySelection" id="ddlCompanySelection" class="form-select mb-3">
+                            <option value="">Loading…</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- jQuery -->
+    <script src="~/assets/js/jquery-3.7.1.min.js"></script>
+    <script>
+        (function () {
+            function getJwtToken() {
+                try {
+                    const token = localStorage.getItem('token');
+                    return token && token.trim() ? token.trim() : '';
+                } catch {
+                    return '';
+                }
+            }
+
+            function isApiUrl(url) {
+                if (!url) return false;
+                return url.startsWith('/api/') || url.startsWith('api/');
+            }
+
+            const nativeFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                const requestUrl = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+                if (!isApiUrl(requestUrl)) {
+                    return nativeFetch(input, init);
+                }
+
+                const token = getJwtToken();
+                if (!token) {
+                    return nativeFetch(input, init);
+                }
+
+                const nextInit = init ? { ...init } : {};
+                const headers = new Headers(nextInit.headers || (typeof input !== 'string' ? input.headers : undefined) || {});
+                if (!headers.has('Authorization')) {
+                    headers.set('Authorization', `Bearer ${token}`);
+                }
+                nextInit.headers = headers;
+                return nativeFetch(input, nextInit);
+            };
+
+            if (window.jQuery && typeof window.jQuery.ajaxSetup === 'function') {
+                window.jQuery.ajaxSetup({
+                    beforeSend: function (xhr, settings) {
+                        const token = getJwtToken();
+                        if (!token) return;
+                        const url = settings && settings.url ? settings.url : '';
+                        if (!isApiUrl(url)) return;
+                        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    }
+                });
+            }
+        })();
+
+            
+        
+    </script>
+
+    <!-- Bootstrap Core JS -->
+    <script src="~/assets/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Simplebar JS -->
+    <script src="~/assets/plugins/simplebar/simplebar.min.js"></script>
+
+    <!-- Dropzone File Js -->
+    <script src="~/assets/plugins/dropzone/dropzone-min.js"></script>
+
+    <!-- File Upload Demo js -->
+    <script src="~/assets/js/form-fileupload.js"></script>
+
+    <!-- Editor JS -->
+    <script src="~/js/ckeditor.js"></script>    
+   
+
+    <!-- Daterangepikcer JS -->
+    <script src="~/assets/js/moment.min.js"></script>
+    <script src="~/assets/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="~/assets/plugins/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <!-- Main JS -->
+    <script src="~/assets/js/script.js"></script>
+    <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+
+
+    <script src="~/js/select2.min.js"></script>
+
+
+
+    <!-- DataTable Core -->
+    <script src="~/js/jquery.dataTables.min.js"></script>
+
+    <!-- Buttons -->
+    <script src="~/js/dataTables.buttons.min.js"></script>
+
+    <!-- Export Dependencies -->
+    <script src="~/js/jszip.min.js"></script>
+
+    <script src="~/js/pdfmake.min.js"></script>
+
+    <script src="~/js/vfs_fonts.js"></script>
+
+    <!-- Export Buttons -->
+    <script src="~/js/buttons.html5.min.js"></script>
+
+    <script src="~/js/buttons.print.min.js"></script>
+
+    <script>
+        const input = document.getElementById("txtBackDaysAllow");
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "-" || e.key === "Minus") {
+                e.preventDefault();
+            }
+        });
+
+
+        $(document).ready(function () {
+            $('#txtStartTime').timepicker({
+                timeFormat: 'hh:mm p', // 12-hour format with AM/PM
+                interval: 15,          // 15 min interval
+                minTime: '12:00am',
+                maxTime: '11:59pm',
+                defaultTime: '12',
+                startTime: '12:00am',
+                dynamic: false,
+                dropdown: true,
+                scrollbar: true
+            });
+        });
+    </script>
+
+    <script>
+        ClassicEditor.create(document.querySelector("#editor")).catch((error) => {
+            console.error(error);
+        });
+
+        ClassicEditor.create(document.querySelector("#editor2")).catch((error) => {
+            console.error(error);
+        });
+
+        ClassicEditor.create(document.querySelector("#editor3")).catch((error) => {
+            console.error(error);
+        });
+
+        ClassicEditor.create(document.querySelector("#editor4")).catch((error) => {
+            console.error(error);
+        });
+
+        $('#mySelect').select2({
+            placeholder: "Select",
+            allowClear: true
+        });
+        $('#mySelect2').select2({
+            placeholder: "Select",
+            allowClear: true
+        });
+    </script>
+
+    <script src="~/js/inline-form-validation.js" asp-append-version="true"></script>
+
+    <script>
+        (function () {
+            const ddl = document.getElementById('ddlSessionYear');
+            //const titleEl = document.getElementById('activeSessionTitle');
+           // const btnSave = document.getElementById('btnSaveSession');
+
+            if (!ddl) return;
+
+            async function fetchSessions() {
+                const resp = await fetch('/Sessions/GetAll?includeDeleted=false', { method: 'GET' });
+                const payload = await resp.json();
+                if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
+                    throw new Error(payload?.message || 'Failed to load sessions');
+                }
+                return payload.data;
+            }
+
+            async function fetchUserCurrentSession() {
+                try {
+                    const resp = await fetch('/Sessions/GetUserCurrentSession', { method: 'GET' });
+                    const payload = await resp.json();
+                    return payload.success ? (payload.data || 0) : 0;
+                } catch {
+                    return 0;
+                }
+            }
+
+            function setLoadingState(message) {
+                ddl.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = message || 'Loading…';
+                ddl.appendChild(opt);
+                ddl.disabled = true;
+               // btnSave.disabled = true;
+            }
+
+            function populateSessions(sessions) {
+                ddl.innerHTML = '';
+                for (const s of sessions) {
+                    const opt = document.createElement('option');
+                    opt.value = String(s.sessionId);
+                    opt.textContent = s.sessionTitle || `Session #${s.sessionId}`;
+                    ddl.appendChild(opt);
+                }
+                ddl.disabled = sessions.length === 0;
+                //btnSave.disabled = sessions.length === 0;
+            }
+
+            function selectDefaultSession(sessions, dbSessionId) {
+                const fromDb = dbSessionId
+                    ? (sessions.find(s => s && s.sessionId === dbSessionId) || null)
+                    : null;
+
+                const active = fromDb || sessions.find(s => s && s.isActive === true) || sessions[0] || null;
+                if (!active) {
+                    //titleEl.textContent = '—';
+                    ddl.value = '';
+                    return null;
+                }
+                //titleEl.textContent = active.sessionTitle || '—';
+                ddl.value = String(active.sessionId);
+                return active;
+            }
+
+            async function init() {
+                try {
+                    setLoadingState('Loading…');
+                    const [sessions, currentSessionId] = await Promise.all([
+                        fetchSessions(),
+                        fetchUserCurrentSession()
+                    ]);
+                    populateSessions(sessions);
+                    selectDefaultSession(sessions, currentSessionId);
+                } catch (e) {
+                    console.error(e);
+                    setLoadingState('No sessions');
+                    //titleEl.textContent = '—';
+                }
+            }
+
+            ddl.addEventListener('change', async function () {
+                const selectedId = parseInt(ddl.value || '0', 10);
+                if (!selectedId) return;
+
+                //btnSave.disabled = true;
+                ddl.disabled = true;
+                try {
+                    const resp = await fetch('/Sessions/SetCurrent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: selectedId })
+                    });
+                    const res = await resp.json();
+                    if (!res || res.success !== true) {
+                        throw new Error(res?.message || 'Could not set current session.');
+                    }
+                    window.location.reload();
+                } catch (e) {
+                    console.error(e);
+                    //btnSave.disabled = false;
+                    ddl.disabled = false;
+                }
+            });
+
+            init();
+        })();
+
+        (function () {
+            const ddl = document.getElementById('ddlCompanySelection');
+            const titleEl = document.getElementById('activeCompanyTitle');
+            const btnSave = document.getElementById('btnSaveCompany');
+
+            if (!ddl || !titleEl || !btnSave) return;
+
+            async function fetchCompanies() {
+                const resp = await fetch('/Company/GetAssignedCompanies', { method: 'GET' });
+                const payload = await resp.json();
+                if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
+                    throw new Error(payload?.message || 'Failed to load companies');
+                }
+                return payload.data;
+            }
+
+            async function fetchUserCurrentCompany() {
+                try {
+                    const resp = await fetch('/Company/GetUserCurrentCompany', { method: 'GET' });
+                    const payload = await resp.json();
+                    return payload.success ? (payload.data || 0) : 0;
+                } catch {
+                    return 0;
+                }
+            }
+
+            function setLoadingState(message) {
+                ddl.innerHTML = '';
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = message || 'Loading…';
+                ddl.appendChild(opt);
+                ddl.disabled = true;
+                btnSave.disabled = true;
+            }
+
+            function populateCompanies(companies) {
+                ddl.innerHTML = '';
+                for (const c of companies) {
+                    const opt = document.createElement('option');
+                    opt.value = String(c.companyId);
+                    opt.textContent = c.schoolName || `Company #${c.companyId}`;
+                    ddl.appendChild(opt);
+                }
+                ddl.disabled = companies.length === 0;
+                btnSave.disabled = companies.length === 0;
+            }
+
+            function selectDefaultCompany(companies, dbCompanyId) {
+                const fromDb = dbCompanyId
+                    ? (companies.find(c => c && c.companyId === dbCompanyId) || null)
+                    : null;
+
+                const active = fromDb || companies.find(c => c && c.isActive === true) || companies[0] || null;
+                if (!active) {
+                    titleEl.textContent = '—';
+                    ddl.value = '';
+                    return null;
+                }
+                titleEl.textContent = active.schoolName || '—';
+                ddl.value = String(active.companyId);
+                return active;
+            }
+
+            async function init() {
+                try {
+                    setLoadingState('Loading…');
+                    const [companies, currentCompanyId] = await Promise.all([
+                        fetchCompanies(),
+                        fetchUserCurrentCompany()
+                    ]);
+                    populateCompanies(companies);
+                    selectDefaultCompany(companies, currentCompanyId);
+                } catch (e) {
+                    console.error(e);
+                    setLoadingState('No companies');
+                    titleEl.textContent = '—';
+                }
+            }
+
+            btnSave.addEventListener('click', async function () {
+                const selectedId = parseInt(ddl.value || '0', 10);
+                if (!selectedId) return;
+
+                btnSave.disabled = true;
+                ddl.disabled = true;
+                try {
+                    const resp = await fetch('/Company/SetCurrent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ companyId: selectedId })
+                    });
+                    const res = await resp.json();
+                    if (!res || res.success !== true) {
+                        throw new Error(res?.message || 'Could not set current company.');
+                    }
+                    window.location.reload();
+                } catch (e) {
+                    console.error(e);
+                    btnSave.disabled = false;
+                    ddl.disabled = false;
+                }
+            });
+
+            init();
+        })();
+    </script>
+    <script>
+        /**
+         * Sidebar Toggle & Persistence Logic
+         * Overrides default script.js behavior to ensure ThemeCustomizer state is preserved.
+         */
+        $(document).ready(function () {
+            if (typeof ThemeCustomizer !== 'undefined') {
+                // Initialize customizer if not already assigned to window
+                if (!window.themeCustomizer) {
+                    window.themeCustomizer = new ThemeCustomizer();
+                    window.themeCustomizer.init();
+                }
+
+                function toggleSidebarStyle() {
+                    let html = document.documentElement;
+                    let currentSize = html.getAttribute("data-layout");
+
+                    // Fallback if attribute is missing
+                    if (!currentSize) {
+                        currentSize = window.themeCustomizer.config.sidenav.size || "default";
+                    }
+
+                    let newSize = (currentSize === "mini") ? "default" : "mini";
+
+                    // Apply layout: This updates <html> data-layout, toggles <body> .mini-sidebar class,
+                    // and persists the state to sessionStorage via ThemeCustomizer's internal methods.
+                    window.themeCustomizer.changeLeftbarSize(newSize);
+
+                    // Force UI refresh for responsive elements (tables, charts, etc.)
+                    window.dispatchEvent(new Event('resize'));
+                }
+
+                // Unbind the conflicting handlers from assets/js/script.js to prevent double-toggling
+                $(document).off('click', '#toggle_btn');
+                $(document).off('click', '#toggle_btn2');
+
+                // Re-bind both toggle buttons to the persistent handler
+                $(document).on('click', '#toggle_btn, #toggle_btn2', function (e) {
+                    e.preventDefault();
+                    toggleSidebarStyle();
+                    return false;
+                });
+            }
+        });
+    </script>
+
+
+    @RenderSection("Scripts", required: false)
+    
+    <!-- Global Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+        <div id="globalToast" class="toast align-items-center border-0 text-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    <i id="globalToastIcon" class="ti ti-info-circle fs-5"></i>
+                    <div id="globalToastMessage"></div>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Global Toast Helper
+         * param {string} message - The message to display
+         * param {string} type - 'success', 'error', 'warning', 'info'
+         */
+        window.showToast = function (message, type) {
+            const toastEl = document.getElementById('globalToast');
+            const messageEl = document.getElementById('globalToastMessage');
+            const iconEl = document.getElementById('globalToastIcon');
+            
+            if (!toastEl || !messageEl) return;
+
+            // Handle boolean type (compatibility with older showToast(msg, isSuccess))
+            let toastType = type;
+            if (typeof type === 'boolean') {
+                toastType = type ? 'success' : 'error';
+            }
+
+            // Reset classes
+            toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
+            iconEl.className = 'ti fs-5';
+
+            // Set type specifics
+            switch (toastType?.toLowerCase()) {
+                case 'success':
+                    toastEl.classList.add('bg-success');
+                    iconEl.classList.add('ti-circle-check');
+                    break;
+                case 'error':
+                case 'danger':
+                    toastEl.classList.add('bg-danger');
+                    iconEl.classList.add('ti-alert-circle');
+                    break;
+                case 'warning':
+                    toastEl.classList.add('bg-warning');
+                    iconEl.classList.add('ti-alert-triangle');
+                    break;
+                case 'info':
+                default:
+                    toastEl.classList.add('bg-info');
+                    iconEl.classList.add('ti-info-circle');
+                    break;
+            }
+
+            messageEl.textContent = message;
+            
+            const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 });
+            toast.show();
+        };
+    </script>
+
+    <script>
+
+        const calendarGrid = document.getElementById("calendarGrid");
+        const monthYear = document.getElementById("monthYear");
+
+        const today = new Date();
+
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+
+        const months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+
+        monthYear.innerText = `${months[currentMonth]} ${currentYear}`;
+
+        const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        // Previous month placeholders
+        for (let i = 0; i < firstDay; i++) {
+
+            const div = document.createElement("div");
+            div.classList.add("day", "inactive");
+
+            calendarGrid.appendChild(div);
+        }
+
+        // Calendar Days
+        for (let day = 1; day <= totalDays; day++) {
+
+            const dayDiv = document.createElement("div");
+            dayDiv.classList.add("day");
+
+            if (
+                day === today.getDate() &&
+                currentMonth === today.getMonth() &&
+                currentYear === today.getFullYear()
+            ) {
+                dayDiv.classList.add("today");
+            }
+
+            let eventHtml = "";
+
+            // Sample Events
+            if (day === 5) {
+                eventHtml = `<div class="event">Sports Day</div>`;
+            }
+
+            if (day === 12) {
+                eventHtml = `<div class="holiday">Holiday</div>`;
+            }
+
+            if (day === 18) {
+                eventHtml = `<div class="meeting">Meeting</div>`;
+            }
+
+            if (day === 25) {
+                eventHtml = `<div class="event">Annual Event</div>`;
+            }
+
+            dayDiv.innerHTML = `
+                        <div class="day-number">${day}</div>
+                        ${eventHtml}
+                    `;
+
+            calendarGrid.appendChild(dayDiv);
+        }
+
+    </script>
+    <script>
+        /**
+         * Global Table Sorting
+         * Automatically adds sorting to tables with class 'table'
+         */
+        $(document).ready(function() {
+            document.querySelectorAll('table.table:not(.dataTable)').forEach(table => {
+                if (table.getAttribute('data-manual-sort') === 'true') return;
+
+                const thead = table.querySelector('thead');
+                const tbody = table.querySelector('tbody');
+                if (!thead || !tbody) return;
+
+                const headers = thead.querySelectorAll('th');
+                headers.forEach((header, index) => {
+                    const headerText = header.innerText.trim().toLowerCase();
+                    if (headerText === 'select' || headerText === 'action' || headerText === 'status' || headerText === '') {
+                        return;
+                    }
+
+                    if (!header.querySelector('i.fa-sort')) {
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-sort text-muted ms-1';
+                        header.appendChild(icon);
+                    }
+
+                    header.style.cursor = 'pointer';
+                    header.addEventListener('click', function() {
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
+                        const validRows = rows.filter(row => !row.querySelector('td[colspan]'));
+                        
+                        if (validRows.length <= 1) return;
+
+                        const isAscending = header.dataset.order !== 'asc';
+                        
+                        validRows.sort((a, b) => {
+                            if (index >= a.cells.length || index >= b.cells.length) return 0;
+                            
+                            let aCol = a.cells[index].innerText.trim();
+                            let bCol = b.cells[index].innerText.trim();
+                            
+                            const aSort = a.cells[index].getAttribute('data-sort');
+                            const bSort = b.cells[index].getAttribute('data-sort');
+                            
+                            if (aSort !== null && bSort !== null) {
+                                aCol = aSort;
+                                bCol = bSort;
+                                const aNum = parseFloat(aCol);
+                                const bNum = parseFloat(bCol);
+                                if (!isNaN(aNum) && !isNaN(bNum)) {
+                                    return isAscending ? aNum - bNum : bNum - aNum;
+                                }
+                            } else {
+                                const aClean = aCol.replace(/[^\d.-]/g, '');
+                                const bClean = bCol.replace(/[^\d.-]/g, '');
+                                const aNum = parseFloat(aClean);
+                                const bNum = parseFloat(bClean);
+                                
+                                if (aClean !== '' && bClean !== '' && !isNaN(aNum) && !isNaN(bNum) && 
+                                    /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean)) {
+                                    return isAscending ? aNum - bNum : bNum - aNum;
+                                }
+                            }
+                            
+                            return isAscending ? aCol.localeCompare(bCol, undefined, {numeric: true, sensitivity: 'base'}) : bCol.localeCompare(aCol, undefined, {numeric: true, sensitivity: 'base'});
+                        });
+                        
+                        validRows.forEach(row => tbody.appendChild(row));
+                        header.dataset.order = isAscending ? 'asc' : 'desc';
+                        
+                        headers.forEach((h) => {
+                            const icon = h.querySelector('i');
+                            if (icon) {
+                                if (h === header) {
+                                    icon.className = isAscending ? 'fas fa-sort-up ms-1' : 'fas fa-sort-down ms-1';
+                                    icon.classList.remove('text-muted');
+                                } else {
+                                    icon.className = 'fas fa-sort text-muted ms-1';
+                                    h.dataset.order = '';
+                                }
+                            }
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

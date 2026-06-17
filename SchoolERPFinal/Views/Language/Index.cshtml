@@ -1,0 +1,456 @@
+@*
+    ======================================================================
+    VIEW: Language / Index.cshtml
+    PURPOSE: User interface rendering for the Language module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.MstLanguagePageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Language Management";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canAdd = PermHelper.HasPermissionByUrl("/Language", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Language", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Language", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Language", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Language", "Export");
+}
+
+@* Local alert div removed in favor of global toast system *@
+
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Language Management</h6>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        @if (canAdd)
+        {
+            <button class="btn btn-primary shadow-sm" id="btnAddLanguage" onclick="openAddModal()">
+                <i class="fas fa-plus me-2"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+                <i class="fas fa-pencil me-2"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+                <i class="fas fa-trash me-2"></i>Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-items-center mb-0" id="languagesTable">
+                        <thead>
+                            <tr class="bg-light">
+                                <th style="width: 50px;">Select</th>
+                                <th>Title</th>
+                                <th>Code</th>
+                                <th>Icon</th>
+                                <th>RTL</th>
+                                <th>Base</th>                                
+                                <th>Created On</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in Model.Languages)
+                            {
+                                <tr class="item-row" onclick="selectItem(@l.LanguageId, this)" style="cursor: pointer;">
+                                    <td class="text-center">
+                                        <input type="checkbox" name="selectedLanguage"
+                                               class="form-check-input student-checkbox"
+                                               value="@l.LanguageId">
+                                    
+                                    </td>
+                                    <td>
+                                        <span>@l.LanguageTitle</span>
+                                    </td>
+                                    <td>@l.LanguageCode</td>
+                                    <td>@l.LanguageIcon</td>
+                                    <td>
+                                        @if (l.LanguageIsRtl)
+                                        {
+                                            <span class="badge bg-warning text-dark">RTL</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-light text-muted border">LTR</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (l.LanguageBase)
+                                        {
+                                            <span class="badge bg-primary">Base</span>
+                                        }
+                                    </td>
+                                    <td><span class="">@l.CreatedOn.ToString("dd MMM yyyy")</span></td>
+                                    <td>
+                                        @if (canEdit)
+                                        {
+                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                <input class="form-check-input language-status-switch" type="checkbox" @(l.IsActive ? "checked" : "") onchange="toggleStatus(@l.LanguageId, this.checked)">
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @(l.IsActive ? "bg-success" : "bg-secondary")">@(l.IsActive ? "Active" : "Inactive")</span>
+                                        }
+                                    </td>
+                                    
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom bg-light d-flex align-items-center">
+                <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add Language</h5>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btnSave" onclick="saveItem()">
+                        <i class="fas fa-save me-1"></i>Save Language
+                    </button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                @* Local alert div removed in favor of global toast system *@
+                <form id="itemForm">
+                    <input type="hidden" id="txtItemId" value="0">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-semibold">Language Title</label>
+                            <input type="text" class="form-control" id="txtLanguageTitle" placeholder="e.g. English" autocomplete="off">
+                            <div class="invalid-feedback" id="errTxtLanguageTitle"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Language Code</label>
+                            <input type="text" class="form-control" id="txtLanguageCode" placeholder="e.g. en-US" autocomplete="off">
+                            <div class="invalid-feedback" id="errTxtLanguageCode"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Language Icon</label>
+                            <input type="text" class="form-control" id="txtLanguageIcon" placeholder="e.g. 🇺🇸" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkLanguageIsRtl">
+                                <label class="form-check-label fw-bold" for="chkLanguageIsRtl">RTL</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkLanguageBase">
+                                <label class="form-check-label fw-bold" for="chkLanguageBase">Base</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkIsActive" checked>
+                                <label class="form-check-label fw-bold" for="chkIsActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text mt-2 text-info">
+                        <i class="fas fa-info-circle me-1"></i>Setting a language as <strong>Base</strong> will unset existing base language.
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const IV = window.InlineFormValidation;
+        const languageFieldMap = {
+            txtLanguageTitle: 'errTxtLanguageTitle',
+            txtLanguageCode: 'errTxtLanguageCode'
+        };
+        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
+        let selectedLanguageId = 0;
+
+        function clearLanguageModalValidation() {
+            IV.clearMap(languageFieldMap);
+            IV.clearNotice('languageModalNotice');
+        }
+
+        IV.bindAutoClear(languageFieldMap);
+
+        function selectItem(id, row) {
+            IV.clearNotice('languagePageNotice');
+            selectedLanguageId = id;
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            //row.querySelector('input[type="radio"]').checked = true;
+            const btnEdit = document.getElementById('btnEdit');
+            const btnDelete = document.getElementById('btnDelete');
+            if (btnEdit && permCanEdit) btnEdit.disabled = false;
+            if (btnDelete && permCanDelete) btnDelete.disabled = false;
+
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openAddModal() {
+            if (!permCanAdd) {
+                IV.setNotice('languagePageNotice', 'You do not have permission to add.');
+                return;
+            }
+            IV.clearNotice('languagePageNotice');
+            clearLanguageModalValidation();
+            document.getElementById('modalTitle').textContent = 'Add Language';
+            document.getElementById('itemForm').reset();
+            document.getElementById('txtItemId').value = "0";
+            document.getElementById('chkIsActive').checked = true;
+            document.getElementById('chkLanguageBase').checked = false;
+            document.getElementById('chkLanguageIsRtl').checked = false;
+            itemModal.show();
+        }
+
+        async function editSelected() {
+            if (!permCanEdit) {
+                IV.setNotice('languagePageNotice', 'You do not have permission to edit.');
+                return;
+            }
+            if (selectedLanguageId === 0) return;
+            IV.clearNotice('languagePageNotice');
+            clearLanguageModalValidation();
+            try {
+                const resp = await fetch(`/Language/GetLanguage?id=${selectedLanguageId}`);
+                const res = await resp.json();
+                if (res.success) {
+                    document.getElementById('modalTitle').textContent = 'Edit Language';
+                    document.getElementById('txtItemId').value = res.data.languageId;
+                    document.getElementById('txtLanguageTitle').value = res.data.languageTitle;
+                    document.getElementById('txtLanguageCode').value = res.data.languageCode;
+                    document.getElementById('txtLanguageIcon').value = res.data.languageIcon;
+                    document.getElementById('chkLanguageIsRtl').checked = res.data.languageIsRtl;
+                    document.getElementById('chkLanguageBase').checked = res.data.languageBase;
+                    document.getElementById('chkIsActive').checked = res.data.isActive;
+                    itemModal.show();
+                } else {
+                    IV.setNotice('languagePageNotice', res.message || 'Could not load language.');
+                }
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('languagePageNotice', 'Could not load language details.');
+            }
+        }
+
+        async function deleteSelected() {
+            if (!permCanDelete) {
+                IV.setNotice('languagePageNotice', 'You do not have permission to delete.');
+                return;
+            }
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: '/Language/Delete',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+
+        function validateLanguageForm() {
+            clearLanguageModalValidation();
+            let ok = true;
+            const title = document.getElementById('txtLanguageTitle').value.trim();
+            const code = document.getElementById('txtLanguageCode').value.trim();
+            if (!title) { IV.setFieldError('txtLanguageTitle', 'errTxtLanguageTitle', 'Title is required.'); ok = false; }
+            if (!code) { IV.setFieldError('txtLanguageCode', 'errTxtLanguageCode', 'Code is required.'); ok = false; }
+            return ok;
+        }
+
+        async function saveItem() {
+            const lid = parseInt(document.getElementById('txtItemId').value);
+            if (lid === 0 && !permCanAdd) {
+                IV.setNotice('languageModalNotice', 'You do not have permission to add.');
+                return;
+            }
+            if (lid > 0 && !permCanEdit) {
+                IV.setNotice('languageModalNotice', 'You do not have permission to edit.');
+                return;
+            }
+            if (!validateLanguageForm()) return;
+
+            const title = document.getElementById('txtLanguageTitle').value.trim();
+            const code = document.getElementById('txtLanguageCode').value.trim();
+
+            const data = {
+                languageId: parseInt(document.getElementById('txtItemId').value),
+                languageTitle: title,
+                languageCode: code,
+                languageIcon: document.getElementById('txtLanguageIcon').value.trim(),
+                languageIsRtl: document.getElementById('chkLanguageIsRtl').checked,
+                languageBase: document.getElementById('chkLanguageBase').checked,
+                isActive: document.getElementById('chkIsActive').checked
+            };
+
+            try {
+                const resp = await fetch('/Language/Save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await resp.json();
+                if (res.success) location.reload();
+                else IV.setNotice('languageModalNotice', res.message || 'Save failed.');
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('languageModalNotice', 'Could not save language.');
+            }
+        }
+
+        async function toggleStatus(id, isActive) {
+            if (!permCanEdit) {
+                IV.setNotice('languagePageNotice', 'You do not have permission to change status.');
+                location.reload();
+                return;
+            }
+            IV.clearNotice('languagePageNotice');
+            try {
+                const resp = await fetch(`/Language/ToggleStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
+                const res = await resp.json();
+                if (res.success) {
+                } else {
+                    IV.setNotice('languagePageNotice', res.message || 'Could not update status.');
+                    location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                IV.setNotice('languagePageNotice', 'Could not update status.');
+                location.reload();
+            }
+        }
+
+        let exportTable;
+        $(document).ready(function () {
+            if ($.fn.DataTable.isDataTable('#languagesTable')) {
+                $('#languagesTable').DataTable().destroy();
+            }
+            exportTable = $('#languagesTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 7], rows: ':visible' } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 7], rows: ':visible' } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 7], rows: ':visible' } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 7], rows: ':visible' } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 7], rows: ':visible' } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false
+            });
+        });
+
+        function triggerExport(type) {
+            if (!exportTable) return;
+            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+            else if (type === 'print') exportTable.button('.buttons-print').trigger();
+        }
+    </script>
+}

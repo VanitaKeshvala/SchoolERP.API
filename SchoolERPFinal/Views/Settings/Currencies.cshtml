@@ -1,0 +1,106 @@
+@*
+    ======================================================================
+    VIEW: Settings / Currencies.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Settings", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Currencies</h4>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        @if (canAdd)
+        {
+            <button type="button" class="btn btn-primary d-inline-flex align-items-center" id="btnAddCurrency">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Currency</th>
+                                <th>Short Code</th>
+                                <th>Currency Symbol</th>
+                                <th>Conversion Rate</th>
+                                <th>Base Currency</th>
+                                <th>Active</th>
+                                <th>Enabled</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>AED</td>
+                                <td>AED</td>
+                                <td><input type="text" id="txtCurrencySymbol1" class="form-control" value="aedf" size="5"></td>
+                                <td><input type="number" id="txtConversionRate1" class="form-control" value="100" size="5"></td>
+                                <td><span class="badge badge-boxed badge-outline-success">Active</span></td>
+                                <td><input type="radio" id="optBaseCurrency1" class="form-check" name="baseCurrency" checked></td>
+                                <td class="text-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" checked="" @(canEdit ? "" : "disabled")>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>USD</td>
+                                <td>USD</td>
+                                <td><input type="text" id="txtCurrencySymbol2" class="form-control" value="$" size="5"></td>
+                                <td><input type="number" id="txtConversionRate2" class="form-control" value="83.50" size="5"></td>
+                                <td><span class="badge badge-boxed badge-outline-primary">Inactive</span></td>
+                                <td><input type="radio" id="optBaseCurrency2" class="form-check" name="baseCurrency"></td>
+                                <td class="text-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="chkCurrencyEnabled2" checked="">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>INR</td>
+                                <td>INR</td>
+                                <td><input type="text" id="txtCurrencySymbol3" class="form-control" value="₹" size="5"></td>
+                                <td><input type="number" id="txtConversionRate3" class="form-control" value="1" size="5"></td>
+                                <td><span class="badge badge-boxed badge-outline-success">Active</span></td>
+                                <td><input type="radio" id="optBaseCurrency3" class="form-check" name="baseCurrency"></td>
+                                <td class="text-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="chkCurrencyEnabled3" checked="" @(canEdit ? "" : "disabled")>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

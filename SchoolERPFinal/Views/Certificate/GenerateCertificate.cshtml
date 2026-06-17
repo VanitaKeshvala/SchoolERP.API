@@ -1,0 +1,403 @@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Generate Student Certificate";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canExport = PermHelper.HasPermissionByUrl("/Certificate/GenerateCertificate", "Export");
+}
+
+<style>
+.dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Generate Student Certificate</h6>
+    </div>
+    <div>
+        <button type="button" class="btn btn-secondary" onclick="generateSelectedCertificates()">
+            <i class="ti ti-printer me-1"></i> Generate & Print
+        </button>
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card shadow-tbl-outer mb-2">
+    <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                <i class="fas fa-search search-icon-input"></i>
+                <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search students...">
+            </div>
+            <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                <div style="width: 200px;" class="position-relative">
+                    <select class="form-select" id="genCertificateId">
+                        <option value="">Select Template</option>
+                    </select>
+                    <div class="invalid-feedback position-absolute" style="top: 100%; left: 0;">Template is required.</div>
+                </div>
+                <div class="dropdown">
+                    <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                        <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                    </a>
+                    <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0">
+                        <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                            <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                            <div class="d-flex align-items-center justify-content-end">
+                                <button type="button" class="btn text-primary fs-6 p-0 border-0 bg-transparent" onclick="searchStudentsForGen()">Apply Filter</button>
+                            </div>
+                        </div>
+                        <div class="filter-body pb-0 p-3">
+                            <div class="mb-3 position-relative">
+                                <label class="form-label mb-1 fw-semibold">Class <span class="text-danger">*</span></label>
+                                <select class="form-select form-control select2" id="genClassId" onchange="loadSectionsForGen(this.value)">
+                                    <option value="">Select Class</option>
+                                </select>
+                                <div class="invalid-feedback">Class is required.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label mb-1 fw-semibold">Section</label>
+                                <select class="form-select form-control select2" id="genSectionId">
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-tbl">
+    <div class="card-body">
+        <div class="table-responsive" style="max-height: 600px;">
+            <table class="table" id="genStudentTable">
+                <thead class="">
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" class="form-check-input" id="selectAllStudents" onchange="toggleAllStudentsForGen(this.checked)">
+                        </th>
+                        <th>Admission No</th>
+                        <th>Student Name</th>
+                        <th>Class</th>
+                        <th>Father Name</th>
+                        <th>Date Of Birth</th>
+                        <th>Gender</th>
+                        <th>Category</th>
+                        <th>Mobile Number</th>
+                    </tr>
+                </thead>
+                <tbody id="genStudentList">
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#genStudentTable')) {
+                const table = $('#genStudentTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+        let studentTable;
+$(document).ready(function () {
+            studentTable= $('#genStudentTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2,3,4,5,6,7,8] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false,
+                language: {
+                    emptyTable: "Please select filters and search to see students."
+                }
+                
+        });
+})
+
+        // Define functions globally immediately so they are available when buttons are clicked
+        window.loadClassesForGen = function () {
+            $.get('/Certificate/GetAllClasses', function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Class</option>';
+                    resp.data.forEach(function(item) {
+                        html += '<option value="' + item.classID + '">' + item.className + '</option>';
+                    });
+                    $('#genClassId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.loadSectionsForGen = function (classId) {
+            if (!classId) {
+                $('#genSectionId').html('<option value="">Select Section</option>').trigger('change');
+                return;
+            }
+            $.get('/Certificate/GetSectionsByClass?classId=' + classId, function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Section</option>';
+                    resp.data.forEach(function(item) {
+                        html += '<option value="' + item.sectionID + '">' + item.sectionName + '</option>';
+                    });
+                    $('#genSectionId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.loadTemplatesForGen = function () {
+            $.get('/Certificate/GetAllStudentCertificates', function (resp) {
+                if (resp.success) {
+                    var html = '<option value="">Select Template</option>';
+                    resp.data.forEach(function(item) {
+                        if (item.isActive) {
+                            html += '<option value="' + item.certificateID + '">' + item.certificateName + '</option>';
+                        }
+                    });
+                    $('#genCertificateId').html(html).trigger('change');
+                }
+            });
+        };
+
+        window.clearGenError = function (id) {
+            $('#' + id).removeClass('is-invalid');
+            if ($('#' + id).hasClass('select2-hidden-accessible')) {
+                $('#' + id).next('.select2-container').find('.select2-selection').removeClass('border-danger');
+                $('#' + id).siblings('.invalid-feedback').css('display', '');
+            }
+        };
+
+        window.searchStudentsForGen = function () {
+
+            var classId = $('#genClassId').val();
+            var sectionId = $('#genSectionId').val();
+
+            if (!classId) {
+
+                $('#genClassId').addClass('is-invalid');
+
+                if ($('#genClassId').hasClass('select2-hidden-accessible')) {
+
+                    $('#genClassId')
+                        .next('.select2-container')
+                        .find('.select2-selection')
+                        .addClass('border-danger');
+
+                    $('#genClassId')
+                        .siblings('.invalid-feedback')
+                        .css('display', 'block');
+                }
+
+                return;
+            }
+
+            $.get('/Certificate/GetStudentList',
+                {
+                    classId: classId,
+                    sectionId: sectionId
+                },
+                function (resp) {
+
+                    studentTable.clear();
+
+                    if (resp.success && resp.data.length > 0) {
+
+                        resp.data.forEach(function (item) {
+
+                            var dob = item.dob
+                                ? new Date(item.dob)
+                                    .toLocaleDateString('en-GB')
+                                    .replace(/\//g, '-')
+                                : '-';
+
+                            var cls =
+                                (item.className || '') +
+                                (item.sectionName
+                                    ? ' (' + item.sectionName + ')'
+                                    : '');
+
+                            studentTable.row.add([
+                                '<input type="checkbox" class="form-check-input gen-student-check" value="' + item.studentID + '">',
+
+                                item.admissionNo || '-',
+
+                                item.fullName || '-',
+
+                                cls || '-',
+
+                                item.fatherName || '-',
+
+                                dob,
+
+                                item.gender || '-',
+
+                                item.categoryName || '-',
+
+                                item.mobileNo || '-'
+                            ]);
+                        });
+                    }
+
+                    studentTable.draw();
+
+                    $('.dropdown-menu').removeClass('show');
+                });
+        };
+
+        window.toggleAllStudentsForGen = function (c) { $('.gen-student-check').prop('checked', c); };
+
+        window.generateSelectedCertificates = async function () {
+            var certId = $('#genCertificateId').val();
+            if (!certId) { 
+                $('#genCertificateId').addClass('is-invalid');
+                return; 
+            }
+            var sIds = [];
+            $('.gen-student-check:checked').each(function() { sIds.push($(this).val()); });
+            if (sIds.length === 0) { alert('Please select at least one student.'); return; }
+
+            console.log("Starting generation...");
+
+            var $btn = $('button[onclick="generateSelectedCertificates()"]');
+            var originalBtnHtml = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Generating...');
+
+            try {
+                var tResp = await $.get('/Certificate/GetStudentCertificateByID?id=' + certId);
+                if (!tResp.success || !tResp.data) {
+                    alert('Failed to load template.');
+                    return;
+                }
+
+                var template = tResp.data;
+                var fullHtml = '';
+                for (var i = 0; i < sIds.length; i++) {
+                    var gResp = await $.get('/Certificate/GenerateStudentCertificate', { studentId: sIds[i], certificateId: certId });
+                    if (gResp.success) {
+                        fullHtml += createCertificatePage(gResp.data, template);
+                        if (i < sIds.length - 1) fullHtml += '<div style="page-break-after: always;"><\/div>';
+                    }
+                }
+
+                if (fullHtml) {
+                    var pw = window.open('', '_blank');
+                    if (!pw) { alert('Pop-up blocked!'); return; }
+
+                    pw.document.write('<html><head><title>Print Certificates</title>');
+                    pw.document.write('<style>');
+                    pw.document.write('body { margin: 0; padding: 0; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }');
+                    pw.document.write('.certificate-container { position: relative; margin: 0 auto; overflow: hidden; background-repeat: no-repeat; background-size: 100% 100%; box-sizing: border-box; }');
+                    pw.document.write('.segment-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; width: 100%; box-sizing: border-box; padding: 0 15px; align-items: center; }');
+                    pw.document.write('.text-left { text-align: left; } .text-center { text-align: center; } .text-right { text-align: right; }');
+                    pw.document.write('@@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display: none; } }');
+                    pw.document.write('<\/style><\/head><body>');
+                    pw.document.write(fullHtml);
+                    pw.document.write('<script>window.onload = function() { setTimeout(function() { window.print(); window.close(); }, 500); };<\/script>');
+                    pw.document.write('<\/body><\/html>');
+                    pw.document.close();
+                }
+            } catch (e) { 
+                console.error(e);
+                alert('Error generating certificates.'); 
+            } finally {
+                $btn.prop('disabled', false).html(originalBtnHtml);
+            }
+        };
+
+        function createCertificatePage(bodyHtml, template) {
+            var bg = template.backgroundImageBase64 ? 'url(' + template.backgroundImageBase64 + ')' : 'none';
+            
+            // Container: Fixed Dimensions + Flex Stack
+            var containerStyle = 'width:' + (template.bodyWidth || 800) + 'px;' +
+                                 'height:' + (template.bodyHeight || 600) + 'px;' +
+                                 'background-image:' + bg + ';' +
+                                 'display: flex; flex-direction: column;';
+
+            // Header Segment
+            var headerStyle = 'height:' + (template.headerHeight || 0) + 'px; flex-shrink: 0;';
+            
+            // Footer Segment
+            var footerStyle = 'height:' + (template.footerHeight || 0) + 'px; flex-shrink: 0;';
+
+            // Start Building HTML
+            var html = '<div class="certificate-container" style="' + containerStyle + '">';
+            
+            // 1. Header (3 Segments)
+            html += '<div class="segment-grid" style="' + headerStyle + '">' +
+                    '<div class="text-left">' + (template.headerLeftText || '') + '</div>' +
+                    '<div class="text-center">' + (template.headerCenterText || '') + '</div>' +
+                    '<div class="text-right">' + (template.headerRightText || '') + '</div>' +
+                    '</div>';
+
+            // 2. Dynamic Body (Fills remaining space)
+            html += '<div style="flex: 1; overflow: hidden; padding: 20px; box-sizing: border-box;">' + bodyHtml + '</div>';
+
+            // 3. Footer (3 Segments)
+            html += '<div class="segment-grid" style="' + footerStyle + '">' +
+                    '<div class="text-left">' + (template.footerLeftText || '') + '</div>' +
+                    '<div class="text-center">' + (template.footerCenterText || '') + '</div>' +
+                    '<div class="text-right">' + (template.footerRightText || '') + '</div>' +
+                    '</div>';
+
+            html += '</div>';
+            return html;
+        }
+
+        $(function () {
+            console.log("Initializing Generate Certificate...");
+            // Initialize Select2 if available
+            if ($.fn.select2) {
+                $('.select2').select2({ width: '100%' });
+            }
+            loadClassesForGen();
+            loadTemplatesForGen();
+
+            // Bind error clearing
+            $('#genClassId').on('change', function() { clearGenError('genClassId'); });
+            $('#genCertificateId').on('change', function() { clearGenError('genCertificateId'); });
+
+            // Client-side search for the search box
+            $('#txtSearchInput').on('keyup', function() {
+                var q = $(this).val().toLowerCase();
+                $('#genStudentList tr').each(function() {
+                    // Skip the empty/loading messages if any
+                    if($(this).find('.text-muted, .spinner-border').length > 0) return;
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+            });
+        });
+    </script>
+}

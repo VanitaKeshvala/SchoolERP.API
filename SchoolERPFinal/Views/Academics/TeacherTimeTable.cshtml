@@ -1,0 +1,309 @@
+@model SchoolERP.Net.Models.TeacherTimeTablePageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Teacher Time Table";
+    var days = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canPrint = PermHelper.HasPermissionByUrl("/Academics/TeacherTimeTable", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Academics/TeacherTimeTable", "Export");
+}
+
+@section Styles {
+    <style>
+        .dt-buttons { display: none !important; }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Teacher Timetable</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body">
+                <form id="filterForm" method="post" action="/Academics/TeacherTimeTable">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" class="form-control border-0 ps-2" id="tableSearch" style="min-width: 220px;" placeholder="Search..." />
+                        </div>
+                        @* <input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." /> *@
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn text-primary fs-6">Filter</button>
+                                        </div>
+                                    </div>
+                                    <div class="filter-body pb-0 p-3">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Teacher<span class="text-danger">*</span></label>
+                                            <select name="staffId" id="FilterStaffID" class="form-select form-control select2" required>
+                                                <option value="">Select Teacher</option>
+                                                @foreach (var item in Model.Staff)
+                                                {
+                                                    <option value="@item.StaffID" selected="@(Model.SelectedStaffId == item.StaffID)">@item.FirstName @item.LastName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.SelectedStaffId > 0)
+    {
+        foreach (var day in days)
+        {
+            var daySlots = Model.TimeTableSlots.Where(x => x.Day == day).OrderBy(x => x.StartTime).ToList();
+            <div class="col-xl-3">
+                <div class="card shadow border-0 rounded-2 overflow-hidden day-card mb-2">
+                    <ul class="list-group">
+                        <li class="list-group-item bg-primary text-white"><b class="fs-6">@day</b></li>
+                        @if (daySlots.Any())
+                        {
+                            foreach (var slot in daySlots)
+                            {
+                                <li class="list-group-item d-flex justify-content-between small"><span><i class="ti ti-book"></i> Subject :</span> @slot.SubjectName</li>
+                                <li class="list-group-item d-flex justify-content-between small"><span><i class="ti ti-clock"></i> Time :</span> @slot.StartTime - @slot.EndTime</li>
+                                <li class="list-group-item d-flex justify-content-between small"><span><i class="ti ti-blackboard"></i> Class :</span> @slot.ClassName (@slot.SectionName)</li>
+                                <li class="list-group-item d-flex justify-content-between small border-bottom-dashed mb-2 pb-2"><span><i class="ti ti-building"></i> Room No :</span> @(slot.RoomNo ?? "-")</li>
+                            }
+                        }
+                        else
+                        {
+                            <li class="list-group-item text-center py-4 text-muted">No schedule available</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    }
+</div>
+<!-- end row -->
+
+<div class="d-none">
+    <table id="tblTimeTable" class="table">
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Subject</th>
+                <th>Time</th>
+                <th>Class</th>
+                <th>Room No</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.SelectedStaffId > 0)
+            {
+                foreach (var day in days)
+                {
+                    var daySlots = Model.TimeTableSlots.Where(x => x.Day == day).OrderBy(x => x.StartTime).ToList();
+                    if (daySlots.Any())
+                    {
+                        foreach (var slot in daySlots)
+                        {
+                            <tr>
+                                <td>@day</td>
+                                <td>@slot.SubjectName</td>
+                                <td>@slot.StartTime - @slot.EndTime</td>
+                                <td>@slot.ClassName (@slot.SectionName)</td>
+                                <td>@(slot.RoomNo ?? "-")</td>
+                            </tr>
+                        }
+                    }
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        function triggerExport(index) {
+            const selectedStaffId = @Model.SelectedStaffId;
+            if (selectedStaffId === 0) {
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data',
+                        text: 'Please select a Teacher and click Filter first!'
+                    });
+                } else {
+                    alert('Please select a Teacher and click Filter first!');
+                }
+                return;
+            }
+            if ($.fn.DataTable.isDataTable('#tblTimeTable')) {
+                const table = $('#tblTimeTable').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+        $(document).ready(function () {
+            $('.select2').select2();
+
+            // Prevent dropdown from closing when clicking inside
+            $('.filter-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+
+            const selectedStaffId = @Model.SelectedStaffId;
+            if (selectedStaffId > 0) {
+                $('#tblTimeTable').DataTable({
+                    dom: 'Bfrtip',
+                    buttons: [
+                        { extend: 'copy', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                        { extend: 'csv', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                        { extend: 'excel', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                        { extend: 'pdf', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                        { extend: 'print', exportOptions: { columns: [0, 1, 2, 3, 4] } }
+                    ],
+                    searching: false,
+                    paging: false,
+                    info: false
+                });
+            }
+
+            renderFilterBadges();
+
+            // Table Search
+            $('#tableSearch').on('keyup', function () {
+                var q = $(this).val().toLowerCase();
+                $(".day-card").filter(function () {
+                    $(this).parent().toggle($(this).text().toLowerCase().indexOf(q) > -1)
+                });
+                renderFilterBadges();
+            });
+        });
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'tableSearch', label: 'Search', type: 'text' },
+                { id: 'FilterStaffID', label: 'Teacher', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        if (selectedOption && selectedOption.value !== "") {
+                            text = selectedOption.text;
+                            activeCount++;
+                        }
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                $(el).trigger('keyup');
+            } else {
+                el.value = '';
+                $('#filterForm').submit();
+            }
+
+            if (window.jQuery && jQuery(el).data('select2')) {
+                jQuery(el).trigger('change.select2');
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('tableSearch').value = '';
+            document.getElementById('FilterStaffID').value = '';
+            
+            $('.select2').trigger('change.select2');
+            $('#tableSearch').trigger('keyup');
+            
+            $('#filterForm').submit();
+        }
+    </script>
+    <style>
+        .border-bottom-dashed { border-bottom: 1px dashed #dee2e6; }
+        .border-bottom-dashed:last-child { border-bottom: none; }
+    </style>
+}

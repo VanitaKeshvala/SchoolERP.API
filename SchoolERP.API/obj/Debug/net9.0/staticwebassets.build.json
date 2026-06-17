@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "dkXrZdVYmVxUspFBnydCfA+2fYZH6ms9qJgu0NwgK6o=",
+  "Source": "SchoolERP.API",
+  "BasePath": "_content/SchoolERP.API",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}

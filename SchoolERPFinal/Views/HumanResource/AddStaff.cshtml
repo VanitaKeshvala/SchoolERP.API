@@ -1,0 +1,781 @@
+@model SchoolERP.Net.Models.HRStaffPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@inject SchoolERP.Net.Services.Clients.IFieldClientService FieldService
+@inject SchoolERP.Net.Services.Clients.ICompanyClientService CompanySvc
+@inject SchoolERP.Net.Services.Clients.ISessionClientService SessionSvc
+@using System.Linq
+@{
+    ViewData["Title"] = Model.EditStaff == null ? "Add Staff" : "Edit Staff";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Edit");
+    var canSave = (Model.EditStaff == null && canAdd) || (Model.EditStaff != null && canEdit);
+
+    bool IsFieldActive(string fieldName) {
+        var field = Model.SystemFields.FirstOrDefault(f => 
+            f.FieldName.Replace(" ", "").Equals(fieldName.Replace(" ", ""), StringComparison.OrdinalIgnoreCase));
+        return field == null || field.IsActive; // Default to active if not found
+    }
+
+    var comres = (await CompanySvc.GetUserCurrentCompanyAsync()).Data;
+    int companyIdForCode = comres??0;
+    var sesres = (await SessionSvc.GetUserCurrentSessionAsync()).Data;
+    int sessionIdForCode = sesres ?? 0;
+    var autogenSettings =(await FieldService.GetIDAutoGenSettingsAsync(companyIdForCode, sessionIdForCode)).Data;
+    // var isStaffAutoGenEnabled = autogenSettings?.FirstOrDefault(s => s.EntityType.Equals("Staff", StringComparison.OrdinalIgnoreCase))?.IsEnabled ?? false;
+    var isStaffAutoGenEnabled =
+    autogenSettings?.FirstOrDefault(s =>
+        string.Equals(s.EntityType, "Staff", StringComparison.OrdinalIgnoreCase))
+    ?.IsEnabled ?? false;
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">@(Model.EditStaff == null ? "Add Staff" : "Edit User")</h6>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="/HumanResource/ImportStaff" class="btn btn-primary d-inline-flex align-items-center">
+            <i class="ti ti-file-import me-1"></i>Import Staff
+        </a>
+        @if (canSave)
+        {
+            <button type="button" class="btn btn-success d-inline-flex align-items-center" onclick="saveStaff()">
+                <i class="ti ti-cloud me-1"></i>Save
+            </button>
+        }
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<form id="staffForm">
+    <input type="hidden" id="hdnStaffID" value="@(Model.EditStaff?.StaffID ?? 0)">
+    <input type="hidden" id="hdnUserID" value="@(Model.EditStaff?.UserID ?? 0)">
+    
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow-tbl-outer">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">@(isStaffAutoGenEnabled ? "Staff ID (Auto)" : "Staff ID") <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @(isStaffAutoGenEnabled ? "bg-light" : "")" id="txtStaffCode" value="@(Model.EditStaff?.StaffCode ?? Model.NewStaffCode)" @(isStaffAutoGenEnabled ? "readonly" : "") placeholder="@(isStaffAutoGenEnabled ? "Auto-generated" : "Enter Staff ID")" required />
+                            </div>
+                        </div>
+                        @if (Model.EditStaff == null)
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Role <span class="text-danger">*</span></label>
+                                    <select class="form-select select2" id="ddlRole" name="RoleIDs" multiple required>
+                                        @foreach (var r in Model.Roles)
+                                        {
+                                            <option value="@r.RoleID">@r.RoleName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            foreach (var rId in Model.EditStaff.RoleIDs)
+                            {
+                                <input type="hidden" name="RoleIDs" value="@rId" />
+                            }
+                            <input type="hidden" id="ddlRole" value="@(Model.EditStaff.RoleIDs.FirstOrDefault())" />
+                        }
+                        @if (IsFieldActive("Designation"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Designation <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="ddlDesig" required>
+                                        <option value="">Select Designation</option>
+                                        @foreach(var d in Model.Designations) {
+                                            <option value="@d.HRDesignationID" selected="@(Model.EditStaff?.DesignationID == d.HRDesignationID)">@d.DesignationName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Department"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Department <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="ddlDept" required>
+                                        <option value="">Select Department</option>
+                                        @foreach(var d in Model.Departments) {
+                                            <option value="@d.DepartmentID" selected="@(Model.EditStaff?.DepartmentID == d.DepartmentID)">@d.DepartmentName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("First Name"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtFirstName" value="@Model.EditStaff?.FirstName" required />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Last Name"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="txtLastName" value="@Model.EditStaff?.LastName" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("FatherName"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Father Name</label>
+                                    <input type="text" class="form-control" id="txtFatherName" value="@Model.EditStaff?.FatherName" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("MotherName"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Mother Name</label>
+                                    <input type="text" class="form-control" id="txtMotherName" value="@Model.EditStaff?.MotherName" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Email"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Email (Login Username) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtUsername" value="@Model.EditStaff?.Username" required @(Model.EditStaff != null ? "readonly" : "") />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Gender"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Gender</label>
+                                    <select class="form-select" id="ddlGender">
+                                        <option value="Male" selected="@(Model.EditStaff?.Gender == "Male")">Male</option>
+                                        <option value="Female" selected="@(Model.EditStaff?.Gender == "Female")">Female</option>
+                                        <option value="Other" selected="@(Model.EditStaff?.Gender == "Other")">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Date Of Birth"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Date Of Birth</label>
+                                    <input type="date" class="form-control" id="txtDOB" value="@(Model.EditStaff?.DOB?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Date Of Joining"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Date Of Joining</label>
+                                    <input type="date" class="form-control" id="txtDOJ" value="@(Model.EditStaff?.DOJ?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                        }
+
+                        @if (IsFieldActive("Phone"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="txtPhone" value="@Model.EditStaff?.MobileNo" required maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'');" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Emergency Contact Number"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Emergency Contact Number</label>
+                                    <input type="text" class="form-control" id="txtEmergencyPhone" value="@Model.EditStaff?.EmergencyMobileNo" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'');" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Marital Status"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Marital Status</label>
+                                    <select class="form-select" id="ddlMaritalStatus">
+                                        <option value="Single" selected="@(Model.EditStaff?.MaritalStatus == "Single")">Single</option>
+                                        <option value="Married" selected="@(Model.EditStaff?.MaritalStatus == "Married")">Married</option>
+                                        <option value="Widowed" selected="@(Model.EditStaff?.MaritalStatus == "Widowed")">Widowed</option>
+                                        <option value="Separated" selected="@(Model.EditStaff?.MaritalStatus == "Separated")">Separated</option>
+                                    </select>
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Photo"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Photo</label>
+                                    <input type="file" class="form-control" id="filePhoto" />
+                                    @if (Model.EditStaff?.PhotoDoc != null)
+                                    {
+                                        <small class="text-success">Photo already uploaded</small>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (IsFieldActive("Current Address"))
+                        {
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Address</label>
+                                    <textarea rows="2" class="form-control" id="txtAddress">@Model.EditStaff?.CurrentAddress</textarea>
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Permanent Address"))
+                        {
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Permanent Address</label>
+                                    <textarea rows="2" class="form-control" id="txtPermanentAddress">@Model.EditStaff?.PermanentAddress</textarea>
+                                </div>
+                            </div>
+                        }
+
+                        @if (IsFieldActive("Qualification"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Qualification</label>
+                                    <input type="text" class="form-control" id="txtQualification" value="@Model.EditStaff?.Qualification" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Work Experience"))
+                        {
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Work Experience</label>
+                                    <input type="text" class="form-control" id="txtExperience" value="@Model.EditStaff?.WorkExperience" />
+                                </div>
+                            </div>
+                        }
+                        @if (IsFieldActive("Note"))
+                        {
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Note</label>
+                                    <input type="text" class="form-control" id="txtNote" value="@Model.EditStaff?.Note" />
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.CustomFields != null && Model.CustomFields.Any(f => f.IsActive))
+                        {
+                            @foreach (var field in Model.CustomFields.Where(f => f.IsActive).OrderBy(f => f.DisplayOrder))
+                            {
+                                var existingVal = Model.EditStaff?.CustomFieldValues?.FirstOrDefault(v => v.FieldID == field.FieldId)?.FieldValue ?? "";
+                                var reqStar = field.IsRequired ? "<span class='text-danger'>*</span>" : "";
+                                var reqAttr = field.IsRequired ? "required" : "";
+                                var fieldType = (field.FieldType ?? "text").ToLower();
+                                var grid = field.GridColumn > 0 ? field.GridColumn : 3;
+
+                                <div class="col-md-@grid">
+                                    <div class="mb-3">
+                                        <label class="form-label">@field.FieldName @Html.Raw(reqStar)</label>
+                                        
+                                        @if (fieldType == "select" || fieldType == "dropdown")
+                                        {
+                                            var options = (field.FieldValues ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                                            <select name="@field.FieldName" class="form-select staff-custom-field-input" data-fieldid="@field.FieldId" @reqAttr>
+                                                <option value="">Select @field.FieldName</option>
+                                                @foreach (var opt in options)
+                                                {
+                                                    var trimmedOpt = opt.Trim();
+                                                    <option value="@trimmedOpt" selected="@(existingVal == trimmedOpt)">@trimmedOpt</option>
+                                                }
+                                            </select>
+                                        }
+                                        else if (fieldType == "date")
+                                        {
+                                            <input type="date" name="@field.FieldName" class="form-control staff-custom-field-input" data-fieldid="@field.FieldId" value="@existingVal" @reqAttr />
+                                        }
+                                        else if (fieldType == "number")
+                                        {
+                                            <input type="number" name="@field.FieldName" class="form-control staff-custom-field-input" data-fieldid="@field.FieldId" value="@existingVal" @reqAttr />
+                                        }
+                                        else
+                                        {
+                                            <input type="text" name="@field.FieldName" class="form-control staff-custom-field-input" data-fieldid="@field.FieldId" value="@existingVal" @reqAttr />
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        <p class="text-end">
+                            <a href="#more" data-bs-toggle="collapse" class="text-primary fw-bold">
+                                <i class="ti ti-plus"></i> Add more details
+                            </a>
+                        </p>
+
+                        <div class="col-md-12 collapse @(Model.EditStaff != null ? "show" : "")" id="more">
+                            @if (IsFieldActive("Basic Salary"))
+                            {
+                                <div class="card mb-3 border">
+                                    <div class="card-header bg-light">
+                                        <h5 class="card-title mb-0">Payroll</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">EPF No.</label>
+                                                    <input type="text" class="form-control" id="txtEPFNo" value="@Model.EditStaff?.EPFNo" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Basic Salary</label>
+                                                    <input type="number" class="form-control" id="txtSalary" value="@(Model.EditStaff?.BasicSalary ?? 0)" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Contract Type</label>
+                                                    <select class="form-select" id="ddlContractType">
+                                                        <option value="Permanent" selected="@(Model.EditStaff?.ContractType == "Permanent")">Permanent</option>
+                                                        <option value="Probation" selected="@(Model.EditStaff?.ContractType == "Probation")">Probation</option>
+                                                        <option value="Contractual" selected="@(Model.EditStaff?.ContractType == "Contractual")">Contractual</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Work Shift</label>
+                                                    <input type="text" class="form-control" id="txtWorkShift" value="@Model.EditStaff?.WorkShift" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Work Location</label>
+                                                    <input type="text" class="form-control" id="txtWorkLocation" value="@Model.EditStaff?.WorkLocation" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            
+                             @if (IsFieldActive("Leaves"))
+                             {
+                                 <div class="card mb-3 border">
+                                     <div class="card-header bg-light">
+                                         <h5 class="card-title mb-0">Leaves Quota</h5>
+                                     </div>
+                                     <div class="card-body">
+                                         <div class="row">
+                                             @foreach (var lt in Model.LeaveTypes)
+                                             {
+                                                 var currentQuota = Model.EditStaff?.LeaveQuotas?.FirstOrDefault(q => q.LeaveTypeID == lt.LeaveTypeID)?.MaxDays ?? 0;
+                                                 <div class="col-md-3">
+                                                     <div class="mb-3">
+                                                         <label class="form-label">@lt.LeaveTypeName</label>
+                                                         <input type="number" class="form-control leave-quota-input" 
+                                                                data-typeid="@lt.LeaveTypeID" 
+                                                                value="@currentQuota" 
+                                                                step="0.5" min="0" />
+                                                     </div>
+                                                 </div>
+                                             }
+                                             @if (!Model.LeaveTypes.Any())
+                                             {
+                                                 <div class="col-12 text-muted small italic">No leave types defined in system.</div>
+                                             }
+                                         </div>
+                                     </div>
+                                 </div>
+                             }
+
+                            @if (IsFieldActive("Bank Account Details"))
+                            {
+                                <div class="card mb-3 border">
+                                    <div class="card-header bg-light">
+                                        <h5 class="card-title mb-0">Bank Account Details</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Account Title</label>
+                                                    <input type="text" class="form-control" id="txtAccTitle" value="@Model.EditStaff?.AccountTitle" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Bank Account Number</label>
+                                                    <input type="text" class="form-control" id="txtAccNo" value="@Model.EditStaff?.BankAccountNo" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Bank Name</label>
+                                                    <input type="text" class="form-control" id="txtBankName" value="@Model.EditStaff?.BankName" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">IFSC Code</label>
+                                                    <input type="text" class="form-control" id="txtIFSC" value="@Model.EditStaff?.IFSCCode" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Bank Branch Name</label>
+                                                    <input type="text" class="form-control" id="txtBranch" value="@Model.EditStaff?.BankBranchName" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (IsFieldActive("Social Media Link"))
+                            {
+                                <div class="card mb-3 border">
+                                    <div class="card-header bg-light">
+                                        <h5 class="card-title mb-0">Social Media URL</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Facebook URL</label>
+                                                    <input type="url" class="form-control" id="txtFacebook" value="@Model.EditStaff?.FacebookURL" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Twitter URL</label>
+                                                    <input type="url" class="form-control" id="txtTwitter" value="@Model.EditStaff?.TwitterURL" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Linkedin URL</label>
+                                                    <input type="url" class="form-control" id="txtLinkedin" value="@Model.EditStaff?.LinkedinURL" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Instagram URL</label>
+                                                    <input type="url" class="form-control" id="txtInstagram" value="@Model.EditStaff?.InstagramURL" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (IsFieldActive("Upload Documents"))
+                            {
+                                <div class="card mb-3 border">
+                                    <div class="card-header bg-light">
+                                        <h5 class="card-title mb-0">Upload Documents</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Resume</label>
+                                                <input type="file" class="form-control" id="fileResume">
+                                                @if (!string.IsNullOrEmpty(Model.EditStaff?.ResumeDocName)) { <small class="text-success">Current: @Model.EditStaff.ResumeDocName</small> }
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Joining Letter</label>
+                                                <input type="file" class="form-control" id="fileJoining">
+                                                @if (!string.IsNullOrEmpty(Model.EditStaff?.JoiningLetterDocName)) { <small class="text-success">Current: @Model.EditStaff.JoiningLetterDocName</small> }
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Resignation Letter</label>
+                                                <input type="file" class="form-control" id="fileResign">
+                                                @if (!string.IsNullOrEmpty(Model.EditStaff?.ResignationLetterDocName)) { <small class="text-success">Current: @Model.EditStaff.ResignationLetterDocName</small> }
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Other Documents</label>
+                                                <input type="file" class="form-control" id="fileOther">
+                                                @if (!string.IsNullOrEmpty(Model.EditStaff?.OtherDocName)) { <small class="text-success">Current: @Model.EditStaff.OtherDocName</small> }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+
+
+                            <!-- System Config Section -->
+                            <div class="card mb-3 border">
+                                <div class="card-header bg-light">
+                                    <h5 class="card-title mb-0">System Access & Configuration</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <label class="form-label">User Type <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="ddlUserType" required>
+                                                @foreach(var t in Model.UserTypes) {
+                                                    <option value="@t.UserTypeID" selected="@(Model.EditStaff?.UserTypeID == t.UserTypeID)">@t.TypeName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        @if (Model.EditStaff == null)
+                                        {
+                                            <div class="col-md-8">
+                                                <label class="form-label">Assigned Companies</label>
+                                                <div class="d-flex flex-wrap gap-3">
+                                                    @foreach (var c in Model.Companies)
+                                                    {
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" name="compCheck" value="@c.CompanyId" id="comp_@c.CompanyId" checked>
+                                                            <label class="form-check-label" for="comp_@c.CompanyId">@c.SchoolName</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            foreach (var cId in Model.EditStaff.CompanyIDs)
+                                            {
+                                                <input type="hidden" name="compCheck" value="@cId" />
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    $(document).ready(function() {
+        $('.form-select').select2({
+            width: '100%',
+            placeholder: "Select",
+            allowClear: true
+        });
+    });
+
+    async function fileToBase64(file) {
+        if (!file) return null;
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    async function saveStaff() {
+        const form = document.getElementById('staffForm');
+        if (!form.checkValidity()) { 
+            form.reportValidity(); 
+            return; 
+        }
+
+        const getVal = (id) => document.getElementById(id)?.value?.trim() ?? "";
+        
+        // Custom Validations
+        const username = getVal('txtUsername');
+        const phone = getVal('txtPhone');
+        const emergencyPhone = getVal('txtEmergencyPhone');
+
+        if (!InlineFormValidation.isValidEmail(username)) {
+            alert("Please enter a valid email address for Login Username.");
+            document.getElementById('txtUsername').focus();
+            return;
+        }
+
+        if (!InlineFormValidation.isValidMobile(phone)) {
+            alert("Please enter a valid 10-digit phone number.");
+            document.getElementById('txtPhone').focus();
+            return;
+        }
+
+        if (emergencyPhone && !InlineFormValidation.isValidMobile(emergencyPhone)) {
+            alert("Please enter a valid 10-digit emergency contact number.");
+            document.getElementById('txtEmergencyPhone').focus();
+            return;
+        }
+        const getInt = (id) => parseInt(document.getElementById(id)?.value) || 0;
+        const getFloat = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+        let roleIDs = [];
+        const roleEl = document.getElementById('ddlRole');
+        if (roleEl.multiple) {
+            roleIDs = Array.from(roleEl.selectedOptions).map(o => parseInt(o.value)).filter(v => !isNaN(v));
+        } else if (roleEl.value) {
+            roleIDs = [parseInt(roleEl.value)];
+        }
+
+        // If in Edit mode, we might need to pull from hidden inputs if elements are disabled
+        if (roleIDs.length === 0) {
+            roleIDs = Array.from(document.querySelectorAll('input[type="hidden"][name="RoleIDs"]')).map(i => parseInt(i.value));
+        }
+
+        let companyIDs = Array.from(document.querySelectorAll('input[name="compCheck"]:checked')).map(c => parseInt(c.value));
+        if (companyIDs.length === 0) {
+            companyIDs = Array.from(document.querySelectorAll('input[type="hidden"][name="compCheck"]')).map(i => parseInt(i.value));
+        }
+
+        // Read files (safely)
+        const photoFile = document.getElementById('filePhoto')?.files?.[0];
+        const resumeFile = document.getElementById('fileResume')?.files?.[0];
+        const joiningFile = document.getElementById('fileJoining')?.files?.[0];
+        const resignFile = document.getElementById('fileResign')?.files?.[0];
+        const otherFile = document.getElementById('fileOther')?.files?.[0];
+
+        const data = {
+            staffID: getInt('hdnStaffID'),
+            userID: getInt('hdnUserID'),
+            staffCode: getVal('txtStaffCode'),
+            firstName: getVal('txtFirstName'),
+            lastName: getVal('txtLastName'),
+            fatherName: getVal('txtFatherName'),
+            motherName: getVal('txtMotherName'),
+            username: getVal('txtUsername'),
+            email: getVal('txtUsername'),
+            gender: getVal('ddlGender'),
+            dob: getVal('txtDOB') || null,
+            doj: getVal('txtDOJ') || null,
+            mobileNo: getVal('txtPhone'),
+            emergencyMobileNo: getVal('txtEmergencyPhone'),
+            maritalStatus: getVal('ddlMaritalStatus'),
+            currentAddress: getVal('txtAddress'),
+            permanentAddress: getVal('txtPermanentAddress'),
+            designationID: getInt('ddlDesig'),
+            departmentID: getInt('ddlDept'),
+            qualification: getVal('txtQualification'),
+            workExperience: getVal('txtExperience'),
+            note: getVal('txtNote'),
+            
+            // Payroll
+            epfNo: getVal('txtEPFNo'),
+            basicSalary: getFloat('txtSalary'),
+            contractType: getVal('ddlContractType'),
+            workShift: getVal('txtWorkShift'),
+            workLocation: getVal('txtWorkLocation'),
+            
+            // Leaves
+            leaveQuotas: $('.leave-quota-input').map(function() {
+                return {
+                    leaveTypeID: parseInt($(this).data('typeid')),
+                    maxDays: parseFloat($(this).val()) || 0
+                };
+            }).get(),
+            
+            // Bank
+            accountTitle: getVal('txtAccTitle'),
+            bankAccountNo: getVal('txtAccNo'),
+            bankName: getVal('txtBankName'),
+            ifscCode: getVal('txtIFSC'),
+            bankBranchName: getVal('txtBranch'),
+            
+            // Social
+            facebookURL: getVal('txtFacebook'),
+            twitterURL: getVal('txtTwitter'),
+            linkedinURL: getVal('txtLinkedin'),
+            instagramURL: getVal('txtInstagram'),
+
+            // Files & Metadata
+            photoBase64: await fileToBase64(photoFile),
+            photoDocType: photoFile?.type,
+            photoDocName: photoFile?.name,
+
+            resumeBase64: await fileToBase64(resumeFile),
+            resumeDocType: resumeFile?.type,
+            resumeDocName: resumeFile?.name,
+
+            joiningLetterBase64: await fileToBase64(joiningFile),
+            joiningLetterDocType: joiningFile?.type,
+            joiningLetterDocName: joiningFile?.name,
+
+            resignationLetterBase64: await fileToBase64(resignFile),
+            resignationLetterDocType: resignFile?.type,
+            resignationLetterDocName: resignFile?.name,
+
+            otherDocBase64: await fileToBase64(otherFile),
+            otherDocType: otherFile?.type,
+            otherDocName: otherFile?.name,
+
+            userTypeID: getInt('ddlUserType'),
+            roleIDs: roleIDs,
+            companyIDs: companyIDs,
+            isActive: true,
+            fieldValues: $('.staff-custom-field-input').map(function() {
+                return { key: $(this).attr('name'), value: $(this).val() || "" };
+            }).get().reduce((acc, item) => { if (item.key) acc[item.key] = item.value; return acc; }, {})
+        };
+
+        fetch('/UpsertStaff', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                if (res.message.includes('Generated Password')) {
+                    alert(res.message);
+                } else {
+                    showToast(res.message, 'success');
+                }
+                if (data.staffID === 0) {
+                    setTimeout(() => location.href = '/HumanResource/AddStaff', 1500);
+                }
+            } else {
+                showToast(res.message, 'danger');
+            }
+        });
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 4000);
+    }
+</script>
+}

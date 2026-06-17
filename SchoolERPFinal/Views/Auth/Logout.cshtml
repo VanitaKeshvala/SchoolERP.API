@@ -1,0 +1,26 @@
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logging out...</title>
+</head>
+<body>
+    <script>
+        (function () {
+            try { localStorage.removeItem('token'); } catch { }
+            try { localStorage.removeItem('user'); } catch { }
+
+            try { document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax"; } catch { }
+            try { document.cookie = "CurrentSessionId=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax"; } catch { }
+
+            window.location.replace('/Auth/Login');
+        })();
+    </script>
+</body>
+</html>
+

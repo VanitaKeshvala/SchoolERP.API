@@ -1,0 +1,599 @@
+@model SchoolERP.Net.Models.FOComplaintPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Complaint Management";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canAdd = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Export");
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Complaint List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filters -->
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search by name, phone..." style="min-width: 220px;">
+                    </div>
+                    <!--<input type="text" class="form-control w-25" id="txtSearch" placeholder="Search by name, phone...">-->
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="">
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <!--<button type="button" class="btn btn-light btn-md me-2 fw-medium" id="btnResetFilters">Reset</button>
+                                    <a href="javascript:void(0);" class="btn btn-secondary btn-md me-2 fw-medium" id="close-filter">Close</a>-->
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                </div>
+                            </div>
+                            <form action="#">
+                                <div class="filter-body pb-0">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Type</label>
+                                            <select class="form-select select2" id="filterType">
+                                                <option value="">All Types</option>
+                                                @foreach (var t in Model.ComplaintTypes)
+                                                {
+                                                    <option value="@t.Name">@t.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Sources</label>
+                                            <select class="form-select select2" id="filterSource">
+                                                <option value="">All Sources</option>
+                                                @foreach (var s in Model.Sources)
+                                                {
+                                                    <option value="@s.Name">@s.Name</option>
+                                                }
+                                            </select>
+                                        </div>                                        
+                                    </div>
+                                </div>
+
+                            </form>
+                        </div>
+                    </div>                       
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblComplaints">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="ps-3">Select</th>
+                                <th>Complaint By</th>
+                                <th>Type</th>
+                                <th>Source</th>
+                                <th>Phone</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Complaints)
+                            {
+                                <tr class="item-row" onclick="selectItem(@item.ComplaintID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="selectedItem"
+                                               class="form-check-input student-checkbox"
+                                               value="@item.ComplaintID">
+                                    
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">@item.ComplaintBy</div>
+                                        <small class="text-muted">@item.Email</small>
+                                    </td>
+                                    <td>@item.ComplaintTypeName</td>
+                                    <td>@item.SourceName</td>
+                                    <td>@item.Phone</td>
+                                    <td>@item.ComplaintDate.ToString("dd-MM-yyyy")</td>
+                                    <td>
+                                        <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   onchange="toggleStatus(@item.ComplaintID, this.checked)"
+                                                   @(item.IsActive ? "checked" : "")
+                                                   @(canEdit ? "" : "disabled")>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Complaints.Any())
+                            {
+                                <tr><td colspan="7" class="text-center text-muted py-4">No complaints found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="complaintModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Complaint</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveComplaint()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="complaintForm">
+                    <input type="hidden" id="hdnComplaintID" value="0">
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Complaint Type <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlComplaintType" required>
+                                <option value="">Select</option>
+                                @foreach(var t in Model.ComplaintTypes) { <option value="@t.ComplaintTypeID">@t.Name</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Source <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlSource" required>
+                                <option value="">Select</option>
+                                @foreach(var s in Model.Sources) { <option value="@s.SourceID">@s.Name</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Complaint By <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtComplaintBy" placeholder="Name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="txtPhone" placeholder="Phone number">
+                            <div id="errPhone" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="txtEmail" placeholder="Email address">
+                            <div id="errEmail" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="txtDate" required value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Assigned To</label>
+                            <input type="text" class="form-control" id="txtAssignedTo" placeholder="Name of staff">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Action Taken</label>
+                            <input type="text" class="form-control" id="txtActionTaken">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="txtDescription" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-control" id="txtNote" rows="2"></textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" checked>
+                                <label class="form-check-label" for="chkActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/inline-form-validation.js"></script>
+<script>
+    let selectedId = 0;
+    const canEdit = @canEdit.ToString().ToLower();
+    const canDelete = @canDelete.ToString().ToLower();
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblComplaints')) {
+                const table = $('#tblComplaints').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+    $(document).ready(function() {
+
+            $('#tblComplaints').DataTable({
+                dom: 'Brtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4,5] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4,5] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+
+        // Initialize Select2 for page filters
+        $('.select2:not(#complaintModal .select2)').select2({
+            width: '100%'
+        });
+
+        // Initialize Select2 for modal with dropdownParent
+        $('#complaintModal').on('shown.bs.modal', function () {
+            $('#complaintModal .select2').select2({
+                dropdownParent: $('#complaintModal'),
+                width: '100%'
+            });
+        });
+
+        renderFilterBadges();
+    });
+
+    function selectItem(id, row) {
+        selectedId = id;
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        row.classList.add('bg-light');
+        //row.querySelector('input[type="radio"]').checked = true;
+
+        if (canEdit) document.getElementById('btnEdit').disabled = false;
+        if (canDelete) document.getElementById('btnDelete').disabled = false;
+                let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+    // Filters logic
+    function applyFilters() {
+        const q = document.getElementById('txtSearchInput').value.toLowerCase();
+        const type = document.getElementById('filterType').value;
+        const source = document.getElementById('filterSource').value;
+
+        document.querySelectorAll('#tblComplaints tbody tr').forEach(row => {
+            if (row.classList.contains('item-row')) {
+                const text = row.textContent.toLowerCase();
+                const rowType = row.cells[2].textContent.trim();
+                const rowSource = row.cells[3].textContent.trim();
+
+                const matchQ = !q || text.includes(q);
+                const matchType = !type || rowType === type;
+                const matchSource = !source || rowSource === source;
+
+                row.style.display = (matchQ && matchType && matchSource) ? '' : 'none';
+            }
+        });
+        renderFilterBadges();
+        
+        // Hide dropdown if it was triggered by the button
+        const toggle = document.getElementById('btnFilterToggle');
+        if (toggle && bootstrap.Dropdown.getInstance(toggle)) {
+            bootstrap.Dropdown.getInstance(toggle).hide();
+        }
+    }
+
+    $('#btnApplyFilters').on('click', applyFilters);
+    document.getElementById('txtSearchInput').addEventListener('keyup', applyFilters);
+    document.getElementById('filterType').addEventListener('change', applyFilters);
+    document.getElementById('filterSource').addEventListener('change', applyFilters);
+
+    // --- Filter Badges Logic ---
+    function renderFilterBadges() {
+        const container = document.getElementById('badgeContainer');
+        const mainContainer = document.getElementById('activeFilterBadges');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const filters = [
+            { id: 'txtSearchInput', label: 'Search', type: 'text' },
+            { id: 'filterType', label: 'Type', type: 'select' },
+            { id: 'filterSource', label: 'Source', type: 'select' }
+        ];
+
+        let activeCount = 0;
+
+        filters.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (!el) return;
+
+            let value = el.value;
+            let text = '';
+
+            if (f.type === 'text') {
+                if (value.trim()) {
+                    text = value;
+                    activeCount++;
+                }
+            } else if (f.type === 'select') {
+                if (value && value !== 'all' && value !== '') {
+                    const selectedOption = el.options[el.selectedIndex];
+                    if (selectedOption && selectedOption.value !== "") {
+                        text = selectedOption.text;
+                        activeCount++;
+                    }
+                }
+            }
+
+            if (text) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                container.appendChild(badge);
+            }
+        });
+
+        if (activeCount > 0) {
+            mainContainer.style.display = 'block';
+        } else {
+            mainContainer.style.display = 'none';
+        }
+    }
+
+    function removeFilter(filterId) {
+        const el = document.getElementById(filterId);
+        if (!el) return;
+
+        if (el.tagName === 'INPUT') {
+            el.value = '';
+        } else {
+            el.value = '';
+            if (window.jQuery && jQuery(el).data('select2')) {
+                jQuery(el).trigger('change.select2');
+            }
+        }
+        applyFilters();
+    }
+
+    function resetAllFilters() {
+        document.getElementById('txtSearchInput').value = '';
+        document.getElementById('filterType').value = '';
+        document.getElementById('filterSource').value = '';
+        
+        $('.select2').trigger('change.select2');
+        applyFilters();
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = 'Add Complaint';
+        document.getElementById('hdnComplaintID').value = 0;
+        document.getElementById('complaintForm').reset();
+        document.getElementById('txtDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('chkActive').checked = true;
+        
+        // Reset Select2
+        $('#ddlComplaintType, #ddlSource').val('').trigger('change');
+        
+        new bootstrap.Modal(document.getElementById('complaintModal')).show();
+    }
+
+    function editSelected() {
+        if (!selectedId) return;
+        fetch(`/FrontOffice/GetComplaint?id=${selectedId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'danger'); return; }
+                const d = res.data;
+                document.getElementById('modalTitle').textContent = 'Edit Complaint';
+                document.getElementById('hdnComplaintID').value = d.complaintID;
+                document.getElementById('ddlComplaintType').value = d.complaintTypeID;
+                document.getElementById('ddlSource').value = d.sourceID;
+                document.getElementById('txtComplaintBy').value = d.complaintBy;
+                document.getElementById('txtPhone').value = d.phone || '';
+                document.getElementById('txtEmail').value = d.email || '';
+                document.getElementById('txtDate').value = d.complaintDate.split('T')[0];
+                document.getElementById('txtAssignedTo').value = d.assignedTo || '';
+                document.getElementById('txtActionTaken').value = d.actionTaken || '';
+                document.getElementById('txtDescription').value = d.description || '';
+                document.getElementById('txtNote').value = d.note || '';
+                document.getElementById('chkActive').checked = d.isActive;
+
+                // Set Select2 values
+                $('#ddlComplaintType').val(d.complaintTypeID).trigger('change');
+                $('#ddlSource').val(d.sourceID).trigger('change');
+
+                new bootstrap.Modal(document.getElementById('complaintModal')).show();
+            });
+    }
+
+    function saveComplaint() {
+        const form = document.getElementById('complaintForm');
+        
+        // Reset and validate
+        InlineFormValidation.clearMap({ 'txtPhone': 'errPhone', 'txtEmail': 'errEmail' });
+        
+        const isPhoneValid = InlineFormValidation.validateMobile('txtPhone', 'errPhone', false);
+        const isEmailValid = InlineFormValidation.validateEmail('txtEmail', 'errEmail', false);
+        
+        if (!form.checkValidity() || !isPhoneValid || !isEmailValid) { 
+            form.reportValidity(); 
+            return; 
+        }
+
+        const payload = {
+            complaintID:     parseInt(document.getElementById('hdnComplaintID').value),
+            complaintTypeID: parseInt(document.getElementById('ddlComplaintType').value),
+            sourceID:        parseInt(document.getElementById('ddlSource').value),
+            complaintBy:     document.getElementById('txtComplaintBy').value.trim(),
+            phone:           document.getElementById('txtPhone').value.trim() || null,
+            email:           document.getElementById('txtEmail').value.trim() || null,
+            complaintDate:   document.getElementById('txtDate').value,
+            assignedTo:      document.getElementById('txtAssignedTo').value.trim() || null,
+            actionTaken:     document.getElementById('txtActionTaken').value.trim() || null,
+            description:     document.getElementById('txtDescription').value.trim() || null,
+            note:            document.getElementById('txtNote').value.trim() || null,
+            isActive:        document.getElementById('chkActive').checked
+        };
+
+        fetch('/FrontOffice/SaveComplaint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success ? 'success' : 'danger');
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('complaintModal')).hide();
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+    }
+
+    function deleteSelected() {
+        if (!selectedId) return;
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                          url: '/FrontOffice/DeleteComplaint',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+    }
+
+    function toggleStatus(id, isActive) {
+        fetch(`/FrontOffice/ToggleComplaintStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 3000);
+    }
+</script>
+}

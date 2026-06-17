@@ -1,0 +1,972 @@
+@using Microsoft.AspNetCore.Html
+@using SchoolERP.Net.Models
+@using System
+@using System.Collections.Generic
+@using System.Linq
+@model List<FieldModel>
+@functions {
+    // Helper to get existing value for a field
+    string GetVal(string fieldName, StudentDetailsViewModel student)
+    {
+        if (student == null) return "";
+        var name = (fieldName ?? "").ToLower().Trim();
+
+        // 1. Family Members First (to avoid overlap with general 'mobile', 'email', etc.)
+        if (name.Contains("father"))
+        {
+            if (name.Contains("name")) return student.BasicInfo.FatherName ?? "";
+            if (name.Contains("phone") || name.Contains("mobile")) return student.BasicInfo.FatherPhone ?? "";
+            if (name.Contains("occupation")) return student.BasicInfo.FatherOccupation ?? "";
+            return "";
+        }
+        if (name.Contains("mother"))
+        {
+            if (name.Contains("name")) return student.BasicInfo.MotherName ?? "";
+            if (name.Contains("phone") || name.Contains("mobile")) return student.BasicInfo.MotherPhone ?? "";
+            if (name.Contains("occupation")) return student.BasicInfo.MotherOccupation ?? "";
+            return "";
+        }
+        if (name.Contains("guardian") || name.Contains("gardian"))
+        {
+            if (name.Contains("name")) return student.BasicInfo.GuardianName ?? "";
+            if (name.Contains("phone") || name.Contains("mobile")) return student.BasicInfo.GuardianPhone ?? "";
+            if (name.Contains("occupation")) return student.BasicInfo.GuardianOccupation ?? "";
+            if (name.Contains("email")) return student.BasicInfo.GuardianEmail ?? "";
+            if (name.Contains("relation")) return student.BasicInfo.GuardianRelation ?? "";
+            if (name.Contains("is")) return student.BasicInfo.IfGuardianIs ?? "";
+            return "";
+        }
+
+        // 2. Specific Student Basic Info
+        if (name == "roll no" || name == "rollno") return student.BasicInfo.RollNo ?? "";
+        if (name == "admission no" || name == "admissionno") return student.BasicInfo.AdmissionNo ?? "";
+        if (name.Contains("first name")) return student.BasicInfo.FirstName ?? "";
+        if (name.Contains("middle name")) return student.BasicInfo.MiddleName ?? "";
+        if (name.Contains("last name")) return student.BasicInfo.LastName ?? "";
+        if (name.Contains("gender")) return student.BasicInfo.Gender ?? "";
+        if (name.Contains("dob") || name.Contains("birth") || name.Contains("date of birth")) return student.BasicInfo.DOB?.ToString("yyyy-MM-dd") ?? "";
+        if (name == "religion") return student.BasicInfo.Religion ?? "";
+        if (name == "caste") return student.BasicInfo.Caste ?? "";
+        if (name == "mobile number" || name == "mobile no" || name == "mobile") return student.BasicInfo.MobileNo ?? "";
+        if (name == "email") return student.BasicInfo.Email ?? "";
+        if (name.Contains("admission date")) return student.BasicInfo.AdmissionDate?.ToString("yyyy-MM-dd") ?? "";
+        if (name.Contains("blood")) return student.BasicInfo.BloodGroup ?? "";
+        if (name.Contains("height")) return student.BasicInfo.Height ?? "";
+        if (name.Contains("weight")) return student.BasicInfo.Weight ?? "";
+        if (name == "class") return student.BasicInfo.ClassID == 0 ? "" : student.BasicInfo.ClassID.ToString();
+        if (name == "section") return student.BasicInfo.SectionID == 0 ? "" : student.BasicInfo.SectionID.ToString();
+        if (name.Contains("category")) return student.BasicInfo.StudentCategoryID == 0 ? "" : student.BasicInfo.StudentCategoryID.ToString();
+        if (name.Contains("house")) return student.BasicInfo.StudentHouseID?.ToString() ?? "";
+
+        // 3. Transport & Hostel
+        if (name == "route list") 
+        {
+            var vid = student.Transport?.VehicleID ?? 0;
+            return vid != 0 ? vid.ToString() : (student.Transport?.RouteID?.ToString() ?? "");
+        }
+        if (name == "transportrouteid") return student.Transport?.RouteID?.ToString() ?? "";
+        if (name.Contains("pickup")) return student.Transport?.PickupPointID?.ToString() ?? "";
+        if (name.Contains("fees month") || name == "month") return student.Transport?.StartMonth ?? "";
+        if (name.Contains("hostel") && !name.Contains("room")) return student.Hostel?.HostelID?.ToString() ?? "";
+        if (name.Contains("room no") || name == "room") return student.Hostel?.RoomID?.ToString() ?? "";
+
+        // 4. Addresses
+        if (name.Contains("current address")) return student.Addresses.FirstOrDefault(a => a.AddressType == "Current")?.AddressDetails ?? "";
+        if (name.Contains("permanent address")) return student.Addresses.FirstOrDefault(a => a.AddressType == "Permanent")?.AddressDetails ?? "";
+
+        // 5. Credentials
+        if (name.Contains("student username")) return student.BasicInfo.StudentUsername ?? "";
+        if (name.Contains("student password")) return student.BasicInfo.StudentPassword ?? "";
+        if (name.Contains("parent username")) return student.BasicInfo.ParentUsername ?? "";
+        if (name.Contains("parent password")) return student.BasicInfo.ParentPassword ?? "";
+
+        // 6. Custom Fields (Try exact match)
+        var custom = student.CustomFields.FirstOrDefault(f => f.FieldName.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        if (custom != null) return custom.FieldValue ?? "";
+
+        return "";
+    }
+
+    // Helper to get fields for a specific tab
+    List<FieldModel> GetFields(string category, List<FieldModel> model)
+    {
+        if (model == null || !model.Any()) return new List<FieldModel>();
+
+        // Local helper for case-insensitive matching
+        Func<string, string[], bool> IsMatch = (name, terms) =>
+            terms.Any(t => (name ?? "").Contains(t, StringComparison.OrdinalIgnoreCase));
+
+        var allActive = model.Where(f => f.IsActive).ToList();
+
+        if (category == "Basic")
+        {
+            return allActive.Where(f => (f.IsSystemField && IsMatch(f.FieldName, new[] { "Roll", "Class", "Section", "First", "Middle", "Last", "Gender", "DOB", "Birth", "Category", "Religion", "Caste", "Mobile", "Email", "Admission", "Blood", "House", "Height", "Weight", "Measurement", "Scholar", "Enroll", "Photo" }) 
+                                     && !IsMatch(f.FieldName, new[] { "Father", "Mother", "Guardian", "User", "Pass", "Bank", "IFSC", "National", "Local", "RTE", "Previous", "Note" })) 
+                                     || (!f.IsSystemField && f.DisplayOrder < 100)).OrderBy(f => f.DisplayOrder).ToList();
+        }
+        else if (category == "Transport")
+        {
+            return allActive.Where(f => f.IsSystemField && IsMatch(f.FieldName, new[] { "Route", "Pickup", "Month" })).OrderBy(f => f.DisplayOrder).ToList();
+        }
+        else if (category == "Hostel")
+        {
+            return allActive.Where(f => f.IsSystemField && IsMatch(f.FieldName, new[] { "Hostel", "Room" })).OrderBy(f => f.DisplayOrder).ToList();
+        }
+        else if (category == "Guardian")
+        {
+            return allActive.Where(f => f.IsSystemField && IsMatch(f.FieldName, new[] { "Father", "Mother", "Guardian" })).OrderBy(f => f.DisplayOrder).ToList();
+        }
+        else if (category == "Misc")
+        {
+            // Miscellaneous includes custom fields AND specific system fields like Bank details (DisplayOrder >= 100)
+            return allActive.Where(f => f.DisplayOrder >= 100 || IsMatch(f.FieldName, new[] { "Bank", "IFSC", "National", "Local", "RTE", "Previous", "Note" }))
+                            .OrderBy(f => f.DisplayOrder).ToList();
+        }
+        
+        return new List<FieldModel>();
+    }
+
+    // Local function for rendering fields
+    IHtmlContent RenderField(FieldModel field, StudentDetailsViewModel student, dynamic viewBag)
+    {
+        var builder = new HtmlContentBuilder();
+        if (field == null) return builder;
+
+        var name = field.FieldName ?? "";
+        var grid = field.GridColumn > 0 ? field.GridColumn : 3;
+        var reqStar = field.IsRequired ? "<span class='text-danger'>*</span>" : "";
+        var req = field.IsRequired ? "required" : "";
+        var lowerName = name.ToLower();
+        var type = (field.FieldType ?? "text").ToLower();
+        var existingVal = GetVal(name, student);
+
+        builder.AppendHtml($@"<div class='col-md-{grid} mb-3' data-fieldname='{name}'>
+                                <label class='form-label'>{name} {reqStar}</label>");
+
+        // 1. Special Handling for Class
+        if (lowerName.Contains("class") && !lowerName.Contains("section"))
+        {
+            var classes = (viewBag.Classes as List<MstClassViewModel>) ?? new List<MstClassViewModel>();
+            builder.AppendHtml($"<select id='ddlClass' name='{name}' class='form-select form-control' {req}><option value=''>Select Class</option>");
+            foreach (var cls in classes)
+            {
+                var selected = existingVal == cls.ClassID.ToString() ? "selected" : "";
+                builder.AppendHtml($"<option value='{cls.ClassID}' {selected}>{cls.ClassName}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 2. Special Handling for Section
+        else if (lowerName.Contains("section"))
+        {
+            builder.AppendHtml($"<select id='ddlSection' name='{name}' class='form-select form-control' {req} data-selected='{existingVal}'><option value=''>Select Section</option></select>");
+        }
+        // 3. Special Handling for Category Dropdown
+        else if (lowerName.Contains("category"))
+        {
+            var categories = (viewBag.Categories as List<StudentCategoryViewModel>) ?? new List<StudentCategoryViewModel>();
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select Category</option>");
+            foreach (var cat in categories)
+            {
+                var selected = existingVal == cat.StudentCategoryID.ToString() ? "selected" : "";
+                builder.AppendHtml($"<option value='{cat.StudentCategoryID}' {selected}>{cat.StudentCategoryName}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 2. Special Handling for House Dropdown
+        else if (lowerName.Contains("house"))
+        {
+            var houses = (viewBag.Houses as List<StudentHouseViewModel>) ?? new List<StudentHouseViewModel>();
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select House</option>");
+            foreach (var house in houses)
+            {
+                var selected = existingVal == house.StudentHouseID.ToString() ? "selected" : "";
+                builder.AppendHtml($"<option value='{house.StudentHouseID}' {selected}>{house.StudentHouseName}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 3. Special Handling for Blood Group
+        else if (lowerName.Contains("blood group"))
+        {
+            var bloodGroups = new[] { "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-" };
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select Blood Group</option>");
+            foreach (var bg in bloodGroups)
+            {
+                var selected = existingVal == bg ? "selected" : "";
+                builder.AppendHtml($"<option value='{bg}' {selected}>{bg}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 4. Special Handling for Religion
+        else if (lowerName.Contains("religion"))
+        {
+            var religions = new[] { "Hindu", "Muslim", "Sikh", "Christian", "Buddhist", "Jain", "Parsi", "Other" };
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select Religion</option>");
+            foreach (var r in religions)
+            {
+                var selected = existingVal == r ? "selected" : "";
+                builder.AppendHtml($"<option value='{r}' {selected}>{r}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 5. Special Handling for Hostel
+        else if (lowerName.Contains("hostel") && !lowerName.Contains("room"))
+        {
+            var hostels = (viewBag.Hostels as List<HostelViewModel>) ?? new List<HostelViewModel>();
+            builder.AppendHtml($"<select id='ddlHostel' name='{name}' class='form-select form-control' {req}><option value=''>Select Hostel</option>");
+            foreach (var hostel in hostels)
+            {
+                var selected = existingVal == hostel.HostelID.ToString() ? "selected" : "";
+                builder.AppendHtml($"<option value='{hostel.HostelID}' {selected}>{hostel.HostelName}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 6. Special Handling for Room No
+        else if (lowerName.Contains("room no"))
+        {
+            builder.AppendHtml($"<select id='ddlHostelRoom' name='{name}' class='form-select form-control' {req} data-selected='{existingVal}'><option value=''>Select Room</option></select>");
+        }
+        // 7. Special Handling for If Guardian Is (Radio)
+        else if (lowerName.Contains("if guardian is"))
+        {
+            builder.AppendHtml("<div class='mt-2'>");
+            var options = new[] { "Father", "Mother", "Other" };
+            foreach (var opt in options)
+            {
+                var isChecked = existingVal == opt ? "checked" : "";
+                builder.AppendHtml($@"<div class='form-check form-check-inline'>
+                                <input class='form-check-input rb-guardian-type' type='radio' name='{name}' value='{opt}' id='rb_{opt}' {isChecked}>
+                                <label class='form-check-label' for='rb_{opt}'>{opt}</label>
+                            </div>");
+            }
+            builder.AppendHtml("</div>");
+        }
+        // 8. Special Handling for Guardian Relation (to give it an ID)
+        else if (lowerName.Contains("relation"))
+        {
+            var readonlyAttr = (existingVal == "Father" || existingVal == "Mother") ? "readonly" : "";
+            builder.AppendHtml($"<input type='text' id='txtGuardianRelation' name='{name}' class='form-control' {req} value='{existingVal}' {readonlyAttr}>");
+        }
+        // 9. Special Handling for Route (Linked to Bus/Vehicle)
+        else if (lowerName.Contains("route list"))
+        {
+            var assignments = (viewBag.VehicleAssignments as List<VehicleAssignViewModel>) ?? new List<VehicleAssignViewModel>();
+            var grouped = assignments.GroupBy(a => a.RouteName).OrderBy(g => g.Key);
+            var routeVal = GetVal("transportrouteid", student);
+            
+            builder.AppendHtml($"<input type='hidden' id='hdnTransportRouteID' name='TransportRouteID' value='{routeVal}'>");
+            builder.AppendHtml($"<select id='ddlRoute' name='{name}' class='form-select form-control' {req}><option value=''>Select Bus/Route</option>");
+            foreach (var group in grouped)
+            {
+                builder.AppendHtml($"<optgroup label='{group.Key}'>");
+                foreach (var assign in group)
+                {
+                    var selected = existingVal == assign.VehicleID.ToString() ? "selected" : "";
+                    builder.AppendHtml($"<option value='{assign.VehicleID}' data-routeid='{assign.RouteID}' {selected}>{assign.VehicleNumber} ({assign.VehicleModel})</option>");
+                }
+                builder.AppendHtml("</optgroup>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 6. Special Handling for Pickup Point
+        else if (lowerName.Contains("pickup point"))
+        {
+            builder.AppendHtml($"<select id='ddlPickupPoint' name='{name}' class='form-select form-control' {req} data-selected='{existingVal}'><option value=''>Select Pickup Point</option></select>");
+        }
+        // 7. Special Handling for Fees Month
+        else if (lowerName.Contains("fees month"))
+        {
+            var months = new[] { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" };
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select Month</option>");
+            foreach (var m in months)
+            {
+                var selected = existingVal == m ? "selected" : "";
+                builder.AppendHtml($"<option value='{m}' {selected}>{m}</option>");
+            }
+            builder.AppendHtml("</select>");
+        }
+        // 8. Standard Field Rendering
+        else if (type == "input" || type == "text")
+        {
+            var isRollNo = lowerName.Contains("roll");
+            var isAuto = isRollNo && (viewBag.IsRollAutoGenerated ?? false);
+            var readonlyAttr = isAuto ? "readonly" : "";
+            var placeholder = isAuto ? "placeholder='Auto Generated'" : "";
+            var val = isAuto && string.IsNullOrEmpty(existingVal) ? (viewBag.NextRollNo ?? "") : existingVal;
+            builder.AppendHtml($"<input type='text' name='{name}' class='form-control' {req} {readonlyAttr} {placeholder} value='{val}'>");
+        }
+        else if (type == "number")
+        {
+            var isPhone = lowerName.Contains("mobile") || lowerName.Contains("phone") || lowerName.Contains("contact");
+            if (isPhone)
+                builder.AppendHtml($"<input type='text' name='{name}' class='form-control' {req} maxlength='10' pattern='^\\d{{10}}$' title='Mobile number must be 10 digits.' value='{existingVal}'>");
+            else
+                builder.AppendHtml($"<input type='number' name='{name}' class='form-control' {req} value='{existingVal}'>");
+        }
+        else if (type == "date")
+            builder.AppendHtml($"<input type='date' name='{name}' class='form-control' {req} value='{existingVal}'>");
+        else if (type == "email")
+            builder.AppendHtml($"<input type='email' name='{name}' class='form-control' {req} value='{existingVal}'>");
+        else if (type == "textarea")
+            builder.AppendHtml($"<textarea name='{name}' class='form-control' rows='3' {req}>{existingVal}</textarea>");
+        else if (type == "select" || type == "dropdown")
+        {
+            builder.AppendHtml($"<select name='{name}' class='form-select form-control' {req}><option value=''>Select</option>");
+            if (!string.IsNullOrEmpty(field.FieldValues))
+            {
+                foreach (var val in field.FieldValues.Split(','))
+                {
+                    var trimmed = val.Trim();
+                    var selected = existingVal == trimmed ? "selected" : "";
+                    builder.AppendHtml($"<option value='{trimmed}' {selected}>{trimmed}</option>");
+                }
+            }
+            builder.AppendHtml("</select>");
+        }
+        else if (type == "checkbox")
+        {
+            if (string.IsNullOrEmpty(field.FieldValues) || field.FieldValues == "true" || field.FieldValues == "false")
+            {
+                // Single Toggle Checkbox (e.g., RTE)
+                var isChecked = (existingVal == "true" || field.FieldValues == "true") ? "checked" : "";
+                builder.AppendHtml($"<div class='form-check mt-2'><input type='checkbox' name='{name}' class='form-check-input' {isChecked} {req} value='true'> <span class='text-muted'>(Check if applicable)</span></div>");
+            }
+            else
+            {
+                // Multi-select Checkbox List
+                builder.AppendHtml("<div class='mt-2'>");
+                var selectedVals = (existingVal ?? "").Split(',').Select(v => v.Trim()).ToList();
+                foreach (var val in field.FieldValues.Split(','))
+                {
+                    var trimmed = val.Trim();
+                    var isChecked = selectedVals.Contains(trimmed) ? "checked" : "";
+                    builder.AppendHtml($"<div class='form-check form-check-inline'><input class='form-check-input' type='checkbox' name='{name}' value='{trimmed}' id='chk_{name}_{trimmed}' {isChecked}><label class='form-check-label' for='chk_{name}_{trimmed}'>{trimmed}</label></div>");
+                }
+                builder.AppendHtml("</div>");
+            }
+        }
+        else if (type == "radio")
+        {
+            builder.AppendHtml("<div class='form-check'>");
+            if (!string.IsNullOrEmpty(field.FieldValues))
+            {
+                foreach (var val in field.FieldValues.Split(','))
+                {
+                    var trimmed = val.Trim();
+                    var isChecked = existingVal == trimmed ? "checked" : "";
+                    builder.AppendHtml($"<div class='form-check form-check-inline'><input class='form-check-input' type='radio' name='{name}' value='{trimmed}' {req} {isChecked}><label class='form-check-label'>{trimmed}</label></div>");
+                }
+            }
+            builder.AppendHtml("</div>");
+        }
+        else if (type == "file" || type == "photo" || lowerName.Contains("photo"))
+        {
+            // For photos/files, we just show the input. We might want to show a preview later.
+            builder.AppendHtml($"<input type='file' name='{name}' class='form-control' accept='image/*'>");
+        }
+        else
+            builder.AppendHtml($"<input type='text' name='{name}' class='form-control' {req} value='{existingVal}'>");
+        
+        builder.AppendHtml($@"<div class='invalid-feedback'>Please provide a valid {name}.</div>
+                            </div>");
+        return builder;
+    }
+}
+@{
+    ViewData["Title"] = "Student Admission";
+    var student = ViewBag.StudentDetails as StudentDetailsViewModel;
+    bool isEdit = ViewBag.IsEdit ?? false;
+}
+<style>
+    /* Hide Bootstrap valid feedback icons (ticks) */
+    .was-validated .form-control:valid, 
+    .was-validated .form-select:valid {
+        background-image: none !important;
+        border-color: #dee2e6 !important;
+    }
+    .was-validated .form-control:invalid, 
+    .was-validated .form-select:invalid {
+        border-color: #dc3545 !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Student Admission</h6>
+    </div>
+    <div>
+        <button type="submit" form="admissionForm" class="btn btn-success d-inline-flex align-items-center"><i class="ti ti-cloud me-1"></i> @(isEdit ? "Update" : "Save")</button>
+        <a href="/StudentInformation/ImportStudent" class="btn btn-primary d-inline-flex align-items-center"><i class="ti ti-upload me-1"></i> Import Student</a>
+        <a href="/StudentInformation/Students" class="btn btn-secondary d-inline-flex align-items-center"><i class="ti ti-list me-1"></i> Student List</a>
+        
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header">
+                <ul class="nav nav-pills gap-2">
+                    <li class="nav-item"><a href="#basicInfo" data-bs-toggle="pill" class="nav-link active">Basic Info</a></li>
+                    <li class="nav-item"><a href="#transportInfo" data-bs-toggle="pill" class="nav-link">Transport</a></li>
+                    <li class="nav-item"><a href="#hostelInfo" data-bs-toggle="pill" class="nav-link">Hostel</a></li>
+                    <li class="nav-item"><a href="#fees" data-bs-toggle="pill" class="nav-link">Fees Details</a></li>
+                    <li class="nav-item"><a href="#parentGurdian" data-bs-toggle="pill" class="nav-link">Parent Guardian</a></li>
+                    <li class="nav-item"><a href="#addressInfo" data-bs-toggle="pill" class="nav-link">Address</a></li>
+                    <li class="nav-item"><a href="#misce" data-bs-toggle="pill" class="nav-link">Miscellaneous</a></li>
+                    <li class="nav-item"><a href="#uploadDoc" data-bs-toggle="pill" class="nav-link">Upload Documents</a></li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <form id="admissionForm" class="needs-validation" novalidate>
+                    <input type="hidden" id="hdnStudentID" value="@(student?.BasicInfo?.StudentID ?? 0)" />
+                    <input type="hidden" name="ParentUserID" id="hdnParentUserID" value="@(student?.BasicInfo?.ParentUserID ?? 0)" />
+                    @Html.AntiForgeryToken()
+                    @if (Model == null || !Model.Any())
+                    {
+                        <div class="alert alert-warning m-3">
+                            <i class="ti ti-alert-triangle me-1"></i> No active fields found for Student Admission. 
+                            Please ensure that fields are configured and marked as <strong>Active</strong> in 
+                            <a href="/Settings/SystemFields" class="alert-link">Settings > System Fields</a> or 
+                            <a href="/Settings/CustomFields" class="alert-link">Custom Fields</a>.
+                        </div>
+                    }
+                    <div class="tab-content">
+                        <!-- Basic Info -->
+                        <div class="tab-pane active" id="basicInfo">
+                            <div class="row">
+                                @* Fixed Basic Fields *@
+                                @RenderField(new FieldModel { FieldName = "Roll No", FieldType = "input", GridColumn = 3 }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Class", FieldType = "select", GridColumn = 3, IsRequired = true }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Section", FieldType = "select", GridColumn = 3, IsRequired = true }, student, ViewBag)
+
+                                @foreach (var field in GetFields("Basic", Model))
+                                {
+                                    // Skip fixed fields
+                                    var lowerName = (field.FieldName ?? "").ToLower();
+                                    if (lowerName.Contains("roll") || lowerName.Contains("class") || lowerName.Contains("section")) continue;
+
+                                    @RenderField(field, student, ViewBag)
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Transport Info -->
+                        <div class="tab-pane" id="transportInfo">
+                            <div class="row">
+                                @* Fixed Transport Fields *@
+                                @RenderField(new FieldModel { FieldName = "Route List", FieldType = "select", GridColumn = 4 }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Pickup Point", FieldType = "select", GridColumn = 4 }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Fees Month", FieldType = "select", GridColumn = 4 }, student, ViewBag)
+
+                                @foreach (var field in GetFields("Transport", Model))
+                                {
+                                    // Skip fields already rendered as fixed
+                                    var lowerName = (field.FieldName ?? "").ToLower();
+                                    if (lowerName.Contains("route") || lowerName.Contains("pickup") || lowerName.Contains("month")) continue;
+
+                                    @RenderField(field, student, ViewBag)
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Hostel Info -->
+                        <div class="tab-pane" id="hostelInfo">
+                            <div class="row">
+                                @* Fixed Hostel Fields *@
+                                @RenderField(new FieldModel { FieldName = "Hostel", FieldType = "select", GridColumn = 3 }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Room No", FieldType = "select", GridColumn = 3 }, student, ViewBag)
+
+                                @foreach (var field in GetFields("Hostel", Model))
+                                {
+                                    // Skip fields already rendered as fixed
+                                    var lowerName = (field.FieldName ?? "").ToLower();
+                                    if (lowerName.Contains("hostel") || lowerName.Contains("room")) continue;
+
+                                    @RenderField(field, student, ViewBag)
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Fees Details (Kept static for now as requested for field visibility only) -->
+                        <div class="tab-pane" id="fees">
+                             <div class="alert alert-info">Fees configuration will be based on Class selection.</div>
+                        </div>
+
+                        <!-- Parent Guardian -->
+                        <div class="tab-pane" id="parentGurdian">
+                            <div class="row pt-2 pb-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#modalSibling">
+                                        <i class="ti ti-users me-1"></i> Link Sibling
+                                    </button>
+                                    <hr />
+                                </div>
+                            </div>
+                            <div class="row">
+                                @* Render Father Fields first *@
+                                @foreach (var field in GetFields("Guardian", Model).Where(f => f.FieldName.Contains("Father", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    @RenderField(field, student, ViewBag)
+                                }
+                                
+                                @* Render Mother Fields *@
+                                @foreach (var field in GetFields("Guardian", Model).Where(f => f.FieldName.Contains("Mother", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    @RenderField(field, student, ViewBag)
+                                }
+
+                                <div class="col-12 mt-2 mb-3"><div class="bg-light p-2 fw-bold text-primary border-start border-primary border-4">Guardian Details</div></div>
+
+                                @* Fixed Guardian Selection *@
+                                @RenderField(new FieldModel { FieldName = "If Guardian Is", FieldType = "radio", GridColumn = 3 }, student, ViewBag)
+                                @RenderField(new FieldModel { FieldName = "Guardian Relation", FieldType = "input", GridColumn = 3, IsRequired = true }, student, ViewBag)
+
+                                @foreach (var field in GetFields("Guardian", Model).Where(f => f.FieldName.Contains("Guardian", StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    // Skip fixed fields
+                                    var lowerName = (field.FieldName ?? "").ToLower();
+                                    if (lowerName.Contains("guardian is") || lowerName.Contains("relation")) continue;
+
+                                    @RenderField(field, student, ViewBag)
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Address Info -->
+                        <div class="tab-pane" id="addressInfo">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Current Address</label>
+                                    <textarea name="CurrentAddress" class="form-control" rows="3">@GetVal("Current Address", student)</textarea>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Permanent Address</label>
+                                    <textarea name="PermanentAddress" class="form-control" rows="3">@GetVal("Permanent Address", student)</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Miscellaneous -->
+                        <div class="tab-pane" id="misce">
+                            <div class="row">
+                                @foreach (var field in GetFields("Misc", Model))
+                                {
+                                    @RenderField(field, student, ViewBag)
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Upload Documents -->
+                        <div class="tab-pane" id="uploadDoc">
+                            <div class="row">
+                                @for (int i = 1; i <= 4; i++)
+                                {
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">Document @i Title</label>
+                                            <input type="text" name="DocumentTitle_@i" class="form-control mb-2" placeholder="e.g. Birth Certificate">
+                                            <input type="file" name="DocumentFile_@i" class="form-control">
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sibling Search Modal -->
+<div class="modal fade" id="modalSibling" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title text-primary">Search Sibling</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Class</label>
+                        <select id="siblingClass" class="form-select">
+                            <option value="">Select Class</option>
+                            @foreach (var cls in (ViewBag.Classes as List<MstClassViewModel>) ?? new List<MstClassViewModel>())
+                            {
+                                <option value="@cls.ClassID">@cls.ClassName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Section</label>
+                        <select id="siblingSection" class="form-select">
+                            <option value="">Select Section</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Student</label>
+                        <select id="siblingStudent" class="form-select">
+                            <option value="">Select Student</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="btnLinkSibling" class="btn btn-primary" disabled>Link & Copy Data</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
+    <script src="~/js/inline-form-validation.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Sibling Modal Logic
+            $('#siblingClass').on('change', function() {
+                var classId = $(this).val();
+                var $section = $('#siblingSection');
+                $section.empty().append('<option value="">Select Section</option>');
+                $('#siblingStudent').empty().append('<option value="">Select Student</option>');
+                $('#siblingPreview').addClass('d-none');
+                $('#btnLinkSibling').prop('disabled', true);
+
+                if (classId) {
+                    console.log("Fetching sections for sibling class:", classId);
+                    $.getJSON('/StudentInformation/GetSections', { classId: classId }, function(data) {
+                        console.log("Sections received:", data);
+                        $.each(data, function(i, item) {
+                            $section.append($('<option>', { value: item.id, text: item.name }));
+                        });
+                    });
+                }
+            });
+
+            $('#siblingSection').on('change', function() {
+                var classId = $('#siblingClass').val();
+                var sectionId = $(this).val();
+                var $student = $('#siblingStudent');
+                $student.empty().append('<option value="">Select Student</option>');
+                $('#btnLinkSibling').prop('disabled', true);
+
+                if (classId && sectionId) {
+                    var excludeId = $('#hdnStudentID').val();
+                    $.getJSON('/StudentInformation/GetStudentList', { 
+                        classId: classId, 
+                        sectionId: sectionId,
+                        excludeStudentId: excludeId
+                    }, function(data) {
+                        $.each(data, function(i, item) {
+                            var display = item.fullName + (item.rollNo ? ' (' + item.rollNo + ')' : '');
+                            $student.append($('<option>', { value: item.studentID, text: display }));
+                        });
+                    });
+                }
+            });
+
+            $('#siblingStudent').on('change', function() {
+                var studentId = $(this).val();
+                if (studentId) {
+                    $.getJSON('/StudentInformation/GetStudentDetails', { id: studentId }, function(data) {
+                        if (data && data.basicInfo) {
+                            $('#btnLinkSibling').prop('disabled', false).data('student', data);
+                        }
+                    });
+                } else {
+                    $('#btnLinkSibling').prop('disabled', true);
+                }
+            });
+
+            $('#btnLinkSibling').on('click', function() {
+                var data = $(this).data('student');
+                if (data && data.basicInfo) {
+                    var b = data.basicInfo;
+                    
+                    // Link via ParentUserID
+                    $('#hdnParentUserID').val(b.parentUserID || 0);
+
+                    // Auto-fill Parent Info
+                    $('input[name="Father Name"]').val(b.fatherName);
+                    $('input[name="Father Phone"]').val(b.fatherPhone);
+                    $('input[name="Father Mobile"]').val(b.fatherPhone);
+                    $('input[name="Father Occupation"]').val(b.fatherOccupation);
+                    
+                    $('input[name="Mother Name"]').val(b.motherName);
+                    $('input[name="Mother Phone"]').val(b.motherPhone);
+                    $('input[name="Mother Mobile"]').val(b.motherPhone);
+                    $('input[name="Mother Occupation"]').val(b.motherOccupation);
+
+                    // Guardian Info
+                    if (b.ifGuardianIs) {
+                        $('.rb-guardian-type[value="' + b.ifGuardianIs + '"]').prop('checked', true).trigger('change');
+                    }
+                    $('input[name="Guardian Name"]').val(b.guardianName);
+                    $('input[name="Guardian Phone"]').val(b.guardianPhone);
+                    $('input[name="Guardian Mobile"]').val(b.guardianPhone);
+                    $('input[name="Guardian Occupation"]').val(b.guardianOccupation);
+                    $('input[name="Guardian Relation"]').val(b.guardianRelation);
+                    $('input[name="Guardian Email"]').val(b.guardianEmail);
+
+                    // Addresses
+                    if (data.addresses && data.addresses.length > 0) {
+                        var current = data.addresses.find(a => a.addressType === 'Current');
+                        var permanent = data.addresses.find(a => a.addressType === 'Permanent');
+                        if (current) $('textarea[name="CurrentAddress"]').val(current.addressDetails);
+                        if (permanent) $('textarea[name="PermanentAddress"]').val(permanent.addressDetails);
+                    }
+
+                    // User Auth (Optionally link parent login)
+                    $('input[name="Parent Username"]').val(b.parentUsername);
+                    $('input[name="Parent Password"]').val(b.parentPassword);
+
+                    $('#modalSibling').modal('hide');
+                    Swal.fire({
+                        title: 'Linked!',
+                        text: 'Sibling details have been copied. Both students will share the same parent account.',
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                }
+            });
+
+            // Transport Cascading
+            $('#ddlRoute').change(function() {
+                var selectedOption = $(this).find('option:selected');
+                var routeId = selectedOption.data('routeid');
+                $('#hdnTransportRouteID').val(routeId || '');
+                
+                var $pickup = $('#ddlPickupPoint');
+                var selectedVal = $pickup.data('selected');
+                $pickup.html('<option value="">Select Pickup Point</option>');
+                if (routeId) {
+                    $.getJSON('/StudentInformation/GetPickupPoints', { routeId: routeId }, function(data) {
+                        $.each(data, function(i, item) {
+                            var isSelected = (selectedVal == item.id) ? true : false;
+                            $pickup.append($('<option>', { value: item.id, text: item.name, selected: isSelected }));
+                        });
+                        $pickup.attr('data-selected', ''); // Clear after use
+                    });
+                }
+            });
+
+            // Hostel Cascading
+            $('#ddlHostel').change(function() {
+                var hostelId = $(this).val();
+                var $room = $('#ddlHostelRoom');
+                var selectedVal = $room.data('selected');
+                $room.html('<option value="">Select Room</option>');
+                if (hostelId) {
+                    $.getJSON('/StudentInformation/GetHostelRooms', { hostelId: hostelId }, function(data) {
+                        $.each(data, function(i, item) {
+                            var isSelected = (selectedVal == item.id) ? true : false;
+                            $room.append($('<option>', { value: item.id, text: item.name, selected: isSelected }));
+                        });
+                        $room.attr('data-selected', ''); // Clear after use
+                    });
+                }
+            });
+
+            // Guardian Selection Logic
+            $(document).on('change', '.rb-guardian-type', function() {
+                var val = $(this).val();
+                if (val === 'Father' || val === 'Mother') {
+                    $('#txtGuardianRelation').val(val).prop('readonly', true);
+                    
+                    // Copy fields
+                    $('input[name="Guardian Name"]').val($('input[name="' + val + ' Name"]').val());
+                    
+                    var phone = $('input[name="' + val + ' Phone"]').val() || $('input[name="' + val + ' Mobile"]').val();
+                    var mobile = $('input[name="' + val + ' Mobile"]').val() || $('input[name="' + val + ' Phone"]').val();
+                    
+                    $('input[name="Guardian Phone"]').val(phone);
+                    $('input[name="Guardian Mobile"]').val(mobile);
+                    $('input[name="Guardian Occupation"]').val($('input[name="' + val + ' Occupation"]').val());
+                } else {
+                    $('#txtGuardianRelation').val('').prop('readonly', false).focus();
+                    $('input[name="Guardian Name"]').val('');
+                    $('input[name="Guardian Phone"]').val('');
+                    $('input[name="Guardian Mobile"]').val('');
+                    $('input[name="Guardian Occupation"]').val('');
+                }
+            });
+
+            // Sync Guardian if Father/Mother details change while they are selected as guardian
+            $(document).on('input', 'input[name^="Father "], input[name^="Mother "]', function() {
+                var selectedGuardian = $('.rb-guardian-type:checked').val();
+                var fieldName = $(this).attr('name');
+                if (fieldName.startsWith(selectedGuardian)) {
+                    var suffix = fieldName.substring(selectedGuardian.length); // e.g. " Name"
+                    $('input[name="Guardian' + suffix + '"]').val($(this).val());
+                }
+            });
+
+            // Class -> Section Cascading
+            $('#ddlClass').change(function() {
+                var classId = $(this).val();
+                var $section = $('#ddlSection');
+                var selectedVal = $section.data('selected');
+                $section.html('<option value="">Select Section</option>');
+                if (classId) {
+                    $.getJSON('/StudentInformation/GetSections', { classId: classId }, function(data) {
+                        $.each(data, function(i, item) {
+                            var isSelected = (selectedVal == item.id) ? true : false;
+                            $section.append($('<option>', { value: item.id, text: item.name, selected: isSelected }));
+                        });
+                        $section.attr('data-selected', ''); // Clear after use
+                    });
+                }
+            });
+
+            // If in edit mode, trigger cascading loads
+            if (@((ViewBag.IsEdit ?? false).ToString().ToLower())) {
+                if ($('#ddlClass').val()) $('#ddlClass').trigger('change');
+                if ($('#ddlRoute').val()) $('#ddlRoute').trigger('change');
+                if ($('#ddlHostel').val()) $('#ddlHostel').trigger('change');
+            }
+
+            // Auto ID Dependencies
+            var dependencies = '@(ViewBag.RollNoDependencies ?? "")'.split(',').map(s => s.trim()).filter(s => s !== "");
+            if (dependencies.length > 0 && @((ViewBag.IsRollAutoGenerated ?? false).ToString().ToLower())) {
+                $(document).on('change', '.mb-3[data-fieldname] select, .mb-3[data-fieldname] input', function() {
+                    var fieldName = $(this).closest('.mb-3').data('fieldname');
+                    if (dependencies.includes(fieldName)) {
+                        refreshRollNo();
+                    }
+                });
+            }
+
+            function refreshRollNo() {
+                var formData = {};
+                $('.mb-3[data-fieldname]').each(function() {
+                    var fieldName = $(this).data('fieldname');
+                    var val = $(this).find('select, input').val();
+                    if (val) formData[fieldName] = val;
+                });
+
+                $.getJSON('/StudentInformation/GetNextRollNo', formData, function(res) {
+                    if (res.rollNo) {
+                        $('input[name="Roll No"], input[name="RollNo"]').val(res.rollNo);
+                    }
+                });
+            }
+
+            // Form Submit
+            $('#admissionForm').on('submit', async function(e) {
+                e.preventDefault();
+                
+                var form = this;
+                if (!form.checkValidity()) {
+                    e.stopPropagation();
+                    $(form).addClass('was-validated');
+                    
+                    var firstError = $(form).find(':invalid').first();
+                    if (firstError.length > 0) {
+                        var tabPane = firstError.closest('.tab-pane');
+                        if (tabPane.length > 0) {
+                            var tabId = tabPane.attr('id');
+                            $('.nav-link[href="#' + tabId + '"]').tab('show');
+                        }
+                    }
+                    return;
+                }
+
+                var formData = {
+                    StudentID: parseInt($('#hdnStudentID').val() || 0),
+                    RollNo: "",
+                    FieldValues: {}
+                };
+
+                var inputPromises = [];
+                $('#admissionForm').find('input, select, textarea').each(function() {
+                    var input = $(this);
+                    var name = input.attr('name');
+                    if (!name) return;
+
+                    if (input.attr('type') === 'file') {
+                        if (this.files && this.files.length > 0) {
+                            var promise = new Promise((resolve) => {
+                                var reader = new FileReader();
+                                reader.onload = function(e) {
+                                    formData.FieldValues[name] = e.target.result.split(',')[1];
+                                    formData.FieldValues[name + " Name"] = input.val().split('\\').pop();
+                                    formData.FieldValues[name + " Type"] = input[0].files[0].type;
+                                    resolve();
+                                };
+                                reader.readAsDataURL(this.files[0]);
+                            });
+                            inputPromises.push(promise);
+                        }
+                    } else if (input.attr('type') === 'radio') {
+                        if (input.is(':checked')) {
+                            formData.FieldValues[name] = input.val();
+                        }
+                    } else {
+                        formData.FieldValues[name] = input.val();
+                    }
+                });
+                
+                await Promise.all(inputPromises);
+
+                // Custom Validation for Mobile and Email
+                var validationError = null;
+                Object.keys(formData.FieldValues).forEach(function(key) {
+                    if (validationError) return;
+                    var val = formData.FieldValues[key];
+                    var lowerKey = key.toLowerCase();
+                    if (lowerKey.includes('mobile') || lowerKey.includes('phone') || lowerKey.includes('contact')) {
+                        if (val && !InlineFormValidation.isValidMobile(val)) {
+                            validationError = 'Please enter a valid 10-digit mobile number for ' + key;
+                        }
+                    }
+                    if (lowerKey.includes('email')) {
+                        if (val && !InlineFormValidation.isValidEmail(val)) {
+                            validationError = 'Please enter a valid email address for ' + key;
+                        }
+                    }
+                });
+
+                if (validationError) {
+                    Swal.fire('Validation Error', validationError, 'warning');
+                    return;
+                }
+
+                if (!formData.RollNo) {
+                    formData.RollNo = formData.FieldValues["Roll No"] || formData.FieldValues["RollNo"] || "";
+                }
+
+                $.ajax({
+                    url: '/StudentInformation/SaveStudent',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(res) {
+                        if (res.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Student record has been saved successfully.',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    location.reload();
+                                }
+                            });
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error!', 'An unexpected error occurred while saving.', 'error');
+                    }
+                });
+            });
+        });
+    </script>
+}

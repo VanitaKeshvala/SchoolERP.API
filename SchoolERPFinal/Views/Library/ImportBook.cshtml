@@ -1,0 +1,157 @@
+
+@{
+    ViewData["Title"] = "ImportBook";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Import Book</h6>
+    </div>
+    <div>
+        <button id="btnImport" class="btn btn-primary d-inline-flex align-items-center">
+            <i class="ti ti-plus me-1"></i>Import Book
+        </button>
+        <a href="~/import_book_sample_file.csv" class="btn btn-warning d-inline-flex align-items-center" download>
+            <i class="ti ti-download me-1"></i>Download Sample Import File
+        </a>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-header">
+                <div class="bg-light p-3 rounded-3 mb-3">
+                    <ol class="m-0 p-0 px-3">
+                        <li class="mb-2">
+                            Your CSV data should be in the format below. The first line of your CSV file should be the column headers as in the table example. Also make sure that your file is UTF-8 to avoid unnecessary encoding problems.
+                        </li>
+                        <li>
+                            If the column you are trying to import is date make sure that is formatted in format Y-m-d (2018-06-06).
+                        </li>
+
+                    </ol>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for class="form-label">
+                                Select
+                                CSV File
+                            </label>
+                            <input type="file" id="fileInput" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0">
+                        <thead>
+                            <tr>
+                                <th><span class="text-danger">*</span> Book Title</th>
+                                <th>Book Number</th>
+                                <th>ISBN Number</th>
+                                <th>Subject</th>
+                                <th>Rack Number</th>
+                                <th>Publisher</th>
+                                <th>Author</th>
+                                <th>Qty</th>
+                                <th>Book Price</th>
+                                <th>Post Date</th>
+                                <th>Description</th>
+                                <th>Available</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                                <td>XYZ</td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- end col -->
+</div>
+<!-- end row -->
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#btnImport').on('click', function () {
+                var fileInput = document.getElementById('fileInput');
+                if (fileInput.files.length === 0) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'warning',
+                        title: 'Please select a CSV file.',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    return;
+                }
+
+                var formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                var btn = $(this);
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Importing...');
+
+                $.ajax({
+                    url: '/Library/ImportBook',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        btn.prop('disabled', false).html('<i class="ti ti-plus me-1"></i>Import Book');
+                        if (res.success) {
+                            var successCount = res.results.filter(r => r.success).length;
+                            var failCount = res.results.length - successCount;
+                            
+                            var message = `Imported ${successCount} books successfully.`;
+                            if (failCount > 0) {
+                                message += ` ${failCount} failed.`;
+                            }
+                            
+                            Swal.fire({
+                                title: 'Import Result',
+                                text: message,
+                                icon: failCount > 0 ? 'warning' : 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.href = '/Library/Books';
+                            });
+                        } else {
+                            Swal.fire('Error!', res.message, 'error');
+                        }
+                    },
+                    error: function () {
+                        btn.prop('disabled', false).html('<i class="ti ti-plus me-1"></i>Import Book');
+                        Swal.fire('Error!', 'Something went wrong during import.', 'error');
+                    }
+                });
+            });
+        });
+    </script>
+}

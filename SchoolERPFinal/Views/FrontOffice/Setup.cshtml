@@ -1,0 +1,563 @@
+@model SchoolERP.Net.Models.FrontOfficeSetupPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Setup Front Office";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canAdd = PermHelper.HasPermissionByUrl("/FrontOffice/Setup", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/FrontOffice/Setup", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/FrontOffice/Setup", "Delete");
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Setup Front Office</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="row">
+                <!-- Left Nav -->
+                <div class="col-xl-3 pe-0">
+                    <div class="p-3">
+                        <ul class="nav nav-pills row-gap-3 setup-front-office" id="foTabs">
+                            <li class="nav-item w-100">
+                                <a href="#purpose" data-bs-toggle="pill" data-entity="purpose"
+                                   class="nav-link active d-flex align-items-center justify-content-between">
+                                    <span>Purpose</span><span class="ti ti-chevron-right"></span>
+                                </a>
+                            </li>
+                            <li class="nav-item w-100">
+                                <a href="#comptType" data-bs-toggle="pill" data-entity="complaintType"
+                                   class="nav-link d-flex align-items-center justify-content-between">
+                                    <span>Complaint Type</span><span class="ti ti-chevron-right"></span>
+                                </a>
+                            </li>
+                            <li class="nav-item w-100">
+                                <a href="#source" data-bs-toggle="pill" data-entity="source"
+                                   class="nav-link d-flex align-items-center justify-content-between">
+                                    <span>Source</span><span class="ti ti-chevron-right"></span>
+                                </a>
+                            </li>
+                            <li class="nav-item w-100">
+                                <a href="#ref" data-bs-toggle="pill" data-entity="reference"
+                                   class="nav-link d-flex align-items-center justify-content-between">
+                                    <span>Reference</span><span class="ti ti-chevron-right"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Right Content -->
+                <div class="col-xl-9 ps-0">
+                    <div class="tab-content  h-100 border-start">
+
+                        <!-- PURPOSE TAB -->
+                        <div class="tab-pane active" id="purpose">
+                            <div class="card mb-0 border-0 rounded-0 shadow-tbl">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title mb-0">Purpose List</h5>
+                                    <input type="text" class="form-control w-25" id="searchPurpose" placeholder="Search...">
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table mb-0" id="tblPurpose">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:50px" class="ps-3">Select</th>
+                                                    <th>Purpose</th>
+                                                    <th>Description</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in Model.Purposes)
+                                                {
+                                                    <tr class="item-row" onclick="selectItem('purpose', @item.PurposeID, this)" style="cursor: pointer;">
+                                                        <td class="ps-3">
+                                                            <input type="checkbox" name="selectedPurpose"
+                                                                   class="form-check-input student-checkbox"
+                                                                   value="@item.PurposeID">
+                                                        
+                                                        </td>
+                                                        <td>@item.Name</td>
+                                                        <td>@(item.Description ?? "-")</td>
+                                                        <td>
+                                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       onchange="toggleStatus('purpose',@item.PurposeID,this.checked)"
+                                                                       @(item.IsActive ? "checked" : "")
+                                                                       @(canEdit ? "" : "disabled")>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!Model.Purposes.Any())
+                                                {
+                                                    <tr><td colspan="4" class="text-center text-muted py-3">No records found</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- COMPLAINT TYPE TAB -->
+                        <div class="tab-pane" id="comptType">
+                            <div class="card mb-0 border-0 rounded-0 shadow-tbl">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title mb-0">Complaint Type List</h5>
+                                    <input type="text" class="form-control w-25" id="searchComplaintType" placeholder="Search...">
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table mb-0" id="tblComplaintType">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:50px" class="ps-3">Select</th>
+                                                    <th>Complaint Type</th>
+                                                    <th>Description</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in Model.ComplaintTypes)
+                                                {
+                                                    <tr class="item-row" onclick="selectItem('complaintType', @item.ComplaintTypeID, this)" style="cursor: pointer;">
+                                                        <td class="ps-3">
+                                                            <input type="checkbox" name="selectedComplaintType"
+                                                                   class="form-check-input student-checkbox"
+                                                                   value="@item.ComplaintTypeID">
+                                                        
+                                                        </td>
+                                                        <td>@item.Name</td>
+                                                        <td>@(item.Description ?? "-")</td>
+                                                        <td>
+                                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       onchange="toggleStatus('complaintType',@item.ComplaintTypeID,this.checked)"
+                                                                       @(item.IsActive ? "checked" : "")
+                                                                       @(canEdit ? "" : "disabled")>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!Model.ComplaintTypes.Any())
+                                                {
+                                                    <tr><td colspan="4" class="text-center text-muted py-3">No records found</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SOURCE TAB -->
+                        <div class="tab-pane" id="source">
+                            <div class="card mb-0 border-0 rounded-0 shadow-tbl">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title mb-0">Source List</h5>
+                                    <input type="text" class="form-control w-25" id="searchSource" placeholder="Search...">
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table mb-0" id="tblSource">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:50px" class="ps-3">Select</th>
+                                                    <th>Source</th>
+                                                    <th>Description</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in Model.Sources)
+                                                {
+                                                    <tr class="item-row" onclick="selectItem('source', @item.SourceID, this)" style="cursor: pointer;">
+                                                        <td class="ps-3">
+                                                            <input type="checkbox" name="selectedSource"
+                                                                   class="form-check-input student-checkbox"
+                                                                   value="@item.SourceID">
+                                                        
+                                                        </td>
+                                                        <td>@item.Name</td>
+                                                        <td>@(item.Description ?? "-")</td>
+                                                        <td>
+                                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       onchange="toggleStatus('source',@item.SourceID,this.checked)"
+                                                                       @(item.IsActive ? "checked" : "")
+                                                                       @(canEdit ? "" : "disabled")>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!Model.Sources.Any())
+                                                {
+                                                    <tr><td colspan="4" class="text-center text-muted py-3">No records found</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- REFERENCE TAB -->
+                        <div class="tab-pane" id="ref">
+                            <div class="card mb-0 border-0 rounded-0 shadow-tbl">
+                                <div class="card-header d-flex align-items-center justify-content-between">
+                                    <h5 class="card-title mb-0">Reference List</h5>
+                                    <input type="text" class="form-control w-25" id="searchReference" placeholder="Search...">
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table mb-0" id="tblReference">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:50px" class="ps-3">Select</th>
+                                                    <th>Reference</th>
+                                                    <th>Description</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in Model.References)
+                                                {
+                                                    <tr class="item-row" onclick="selectItem('reference', @item.ReferenceID, this)" style="cursor: pointer;">
+                                                        <td class="ps-3">
+                                                            <input type="checkbox" name="selectedReference"
+                                                                   class="form-check-input student-checkbox"
+                                                                   value="@item.ReferenceID">
+                                                        
+                                                        </td>
+                                                        <td>@item.Name</td>
+                                                        <td>@(item.Description ?? "-")</td>
+                                                        <td>
+                                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                                <input class="form-check-input" type="checkbox"
+                                                                       onchange="toggleStatus('reference',@item.ReferenceID,this.checked)"
+                                                                       @(item.IsActive ? "checked" : "")
+                                                                       @(canEdit ? "" : "disabled")>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (!Model.References.Any())
+                                                {
+                                                    <tr><td colspan="4" class="text-center text-muted py-3">No records found</td></tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Purpose</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveRecord()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="recordId" value="0">
+                <div class="row row-gap-3">
+                    <div class="col-md-12">
+                        <label class="form-label" id="nameLabel">Purpose <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="txtName" placeholder="Enter name">
+                        <div class="text-danger small mt-1 d-none" id="nameError">Name is required.</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="txtDescription" rows="3" placeholder="Enter description"></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="chkIsActive" checked>
+                            <label class="form-check-label" for="chkIsActive">Active</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let activeEntity = 'purpose';
+    let selectedId = 0;
+    const canEdit = @canEdit.ToString().ToLower();
+    const canDelete = @canDelete.ToString().ToLower();
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const savedTab = sessionStorage.getItem('activeFoSetupTab');
+        if (savedTab) {
+            const tabEl = document.querySelector(`#foTabs a[data-entity="${savedTab}"]`);
+            if (tabEl) {
+                new bootstrap.Tab(tabEl).show();
+                activeEntity = savedTab;
+            }
+        }
+    });
+
+    // Track active tab
+    document.querySelectorAll('#foTabs a[data-bs-toggle="pill"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', e => {
+            activeEntity = e.target.dataset.entity;
+            sessionStorage.setItem('activeFoSetupTab', activeEntity);
+            resetSelection();
+        });
+    });
+
+    function resetSelection() {
+        selectedId = 0;
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        //document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+        if (canEdit) document.getElementById('btnEdit').disabled = true;
+        if (canDelete) document.getElementById('btnDelete').disabled = true;
+        let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+    function selectItem(entity, id, row) {
+        selectedId = id;
+        activeEntity = entity;
+        
+        // Clear selection in all tables
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+        
+        row.classList.add('bg-light');
+        //row.querySelector('input[type="radio"]').checked = true;
+
+        if (canEdit) document.getElementById('btnEdit').disabled = false;
+        if (canDelete) document.getElementById('btnDelete').disabled = false;
+                let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+    function openAddModal() {
+        const labels = {
+            purpose: 'Purpose', complaintType: 'Complaint Type',
+            source: 'Source', reference: 'Reference'
+        };
+        document.getElementById('modalTitle').textContent = 'Add ' + labels[activeEntity];
+        document.getElementById('nameLabel').innerHTML = labels[activeEntity] + ' <span class="text-danger">*</span>';
+        document.getElementById('recordId').value = 0;
+        document.getElementById('txtName').value = '';
+        document.getElementById('txtDescription').value = '';
+        document.getElementById('chkIsActive').checked = true;
+        document.getElementById('nameError').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('addModal')).show();
+    }
+
+    function editSelected() {
+        if (!selectedId) return;
+        const labels = {
+            purpose: 'Purpose', complaintType: 'Complaint Type',
+            source: 'Source', reference: 'Reference'
+        };
+        fetch(`/FrontOffice/Get${capitalize(activeEntity)}?id=${selectedId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'danger'); return; }
+                const d = res.data;
+                document.getElementById('modalTitle').textContent = 'Edit ' + labels[activeEntity];
+                document.getElementById('nameLabel').innerHTML = labels[activeEntity] + ' <span class="text-danger">*</span>';
+                document.getElementById('recordId').value = getIdFromData(activeEntity, d);
+                document.getElementById('txtName').value = d.name;
+                document.getElementById('txtDescription').value = d.description || '';
+                document.getElementById('chkIsActive').checked = d.isActive;
+                document.getElementById('nameError').classList.add('d-none');
+                new bootstrap.Modal(document.getElementById('addModal')).show();
+            });
+    }
+
+    // Inline search per table
+    ['Purpose','ComplaintType','Source','Reference'].forEach(e => {
+        const input = document.getElementById('search' + e);
+        if (!input) return;
+        input.addEventListener('keyup', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#tbl' + e + ' tbody tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    });
+
+    // Save
+    function saveRecord() {
+        const name = document.getElementById('txtName').value.trim();
+        if (!name) {
+            document.getElementById('nameError').classList.remove('d-none');
+            return;
+        }
+        document.getElementById('nameError').classList.add('d-none');
+
+        const id = parseInt(document.getElementById('recordId').value);
+        const payload = buildPayload(activeEntity, id, name);
+        const url = `/FrontOffice/Save${capitalize(activeEntity)}`;
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success ? 'success' : 'danger');
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addModal'))?.hide();
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+    }
+
+    function deleteSelected() {
+        if (!selectedId) return;
+        // if (!confirm('Are you sure you want to delete this record?')) return;
+        // fetch(`/FrontOffice/Delete${capitalize(activeEntity)}?id=${selectedId}`, { method: 'POST' })
+        // .then(r => r.json())
+        // .then(res => {
+        //     showToast(res.message, res.success ? 'success' : 'danger');
+        //     if (res.success) setTimeout(() => location.reload(), 800);
+        // });
+
+
+               let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                              url: `/FrontOffice/Delete${capitalize(activeEntity)}`,
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+    }
+
+    // Toggle Status
+    function toggleStatus(entity, id, isActive) {
+        fetch(`/FrontOffice/Toggle${capitalize(entity)}Status?id=${id}&isActive=${isActive}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────
+    function capitalize(s) {
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    function getIdFromData(entity, d) {
+        const map = { purpose: 'purposeID', complaintType: 'complaintTypeID', source: 'sourceID', reference: 'referenceID' };
+        return d[map[entity]] || 0;
+    }
+
+    function buildPayload(entity, id, name) {
+        const desc = document.getElementById('txtDescription').value.trim() || null;
+        const isActive = document.getElementById('chkIsActive').checked;
+        const idMap = { purpose: 'purposeID', complaintType: 'complaintTypeID', source: 'sourceID', reference: 'referenceID' };
+        const payload = { name, description: desc, isActive };
+        payload[idMap[entity]] = id;
+        return payload;
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 3000);
+    }
+</script>
+}

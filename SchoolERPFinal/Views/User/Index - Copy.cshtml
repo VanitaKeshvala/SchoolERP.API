@@ -1,0 +1,1471 @@
+@*
+    ======================================================================
+    VIEW: User / Index.cshtml
+    PURPOSE: User interface rendering for the User module.
+    ======================================================================
+*@
+@model SchoolERP.Net.Models.UsersPageViewModel
+@{
+    Layout = "_Layout";
+}
+
+<link rel="stylesheet" href="~/css/treeview.css" />
+<style>
+    .choices__list--dropdown .choices__item--selectable, .choices__list[aria-expanded] .choices__item--selectable {
+        padding-right: 0;
+    }
+
+    /* --- Wizard Step 3 Redesign --- */
+    .role-sidebar {
+        -background: #f8f9fa;
+        min-height: 400px;
+    }
+    .role-item-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        -border: 1px solid transparent !important;
+    }
+    .role-item-card:hover {
+        background-color: #f1f3f9 !important;
+        -transform: translateX(4px);
+    }
+    .role-item-card.active {
+        background-color: #eef2ff !important;
+        border-color: #5e72e4 !important;
+        box-shadow: 0 2px 8px rgba(94, 114, 228, 0.15) !important;
+    }
+    .role-item-card.active i {
+        color: #5e72e4 !important;
+        opacity: 1 !important;
+    }
+    .x-small { font-size: 0.7rem; }
+    .tree-grid{
+        border:1px solid #ddd;
+    }
+    
+        .tree-grid th{
+            padding:10px 8px;
+        }
+
+    .w-s-nowrap {
+        white-space: nowrap;
+    }
+
+    .w-s-nowrap .form-check-input{
+        margin-top:2px !important;
+    }
+    .tree-grid-wrapper {
+        border-radius: 0;
+    }
+
+    /* Indicators */
+    .wizard-step { cursor: pointer; }
+    .wizard-step.completed .step-num { background: #2dce89 !important; }
+    .wizard-step.active .step-num { background: #5e72e4 !important; }
+
+    
+</style>
+
+
+    <!-- Page Header -->
+    <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+        <div>
+            <h6 class="fw-bold mb-0">User Management</h6>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="dropdown">
+                <a href="#" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                </a>
+                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="">
+                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                        <div class="d-flex align-items-center justify-content-end">
+                            <a href="javascript:void(0);" class="btn btn-light btn-md me-2 fw-medium" id="close-filter">Close</a>
+                            <button type="submit" class="btn btn-primary btn-md fw-medium">Filter</button>
+                        </div>
+                    </div>
+                    <form action="#">
+                        <div class="filter-body pb-0">
+                            <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label mb-1">Financial Year <span class="text-danger">*</span></label>
+                                <select class="form-control" data-choices name="choices-single-default" id="choices-single-default">
+                                    <option value="">Year</option>
+                                    <option value="Choice 1">2024-25</option>
+                                    <option value="Choice 2">2025-26</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label mb-1">Organization <span class="text-danger">*</span></label>
+                                <select class="form-select form-control select2">
+                                    <option value="m-1" selected="">Select</option>
+                                    <option value="m-2">Section A</option>
+                                    <option value="m-3">Section B</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label mb-1">City <span class="text-danger">*</span></label>
+                                <select class="form-select form-control select2">
+                                    <option value="m-1" selected="">Select</option>
+                                    <option value="m-2">City 1</option>
+                                    <option value="m-3">City 2</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label mb-1">State <span class="text-danger">*</span></label>
+                                <select class="form-select form-control select2">
+                                    <option value="m-1" selected="">Select</option>
+                                    <option value="m-2">State 1</option>
+                                    <option value="m-3">State 2</option>
+                                </select>
+                            </div>
+                        </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            <button class="btn btn-primary shadow-sm" id="btnAddUser" onclick="openAddModal()">
+                <i class="ti ti-plus me-2"></i>Add
+            </button>
+            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+                <i class="ti ti-edit me-2"></i>Edit
+            </button>
+            <button id="btnUnlock" class="btn btn-danger shadow-sm" onclick="unlockSelected()">
+                <i class="ti ti-trash me-2"></i>Delete
+            </button> 
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    @* <div class="row mb-4">
+        @{
+            int totalUsers = Model.Users.Count;
+            int activeUsers = Model.Users.Count(u => u.IsActive);
+            int inactiveUsers = totalUsers - activeUsers;
+            int lockedUsers = Model.Users.Count(u => u.IsLocked);
+        }
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-sm mb-0 text-uppercase text-muted fw-semibold">Total Users</p>
+                            <h3 class="fw-bold mb-0">@totalUsers</h3>
+                        </div>
+                        <div class="stat-icon bg-gradient-primary">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-sm mb-0 text-uppercase text-muted fw-semibold">Active</p>
+                            <h3 class="fw-bold mb-0 text-success">@activeUsers</h3>
+                        </div>
+                        <div class="stat-icon bg-gradient-success">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-sm mb-0 text-uppercase text-muted fw-semibold">Inactive</p>
+                            <h3 class="fw-bold mb-0 text-secondary">@inactiveUsers</h3>
+                        </div>
+                        <div class="stat-icon bg-gradient-secondary">
+                            <i class="fas fa-user-slash"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-3">
+            <div class="card border-0 shadow-sm stat-card">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-sm mb-0 text-uppercase text-muted fw-semibold">Locked</p>
+                            <h3 class="fw-bold mb-0 text-danger">@lockedUsers</h3>
+                        </div>
+                        <div class="stat-icon bg-gradient-danger">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> *@
+
+    <!-- Users Table Card -->
+    <div class="row">
+
+        <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    @*  <h5 class="mb-0 fw-bold text-dark">
+                    All Users
+                    </h5> *@
+                    <div class="position-relative border d-flex align-items-center rounded-3 px-3 flex-grow-1">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search users..." style="min-width: 220px;">
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Status Filter -->
+                        <select class="form-select form-control" id="ddlStatusFilter" style="width: auto; min-width: 130px;">
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="locked">Locked</option>
+                        </select>
+                        <!-- Search -->
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div class="col-md-12">
+        <div class="card shadow-tbl">                
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table" id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;" class="">Select</th>
+                                    <th class="">User</th>
+                                    <th class="">Contact</th>
+                                    <th class="">Role(s)</th>
+                                    <th class="">Settings</th>
+                                    <th class="">Status</th>
+                                    <th class="">Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    string initials = "";
+                                    if (!string.IsNullOrEmpty(user.FullName))
+                                    {
+                                        var parts = user.FullName.Split(' ');
+                                        initials = parts.Length >= 2
+                                            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+                                            : $"{parts[0][0]}".ToUpper();
+                                    }
+                                    else
+                                    {
+                                        initials = user.Username.Length >= 2
+                                            ? user.Username.Substring(0, 2).ToUpper()
+                                            : user.Username.ToUpper();
+                                    }
+                                    
+                                    var avatarColors = new[] { "#4e73df", "#1cc88a", "#36b9cc", "#f6c23e", "#e74a3b", "#858796", "#5a5c69" };
+                                    string avatarColor = avatarColors[Math.Abs(user.UserID.GetHashCode()) % avatarColors.Length];
+
+                                    <tr class="user-row" 
+                                        data-status="@(user.IsLocked ? "locked" : (user.IsActive ? "active" : "inactive"))"
+                                        onclick="selectUser(@user.UserID, this, @user.IsLocked.ToString().ToLower())" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                            <input type="radio" name="selectedUser" class="form-check-input" value="@user.UserID">
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                               @*  <div class="avatar-circle me-3" style="background: @avatarColor;">
+                                                    <span class="avatar-initials">@initials</span>
+                                                </div> *@
+                                                <div class="d-flex flex-column justify-content-center">
+                                                    @user.FullName
+                                                  @*   <p class="text-xs text-primary small mb-0">@@user.Username</p> *@
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <p class="mb-0">@user.Email</p>
+                                            <p class="mb-0">@user.PhoneNo</p>
+                                        </td>
+                                        <td>
+                                            @{
+                                                string displayRoles = user.RoleNames;
+                                                var roleList = displayRoles.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                                            }
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var role in roleList)
+                                                {
+                                                    <span class="badge bg-light text-dark border">@role.Trim()</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="align-middle text-center">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                @if (user.IsOTPEnabled)
+                                                {
+                                                    <span class="badge bg-info bg-opacity-10 text-info" title="OTP Enabled">
+                                                        <i class="fas fa-shield-alt"></i> 2FA
+                                                    </span>
+                                                }
+                                                @if (user.BackDaysAllow > 0)
+                                                {
+                                                    <span class="badge bg-warning bg-opacity-10 text-warning" title="Back-date: @user.BackDaysAllow day(s)">
+                                                        <i class="fas fa-calendar-alt"></i> BD:@user.BackDaysAllow
+                                                    </span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="align-middle text-center text-sm">
+                                            @if (user.IsLocked)
+                                            {
+                                                <span class="badge badge-sm bg-gradient-danger">
+                                                    <i class="fas fa-lock me-1"></i>Locked
+                                                </span>
+                                            }
+                                            else if (user.IsActive)
+                                            {
+                                                <div class="form-check form-switch d-flex justify-content-start mb-0" onclick="event.stopPropagation()">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           checked onchange="toggleStatus(@user.UserID, this.checked)" 
+                                                           id="statusSwitch_@user.UserID">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="form-check form-switch d-flex justify-content-center mb-0" onclick="event.stopPropagation()">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           onchange="toggleStatus(@user.UserID, this.checked)" 
+                                                           id="statusSwitch_@user.UserID">
+                                                </div>
+                                            }
+                                        </td>
+                                        <td class="">
+                                            <span class="">@user.CreatedOn.ToString("dd MMM yyyy")</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (Model.Users.Count == 0)
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-users text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                            <p class="text-muted mt-3">No users found. Click "Add New User" to create one.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Add/Edit User Modal -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header justify-content-between align-items-center">
+                <div class="d-flex flex-column">
+                    <h5 class="modal-title" id="wizardModalTitle">
+                        User Wizard
+                    </h5>
+                    <div class="wizard-steps-indicator d-flex align-items-center mt-3 gap-4">
+                        <div class="wizard-step active" data-step="1">
+                            <span class="step-num">1</span>
+                            <span class="step-label d-none d-sm-inline">Identity</span>
+                        </div>
+                        <div class="wizard-step-line"></div>
+                        <div class="wizard-step" data-step="2">
+                            <span class="step-num">2</span>
+                            <span class="step-label d-none d-sm-inline">Companies</span>
+                        </div>
+                        <div class="wizard-step-line"></div>
+                        <div class="wizard-step" data-step="3">
+                            <span class="step-num">3</span>
+                            <span class="step-label d-none d-sm-inline">Permissions</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    @* <button type="button" class="btn btn-sm btn-light px-3" data-bs-dismiss="modal">Cancel</button> *@
+                    <div class="ms-auto d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-secondary d-none" id="btnWizardPrev" onclick="moveWizard(-1)">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btnWizardNext" onclick="moveWizard(1)">
+                            Next <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success shadow-sm d-none" id="btnWizardFinish" onclick="finishWizard()">
+                            <i class="fas fa-check-circle me-1"></i> Save User
+                        </button>
+                        <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                    </div>
+                </div>
+                @* <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal" aria-label="Close"></button> *@
+            </div>
+            <div class="modal-body p-0" style="overflow-y: auto;">
+                <div class="wizard-content" style="height: 100%;">
+                    <form id="userWizardForm">
+                        <input type="hidden" id="txtUserId" value="0">
+                        
+                        <!-- STEP 1: IDENTITY -->
+                        <div class="wizard-pane active p-4" id="step1">
+                            <h6 class="text-uppercase text-muted text-xxs font-weight-bolder mb-3">
+                                <i class="fas fa-user-circle me-1"></i> Core Identity & Roles
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">User Name <span class="text-danger">*</span></label>
+                                    <div class="mb-3">
+                                        @* <span class="input-group-text bg-light"><i class="fas fa-at text-muted"></i></span> *@
+                                        <input type="text" class="form-control" id="txtUsername" placeholder="" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" id="passwordLabel">Password <span class="text-danger">*</span></label>
+                                    <div class="mb-3">
+                                        @* <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span> *@
+                                        <input type="password" class="form-control" id="txtPassword" placeholder="">
+                                        @* <button class="btn btn-outline-secondary" type="button" id="btnTogglePassword">
+                                            <i class="fas fa-eye"></i>
+                                        </button> *@
+                                    </div>
+                                    <small class="text-muted d-none" id="passwordNote">Leave blank to keep existing.</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" id="passwordLabel">Confirm Password</label>
+                                    <div class="mb-3">
+                                        @* <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span> *@
+                                        <input type="password" class="form-control" id="txtPassword" placeholder="">
+                                        @* <button class="btn btn-outline-secondary" type="button" id="btnTogglePassword">
+                                        <i class="fas fa-eye"></i>
+                                        </button> *@
+                                    </div>
+                                    <small class="text-muted d-none" id="passwordNote">Leave blank to keep existing.</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="txtFullName" placeholder="" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="txtEmail" placeholder="">
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                    <label class="form-label">User Type</label>
+                                    <select class="form-select form-control" id="ddlUserTypeID" required>
+                                        <option value="">Select</option>
+                                        @foreach (var ut in Model.UserTypes)
+                                        {
+                                            <option value="@ut.UserTypeID">@ut.TypeName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2 mb-3">
+                                     <label class="form-label">Back Days Allow</label>
+                                     <input type="number" class="form-control" id="txtBackDaysAllow" value="0" min="0">
+                                 </div>
+                                                               
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" class="form-control" id="txtPhoneNo" placeholder="">
+                                </div>
+
+                                <div class="col-md-2 mb-3">
+                                     <label class="form-label">Start Date</label>
+                                     <input type="date" class="form-control" id="txtStartDate">
+                                 </div>
+                                 <div class="col-md-2 mb-3">
+                                     <label class="form-label">End Date</label>
+                                     <input type="date" class="form-control" id="txtEndDate">
+                                 </div>
+                                 <div class="col-md-2 mb-3">
+                                     <label class="form-label">Start Time</label>
+                                     <input type="time" class="form-control" id="txtStartTime">
+                                 </div>
+                                 <div class="col-md-2 mb-3">
+                                     <label class="form-label">End Time</label>
+                                     <input type="time" class="form-control" id="txtEndTime">
+                                 </div>
+                                 
+                                 <div class="col-md-4 mb-3 d-flex align-items-end">
+                                     <div class="form-check form-switch mb-2">
+                                         <input class="form-check-input" type="checkbox" id="chkIsOTPEnabled">
+                                         <label class="form-check-label ms-2 fw-semibold" for="chkIsOTPEnabled">Login with OTP</label>
+                                     </div>
+                                 </div>
+
+                            </div>
+
+                             @* <h6 class="text-uppercase text-muted text-xxs font-weight-bolder mb-3 mt-3">
+                                 <i class="fas fa-clock me-1"></i> Access Policy & Security
+                             </h6> *@
+                             @* <div class="row">
+                                 
+                             </div> *@
+                         </div>
+
+                        <!-- STEP 2: COMPANY ASSIGNMENT -->
+                        <div class="wizard-pane p-4" id="step2">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="text-uppercase text-muted text-xxs font-weight-bolder mb-0">
+                                    <i class="fas fa-building me-1"></i> Company/School Assignment
+                                </h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkAllCompanies" onchange="toggleAllCompanies(this.checked)">
+                                    <label class="form-check-label text-xs fw-bold" for="chkAllCompanies">Select All</label>
+                                </div>
+                            </div>
+                            <div class="company-list border rounded p-3 bg-white shadow-sm" style="max-height: 400px; overflow-y: auto;" id="companyAssignmentList">
+                                <!-- Loaded via JS -->
+                                <div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span> Loading companies...</div>
+                            </div>
+                        </div>
+
+                        <!-- STEP 3: ROLES & PERMISSIONS -->
+                        <div class="wizard-pane p-0" id="step3" style="height: calc(100vh - 280px); min-height: 450px;">
+                            <div class="d-flex h-100">
+                                <!-- Left Sidebar: Roles -->
+                                <div class="role-sidebar border-end" style="width: 280px; display: flex; flex-direction: column;">
+                                    <div class="p-3 border-bottom bg-white">
+                                        <h6 class="text-uppercase text-dark mb-2 small">
+                                            <i class="fas fa-shield-alt me-1"></i> Assign Roles
+                                        </h6>
+                                        <div class="position-relative mb-2">
+                                            <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-2 text-muted" style="font-size: 0.75rem;"></i>
+                                            <input type="text" class="form-control form-control-sm ps-4" id="txtRoleSearch" placeholder="Search roles...">
+                                        </div>
+                                         <button type="button" class="btn btn-xxs btn-light w-100 text-start d-none align-items-center justify-content-between px-2 py-1 border shadow-sm" 
+                                                id="btnEffectiveView" onclick="showEffectivePermissions()">
+                                            <span class="x-small fw-bold"><i class="fas fa-layer-group me-1 text-primary"></i> Combined View</span>
+                                            <i class="fas fa-check text-success x-small d-none" id="iconEffectiveActive"></i>
+                                        </button> 
+                                    </div>
+                                    <div class="flex-grow-1 overflow-auto p-3" id="roleSelectorList">
+                                        @foreach (var role in Model.Roles)
+                                        {
+                                            <div class="role-item-card p-2 mb-2 rounded bg-white border d-flex align-items-center justify-content-between" 
+                                                 data-role-id="@role.RoleID" onclick="highlightRole(this, @role.RoleID)">
+                                                <div class="d-flex align-items-center gap-0 overflow-hidden">
+                                                    <div class="form-check mb-0 ms-1">
+                                                        <input class="form-check-input role-checkbox" type="checkbox" id="role_@role.RoleID" value="@role.RoleID" onclick="event.stopPropagation(); toggleRoleCheck(@role.RoleID)">
+                                                    </div>
+                                                    <span class="text-truncate small fw-bold text-dark">@role.RoleName</span>
+                                                </div>
+                                                @* <i class="fas fa-chevron-right text-muted x-small opacity-50"></i> *@
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Right Panel: Permissions -->
+                                <div class="flex-grow-1 d-flex flex-column bg-white overflow-hidden">
+                                    <div class="p-3 border-bottom d-flex align-items-center justify-content-between bg-white shadow-sm" style="z-index: 5;">
+                                        <div>
+                                            <h6 class="text-uppercase text-dark mb-2 small">
+                                                <i class="fas fa-key me-1 text-primary"></i> <span id="permissionViewTitle">Effective Permissions</span>
+                                            </h6>
+                                            <p class="text-muted x-small mb-0" id="permissionViewDesc">Showing combined result of all selected roles.</p>
+                                        </div>
+                                       @*  <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-xxs btn-outline-primary" onclick="toggleGridChecks(true)">Check All</button>
+                                            <button type="button" class="btn btn-xxs btn-outline-secondary" onclick="toggleGridChecks(false)">Uncheck All</button>
+                                        </div> *@
+                                    </div>
+                                    <div class="permission-tree-container flex-grow-1 overflow-auto p-3">
+                                        <div class="tree-grid-container" style="border: none; border-radius: 0; max-height: none;">
+                                            <table class="tree-grid" id="userPermissionTable">
+                                                <thead>
+                                                    <tr id="userTreeHeaderRow">
+                                                        <th class="id-column">ID</th>
+                                                        <th>Menu Name</th>
+                                                        <!-- Dynamic columns -->
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="userTreeGridBody">
+                                                    <tr>
+                                                        <td colspan="10" class="text-center py-5 text-muted">
+                                                            <i class="fas fa-spinner fa-spin me-2"></i>Loading details...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+           
+
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div class="toast align-items-center border-0" role="alert" id="toastNotification">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const userModal = new bootstrap.Modal(document.getElementById('userModal'));
+        const toastEl = document.getElementById('toastNotification');
+        const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        let selectedUserId = 0;
+
+        function selectUser(id, row, isLocked) {
+            selectedUserId = id;
+            // Highlight row
+            document.querySelectorAll('.user-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            // Check radio
+            row.querySelector('input[type="radio"]').checked = true;
+            // Enable buttons
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnUnlock').disabled = !isLocked;
+        }
+
+        function editSelected() {
+            if (selectedUserId > 0) {
+                openEditModal(selectedUserId);
+            }
+        }
+
+        async function unlockSelected() {
+            if (selectedUserId > 0) {
+                await unlockUser(selectedUserId);
+            }
+        }
+
+        function resetSelection() {
+            selectedUserId = 0;
+            document.querySelectorAll('.user-row').forEach(r => r.classList.remove('bg-light'));
+            document.querySelectorAll('input[name="selectedUser"]').forEach(r => r.checked = false);
+            document.getElementById('btnEdit').disabled = true;
+            document.getElementById('btnUnlock').disabled = true;
+        }
+
+        // ========================================
+        // Toast helper
+        // ========================================
+        function showToast(message, isSuccess) {
+            const toastDiv = document.getElementById('toastNotification');
+            toastDiv.className = `toast align-items-center border-0 text-white ${isSuccess ? 'bg-success' : 'bg-danger'}`;
+            document.getElementById('toastMessage').textContent = message;
+            toast.show();
+        }
+
+        // ========================================
+        // Password toggle
+        // ========================================
+        const btnTogglePwd = document.getElementById('btnTogglePassword');
+        if (btnTogglePwd) {
+            btnTogglePwd.addEventListener('click', function() {
+                const pwd = document.getElementById('txtPassword');
+                const icon = this.querySelector('i');
+                if (pwd.type === 'password') {
+                    pwd.type = 'text';
+                    icon.classList.replace('fa-eye', 'fa-eye-slash');
+                } else {
+                    pwd.type = 'password';
+                    icon.classList.replace('fa-eye-slash', 'fa-eye');
+                }
+            });
+        }
+
+        // ========================================
+        // Search Filter
+        // ========================================
+        document.getElementById('txtSearchInput').addEventListener('input', applyFilters);
+        document.getElementById('ddlStatusFilter').addEventListener('change', applyFilters);
+
+        function applyFilters() {
+            const searchText = document.getElementById('txtSearchInput').value.toLowerCase();
+            const statusVal = document.getElementById('ddlStatusFilter').value;
+            const rows = document.querySelectorAll('.user-row');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowStatus = row.dataset.status;
+                const matchSearch = text.includes(searchText);
+                const matchStatus = statusVal === 'all' || rowStatus === statusVal;
+                row.style.display = matchSearch && matchStatus ? '' : 'none';
+            });
+        }
+
+        // ========================================
+        // Wizard State & Navigation
+        // ========================================
+        let currentStep = 1;
+        let wizardData = {
+            user: { userID: 0 },
+            allRoles: [],
+            allCompanies: [],
+            permissionMatrix: [],
+            selectedCompanyIDs: []
+        };
+
+        function moveWizard(delta) {
+            const nextStep = currentStep + delta;
+            if (nextStep < 1 || nextStep > 3) return;
+
+            // Simple validation for Step 1
+            if (delta > 0 && currentStep === 1) {
+                const username = document.getElementById('txtUsername').value.trim();
+                const fullName = document.getElementById('txtFullName').value.trim();
+                const userType = document.getElementById('ddlUserTypeID').value;
+
+                if (!username || !fullName || !userType) {
+                    showToast('Please complete all required fields.', false);
+                    return;
+                }
+            }
+
+            if (currentStep === 2) {
+                wizardData.selectedCompanyIDs = Array.from(
+                    document.querySelectorAll('.company-checkbox:checked')
+                ).map(cb => parseInt(cb.value));
+            }
+
+            // Sync UI
+            document.querySelector(`.wizard-pane[id="step${currentStep}"]`).classList.remove('active');
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+            if (delta > 0) document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('completed');
+
+            currentStep = nextStep;
+            
+            document.querySelector(`.wizard-pane[id="step${currentStep}"]`).classList.add('active');
+            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+
+            // Button visibility
+            document.getElementById('btnWizardPrev').classList.toggle('d-none', currentStep === 1);
+            document.getElementById('btnWizardNext').classList.toggle('d-none', currentStep === 3);
+            document.getElementById('btnWizardFinish').classList.toggle('d-none', currentStep !== 3);
+
+            // Contextual loading for Step 2/3
+            if (delta > 0 && (currentStep === 2 || currentStep === 3)) {
+                refreshWizardSteps();
+            }
+        }
+
+        async function fetchWizardData(userId = 0, previewRoleId = 0) {
+            let roleIds = Array.from(document.querySelectorAll('.role-checkbox:checked')).map(cb => cb.value).join(',');
+            
+            // If we are previewing a specific role, we might want to fetch just that or use it to filter
+            // For now, the API expects roleIds to calculate combined permissions.
+            // If we want "Effective", we send all checked ones.
+            // If we want "Specific", we could just send that one ID.
+            
+            let queryIds = previewRoleId > 0 ? previewRoleId : roleIds;
+            
+            try {
+                const response = await fetch(`/api/user/wizard-data?userId=${userId}&roleIds=${queryIds}`);
+                const result = await response.json();
+                if (result.success) {
+                    wizardData = result.data;
+                    renderStep2();
+                    renderStep3(previewRoleId > 0);
+                }
+            } catch (err) {
+                console.error('Error fetching wizard data:', err);
+                showToast('Failed to load access details.', false);
+            }
+        }
+
+        function renderStep2() {
+            const container = document.getElementById('companyAssignmentList');
+            if (!wizardData.allCompanies || wizardData.allCompanies.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">No companies found.</div>';
+                return;
+            }
+
+            let html = '';
+            wizardData.allCompanies.forEach(c => {
+                // const isSelected = wizardData.user.companyIDs && wizardData.user.companyIDs.includes(c.companyId);
+                const selected = (wizardData.selectedCompanyIDs && wizardData.selectedCompanyIDs.length > 0)
+                    ? wizardData.selectedCompanyIDs
+                    : (wizardData.user?.companyIDs || []);
+                const isSelected = selected.includes(c.companyId);
+                html += `
+                    <div class="company-item d-flex align-items-center">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input company-checkbox" type="checkbox" id="comp_${c.companyId}" value="${c.companyId}" ${isSelected ? 'checked' : ''}>
+                            <label class="form-check-label text-sm fw-semibold mb-0 ms-2" for="comp_${c.companyId}">
+                                ${c.schoolName} <small class="text-muted">(${c.schoolCode})</small>
+                            </label>
+                        </div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderStep3(isPreview = false) {
+            const body = document.getElementById('userTreeGridBody');
+            const header = document.getElementById('userTreeHeaderRow');
+            
+            // Update Title/Desc based on view
+            const titleEl = document.getElementById('permissionViewTitle');
+            const descEl = document.getElementById('permissionViewDesc');
+
+            if (!isPreview) {
+                titleEl.textContent = 'Effective Permissions';
+                descEl.textContent = 'Showing combined result of all selected roles.';
+            }
+
+            if (!wizardData.permissionMatrix || wizardData.permissionMatrix.length === 0) {
+                body.innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-info-circle me-2"></i>No permissions available. Select a role to preview.</td></tr>';
+                return;
+            }
+
+            // 1. Identify unique permissions (Columns)
+            const uniquePerms = [];
+            const permIdsSeen = new Set();
+            wizardData.permissionMatrix.forEach(p => {
+                if (!permIdsSeen.has(p.permissionID)) {
+                    permIdsSeen.add(p.permissionID);
+                    uniquePerms.push({
+                        id: p.permissionID,
+                        name: p.permissionName,
+                        label: p.displayLabel
+                    });
+                }
+            });
+
+            // Sort Columns (View first)
+            uniquePerms.sort((a, b) => {
+                if (a.name === 'View') return -1;
+                if (b.name === 'View') return 1;
+                return a.id - b.id;
+            });
+
+            // Update Header (match Role UI: id-column + Menu Name + dynamic perm cols)
+            header.innerHTML = '<th class="id-column">ID</th><th>Menu Name</th>';
+            uniquePerms.forEach(p => {
+                header.innerHTML += `<th class="matrix-col w-s-nowrap"><input type="checkbox" class="form-check-input me-1"> ${p.label}</th>`;
+            });
+
+            // 2. Map Menus
+            const menus = {};
+            wizardData.permissionMatrix.forEach(p => {
+                if (!menus[p.menuID]) {
+                    menus[p.menuID] = {
+                        id: p.menuID,
+                        name: p.menuName,
+                        parentId: p.parentID,
+                        permissions: {}
+                    };
+                }
+                menus[p.menuID].permissions[p.permissionID] = {
+                    roleAccess: p.roleAccess,
+                    userOverride: p.userOverride,
+                    hasAccess: p.hasAccess
+                };
+            });
+
+            const menuArray = Object.values(menus);
+            const rootMenus = menuArray.filter(m => !m.parentId);
+            body.innerHTML = '';
+
+            // Build tree rows matching Role UI: collapsed by default, dotted connectors
+            const buildGridRows = (list, depth = 0) => {
+                list.forEach((m, index) => {
+                    const children = menuArray.filter(c => c.parentId === m.id);
+                    const isParent = children.length > 0;
+                    const isLast = index === list.length - 1;
+
+                    const tr = document.createElement('tr');
+                    tr.className = `tree-row depth-${depth} ${isParent ? 'parent-node collapsed' : 'leaf-node'}`;
+                    tr.dataset.id = m.id;
+                    if (m.parentId) tr.dataset.parentId = m.parentId;
+
+                    // ID column (matches Role UI id-column)
+                    let html = `<td class="id-column">${m.id}</td>`;
+
+                    // Tree cell with connector lines (same as Role UI)
+                    html += `<td class="tree-cell">`;
+                    for (let i = 0; i < depth; i++) {
+                        html += `<span class="tree-indent"><span class="tree-line-v"></span></span>`;
+                    }
+                    if (depth > 0) {
+                        html += `<span class="tree-indent">
+                                    <span class="tree-line-v ${isLast ? 'last' : ''}"></span>
+                                    <span class="tree-line-h"></span>
+                                 </span>`;
+                    }
+
+                    // Row master checkbox
+                    html += `<input type="checkbox" class="row-master-check me-2" onchange="toggleGridRow(this, ${m.id})">`;
+
+                    // Toggle button (collapsed = plus icon by default)
+                    if (isParent) {
+                        html += `<span class="tree-toggle" onclick="toggleTreeNode(${m.id}, event)"><i class="fas fa-plus"></i></span>`;
+                    } else {
+                        html += `<span style="width:20px;display:inline-block;"></span>`;
+                    }
+
+                    // Icon + Label
+                    html += `<i class="fas ${isParent ? 'fa-folder folder' : 'fa-file-alt file'} tree-icon"></i>`;
+                    html += `<span class="tree-label">${m.name}</span></td>`;
+
+                    // Permission columns
+                    uniquePerms.forEach(p => {
+                        const perm = m.permissions[p.id];
+                        if (perm) {
+                            html += `<td class="matrix-col">
+                                        <input type="checkbox" class="form-check-input perm-grid-checkbox"
+                                               data-menu="${m.id}" data-perm="${p.id}" 
+                                               data-role-access="${perm.roleAccess}"
+                                               ${perm.hasAccess ? 'checked' : ''}
+                                               title="Role Default: ${perm.roleAccess ? 'Allowed' : 'Denied'}">
+                                     </td>`;
+                        } else {
+                            html += `<td class="matrix-col">-</td>`;
+                        }
+                    });
+
+                    tr.innerHTML = html;
+                    body.appendChild(tr);
+
+                    if (isParent) buildGridRows(children, depth + 1);
+                });
+            };
+
+            buildGridRows(rootMenus);
+        }
+
+        // --- NEW STEP 3 HELPERS ---
+        function updateRoleCardsUI() {
+            document.querySelectorAll('.role-item-card').forEach(card => {
+                const cb = card.querySelector('.role-checkbox');
+                if (cb && cb.checked) {
+                    card.classList.add('active');
+                } else {
+                    card.classList.remove('active');
+                }
+            });
+        }
+
+        function highlightRole(el, roleId) {
+            const checkbox = document.getElementById('role_' + roleId);
+            // Toggle the checkbox when the user clicks the card
+            checkbox.checked = !checkbox.checked;
+            
+            showEffectivePermissions();
+        }
+
+        function showEffectivePermissions() {
+            updateRoleCardsUI();
+            document.getElementById('btnEffectiveView').classList.add('bg-primary', 'text-white', 'border-primary');
+            document.getElementById('iconEffectiveActive').classList.remove('d-none');
+            
+            document.getElementById('permissionViewTitle').textContent = 'Effective Permissions';
+            document.getElementById('permissionViewDesc').textContent = 'Showing combined result of all selected roles.';
+            
+            refreshWizardSteps();
+        }
+
+        function toggleRoleCheck(roleId) {
+            // When user checks/unchecks a role, refresh combined view
+            showEffectivePermissions();
+        }
+
+        document.getElementById('txtRoleSearch')?.addEventListener('input', function(e) {
+            const q = e.target.value.toLowerCase();
+            document.querySelectorAll('.role-item-card').forEach(card => {
+                const name = card.querySelector('span').textContent.toLowerCase();
+                card.style.display = name.includes(q) ? 'flex' : 'none';
+            });
+        });
+
+        function toggleTreeNode(menuId, event) {
+            event.stopPropagation();
+            const row = document.querySelector(`.tree-row[data-id="${menuId}"]`);
+            const isExpanded = row.classList.contains('expanded');
+            row.classList.toggle('expanded');
+            row.classList.toggle('collapsed');
+            
+            const icon = row.querySelector('.tree-toggle i');
+            icon.classList.toggle('fa-minus');
+            icon.classList.toggle('fa-plus');
+
+            const descendants = document.querySelectorAll(`.tree-row[data-parent-id="${menuId}"]`);
+            descendants.forEach(d => {
+                if (isExpanded) {
+                    hideTreeDescendants(d.dataset.id);
+                    d.style.display = 'none';
+                } else {
+                    d.style.display = 'table-row';
+                }
+            });
+        }
+
+        function hideTreeDescendants(parentId) {
+            document.querySelectorAll(`.tree-row[data-parent-id="${parentId}"]`).forEach(d => {
+                d.style.display = 'none';
+                hideTreeDescendants(d.dataset.id);
+            });
+        }
+
+        function toggleGridRow(cb, menuId) {
+            const row = document.querySelector(`.tree-row[data-id="${menuId}"]`);
+            row.querySelectorAll('.perm-grid-checkbox').forEach(pcb => pcb.checked = cb.checked);
+            
+            // Recurse to children
+            document.querySelectorAll(`.tree-row[data-parent-id="${menuId}"]`).forEach(childRow => {
+                const childMaster = childRow.querySelector('.row-master-check');
+                childMaster.checked = cb.checked;
+                toggleGridRow(childMaster, childRow.dataset.id);
+            });
+        }
+
+        function toggleGridChecks(checked) {
+            document.querySelectorAll('.perm-grid-checkbox, .row-master-check').forEach(cb => cb.checked = checked);
+        }
+
+        function toggleAllCompanies(checked) {
+            document.querySelectorAll('.company-checkbox').forEach(cb => cb.checked = checked);
+        }
+
+        function refreshWizardSteps() {
+            // Re-fetch only if roles changed or user is new
+            fetchWizardData(parseInt(document.getElementById('txtUserId').value));
+        }
+
+        // ========================================
+        // Open Add/Edit
+        // ========================================
+        function openAddModal() {
+            currentStep = 1;
+            document.getElementById('userWizardForm').reset();
+            document.getElementById('txtUserId').value = '0';
+            document.getElementById('txtStartDate').value = '';
+            document.getElementById('txtEndDate').value = '';
+            document.getElementById('txtStartTime').value = '';
+            document.getElementById('txtEndTime').value = '';
+            document.getElementById('txtBackDaysAllow').value = '0';
+            document.getElementById('chkIsOTPEnabled').checked = false;
+            resetSelection();
+            resetWizardUI();
+            wizardData.selectedCompanyIDs = [];
+            userModal.show();
+        }
+
+        async function openEditModal(userId) {
+            currentStep = 1;
+            document.getElementById('userWizardForm').reset();
+            document.getElementById('txtUserId').value = userId;
+            resetWizardUI();
+            wizardData.selectedCompanyIDs = [];
+            try {
+                const response = await fetch(`/api/user/${userId}`);
+                const result = await response.json();
+                if (result.success) {
+                    const u = result.data;
+                    document.getElementById('txtUsername').value = u.username;
+                    document.getElementById('txtFullName').value = u.fullName;
+                    document.getElementById('txtEmail').value = u.email;
+                    document.getElementById('txtPhoneNo').value = u.phoneNo;
+                    document.getElementById('ddlUserTypeID').value = u.userTypeID;
+                    
+                    // Roles are loaded via wizard-data call later, but let's pre-check for validation
+                    // Wait, we need them for step 1 validation immediately if user clicks Next.
+                    // Better to fetch role IDs now.
+                    const roleResp = await fetch(`/api/user/${userId}/roles`);
+                    const roleData = await roleResp.json();
+                    if (roleData.success) {
+                        roleData.data.forEach(rid => {
+                            const cb = document.getElementById(`role_${rid}`);
+                            if (cb) cb.checked = true;
+                        });
+                        if (typeof updateRoleCardsUI === 'function') updateRoleCardsUI();
+                    }
+
+                    // Populate access fields (from 'u' object which comes from userResponse.data)
+                    // Note: The UserApiController.GetUserById returns ApiResponse<UserViewModel>
+                    // UserViewModel has these properties.
+                    document.getElementById('txtStartDate').value = u.startDate ? u.startDate.split('T')[0] : '';
+                    document.getElementById('txtEndDate').value = u.endDate ? u.endDate.split('T')[0] : '';
+                    document.getElementById('txtStartTime').value = u.startTime || '';
+                    document.getElementById('txtEndTime').value = u.endTime || '';
+                    document.getElementById('txtBackDaysAllow').value = u.backDaysAllow || 0;
+                    document.getElementById('chkIsOTPEnabled').checked = u.isOTPEnabled || false;
+                }
+            } catch (err) { console.error(err); }
+
+            userModal.show();
+        }
+
+        function resetWizardUI() {
+            document.querySelectorAll('.wizard-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('step1').classList.add('active');
+            document.querySelectorAll('.wizard-step').forEach(s => {
+                s.classList.remove('active', 'completed');
+                if (s.dataset.step == "1") s.classList.add('active');
+            });
+            document.getElementById('btnWizardPrev').classList.add('d-none');
+            document.getElementById('btnWizardNext').classList.remove('d-none');
+            document.getElementById('btnWizardFinish').classList.add('d-none');
+            document.getElementById('companyAssignmentList').innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span> Loading...</div>';
+            document.getElementById('userTreeGridBody').innerHTML = '<tr><td colspan="10" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading details...</td></tr>';
+            if (typeof updateRoleCardsUI === 'function') updateRoleCardsUI();
+        }
+
+        // ========================================
+        // Final Save
+        // ========================================
+        async function finishWizard() {
+            const btn = document.getElementById('btnWizardFinish');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+            const userId   = parseInt(document.getElementById('txtUserId').value) || 0;
+            const password = document.getElementById('txtPassword').value;
+
+            // Validate: password is required when creating a new user
+            if (userId === 0 && !password) {
+                showToast('Password is required for new users.', false);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Save User';
+                return;
+            }
+
+            // FIX: HTML <input type="time"> returns "HH:mm" (5 chars).
+            // .NET System.Text.Json deserializes TimeSpan only from "HH:mm:ss".
+            // Append ":00" so the JSON payload is valid for model binding.
+            const toTimeSpan = (val) => val ? (val.length === 5 ? val + ':00' : val) : null;
+
+            // Gather all data
+            const request = {
+                userID:    userId,
+                username:  document.getElementById('txtUsername').value.trim(),
+                fullName:  document.getElementById('txtFullName').value.trim(),
+                email:     document.getElementById('txtEmail').value.trim(),
+                phoneNo:   document.getElementById('txtPhoneNo').value.trim(),
+                password:  password,
+                userTypeID: parseInt(document.getElementById('ddlUserTypeID').value) || 0,
+                startDate:  document.getElementById('txtStartDate').value || null,
+                endDate:    document.getElementById('txtEndDate').value || null,
+                startTime:  toTimeSpan(document.getElementById('txtStartTime').value),
+                endTime:    toTimeSpan(document.getElementById('txtEndTime').value),
+                backDaysAllow: parseInt(document.getElementById('txtBackDaysAllow').value) || 0,
+                isOTPEnabled:  document.getElementById('chkIsOTPEnabled').checked,
+                roleIDs:    Array.from(document.querySelectorAll('.role-checkbox:checked')).map(cb => parseInt(cb.value)),
+                //companyIDs: Array.from(document.querySelectorAll('.company-checkbox:checked')).map(cb => parseInt(cb.value)),
+                companyIDs: Array.from(
+                    document.querySelectorAll('.company-checkbox:checked')
+                ).map(cb => parseInt(cb.value)),
+                permissionOverrides: Array.from(document.querySelectorAll('.perm-grid-checkbox'))
+                    .filter(pcb => pcb.checked)
+                    .map(pcb => ({
+                        menuID:       parseInt(pcb.dataset.menu),
+                        permissionID: parseInt(pcb.dataset.perm),
+                        isAllowed:    pcb.checked
+                    }))
+            };
+            console.log(wizardData.selectedCompanyIDs)
+            console.log(request);
+            alert(companyIDs);
+
+            try {
+                const response = await fetch('/api/user/save-wizard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(request)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(result.message || 'User saved successfully.', true);
+                    userModal.hide();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(result.message || 'Save failed. Please check all fields.', false);
+                }
+            } catch (err) {
+                console.error('finishWizard error:', err);
+                showToast('Error saving user data. Please try again.', false);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Save User';
+            }
+        }
+
+        // ========================================
+        // Toggle Status
+        // ========================================
+        async function toggleStatus(userId, isActive) {
+            try {
+                const response = await fetch(`/api/user/toggle-status?userId=${userId}&isActive=${isActive}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(isActive ? 'User activated' : 'User deactivated', true);
+                } else {
+                    showToast(result.message, false);
+                    location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error updating status', false);
+                location.reload();
+            }
+        }
+
+        async function unlockUser(userId) {
+            if (!confirm('Are you sure you want to unlock this user?')) return;
+
+            try {
+                const response = await fetch(`/api/user/unlock/${userId}`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('User account unlocked', true);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast(result.message, false);
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error unlocking user', false);
+            }
+        }
+    </script>
+}
+
+<style>
+    /* ============ Stats Cards ============ */
+    .stat-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.2rem;
+    }
+
+    /* ============ Gradients ============ */
+    .bg-gradient-primary {
+        background: linear-gradient(310deg, #5e72e4, #825ee4);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(310deg, #2dce89, #2dcecc);
+    }
+    .bg-gradient-secondary {
+        background: linear-gradient(310deg, #627594, #a8b8d8);
+    }
+    .bg-gradient-danger {
+        background: linear-gradient(310deg, #f5365c, #f56036);
+    }
+
+    /* ============ Avatar ============ */
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .avatar-initials {
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    /* ============ Table ============ */
+    .text-xxs {
+        font-size: 0.65rem;
+    }
+    .font-weight-bolder {
+        font-weight: 700 !important;
+    }
+    .badge-sm {
+        padding: 0.45em 0.75em;
+        font-size: 0.75rem;
+    }
+    .table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    .table tbody tr:hover {
+        background-color: rgba(94, 114, 228, 0.04);
+    }
+
+    /* ============ Action Button ============ */
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+
+    /* ============ Wizard UI ============ */
+    .wizard-steps-indicator {
+        user-select: none;
+    }
+    .wizard-step {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: grey;
+        transition: all 0.3s ease;
+    }
+    .wizard-step.active {
+        color: #5e72e4;
+    }
+    .wizard-step.completed {
+        color: #22b14c;
+    }
+    .step-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        transition: all 0.3s ease;
+    }
+    .wizard-step.active .step-num {
+        background: #5e72e4;
+        color: #fff;
+        box-shadow: 0 0 0 4px rgba(94, 114, 228, 0.2);
+    }
+    .wizard-step.completed .step-num {
+        background: #2dce89;
+        color: #fff;
+    }
+    .wizard-step-line {
+        flex: 1;
+        height: 2px;
+        background: #e9ecef;
+        min-width: 30px;
+    }
+    .wizard-pane {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .wizard-pane.active {
+        display: block;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============ Role Selector Grid ============ */
+    .role-selector-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .role-check-item {
+        background: #fff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+        margin: 0 !important;
+    }
+
+    /* ============ Company List ============ */
+    .company-item {
+        padding: 10px 15px;
+        border-bottom: 1px solid #f8f9fc;
+        transition: background 0.2s;
+    }
+    .company-item:last-child {
+        border-bottom: none;
+    }
+    .company-item:hover {
+        background: #f8f9fa;
+    }
+
+    /* ============ Permission Tree ============ */
+    .permission-row {
+        padding: 6px 15px;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        align-items: center;
+    }
+    .permission-row.bg-light-gray {
+        background-color: #fcfcfc;
+    }
+    .menu-node {
+        font-weight: 600;
+        color: #32325d;
+    }
+    .override-toggle-group {
+        display: flex;
+        background: #f4f6f9;
+        padding: 2px;
+        border-radius: 20px;
+    }
+    .override-btn {
+        padding: 2px 10px;
+        font-size: 0.7rem;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+        color: #8898aa;
+    }
+    .override-btn.active.btn-inherit { background: #adb5bd; color: white; }
+    .override-btn.active.btn-allow { background: #2dce89; color: white; }
+    .override-btn.active.btn-deny { background: #f5365c; color: white; }
+
+    /* ============ Misc Utilities ============ */
+    .btn-xxs { padding: 0.15rem 0.4rem; font-size: 0.65rem; border-radius: 4px; }
+    .row-master-check { width: 15px; height: 15px; cursor: pointer; }
+    .badge-dot { width: 6px; height: 6px; padding: 0; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+
+    /* Depth-0 highlight for parent nodes */
+    .tree-row.depth-0 { background-color: #f8f9fc; }
+    .tree-row.depth-0 .tree-label { font-weight: 700; color: #32325d; }
+</style>
+

@@ -1,0 +1,82 @@
+﻿@model List<MenuViewModel>
+
+
+@{
+    RenderMenus(null, 0);
+}
+
+@functions
+{
+    // Implemented recursive dynamic menu rendering with parent-child hierarchy support.
+
+    //  Added RenderMenus recursive method
+    //  Generated unlimited nested submenu structure
+    //  Added parent-child menu traversal using ParentID
+    //  Applied menu sorting by DisplayOrder
+    //  Added child existence validation using Any()
+    //  Displayed icons only for top-level menus
+    //  Added default icon fallback using null coalescing operator
+    //  Supported dynamic URL navigation for leaf menus
+
+    void RenderMenus(int? parentId, int depth)
+    {
+        var menus = Model
+        .Where(x => x.ParentID == parentId)
+        .OrderBy(x => x.DisplayOrder);
+
+        foreach (var menu in menus)
+        {
+            var children = Model.Any(x => x.ParentID == menu.MenuID);
+
+            if (children)
+            {
+                if (depth == 0)
+                {
+                    <li>
+                        <ul>
+                            <li class="submenu">
+                                <a href="javascript:void(0);">
+                                    <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
+                                    <span>@menu.MenuName</span>
+                                    <span class="menu-arrow inside-submenu"></span>
+                                </a>
+                                <ul>
+                                    @{
+                                        RenderMenus(menu.MenuID, depth + 1);
+                                    }
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                }
+                else
+                {
+                    <li class="submenu">
+                        <a href="javascript:void(0);">
+                            <span>@menu.MenuName</span>
+                            <span class="menu-arrow inside-submenu"></span>
+                        </a>
+                        <ul>
+                            @{
+                                RenderMenus(menu.MenuID, depth + 1);
+                            }
+                        </ul>
+                    </li>
+                }
+            }
+            else
+            {
+                <li>
+                    <a href="@menu.MenuURL">
+                        @if (depth == 0)
+                        {
+                            <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
+                        }
+                        <span>@menu.MenuName</span>
+                    </a>
+                </li>
+            }
+        }
+    }
+}
+

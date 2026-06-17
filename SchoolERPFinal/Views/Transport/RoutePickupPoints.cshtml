@@ -1,0 +1,450 @@
+@model SchoolERP.Net.Models.RoutePickupPointPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Route Pickup Points";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Transport/RoutePickupPoints", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Transport/RoutePickupPoints", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Transport/RoutePickupPoints", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Transport/RoutePickupPoints", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Transport/RoutePickupPoints", "Export");
+}
+
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Route Pickup Point List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i> Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-block">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="ti ti-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-2"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-2"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-2"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-2"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+
+<!-- Filters -->
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search by route,point..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblRPP">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Route Name</th>
+                                <th>Pickup Point</th>
+                                <th>Distance (KM)</th>
+                                <th>Pickup Time</th>
+                                <th>Monthly Fees</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr class="item-row" onclick="selectItem(@item.RoutePickupPointID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="selectedItem"
+                                               class="form-check-input student-checkbox"
+                                               value="@item.RoutePickupPointID">
+                                        
+                                    </td>
+                                    <td>@item.RouteName.ToUpper()</td>
+                                    <td>@item.PickupPointName</td>
+                                    <td>@(item.Distance?.ToString("N2") ?? "0.00")</td>
+                                    <td>@(string.IsNullOrEmpty(item.PickupTime) ? "---" : item.PickupTime)</td>
+                                    <td class="text-primary fw-semibold">@(item.MonthlyFees?.ToString("N2") ?? "0.00")</td>
+                                    <td>
+                                        <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   onchange="toggleStatus(@item.RoutePickupPointID, this.checked)"
+                                                   @(item.IsActive ? "checked" : "")
+                                                   @(canEdit ? "" : "disabled")>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Items.Any())
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        @if (ViewBag.ErrorMessage != null)
+                                        {
+                                            <div class="alert alert-danger mx-3">@ViewBag.ErrorMessage</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No records found. Please check your Company/Session selection.</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="entryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold" id="modalTitle">Route Pickup Point</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveRecord()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="entryForm">
+                    <input type="hidden" id="hdnRPPID" value="0">
+                    <div class="row row-gap-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Select Route <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ddlRoute" required>
+                                <option value="">-- Select Route --</option>
+                                @foreach (var r in Model.Routes)
+                                {
+                                    <option value="@r.RouteID">@r.RouteName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Select Pickup Point <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ddlPoint" required>
+                                <option value="">-- Select Point --</option>
+                                @foreach (var p in Model.PickupPoints)
+                                {
+                                    <option value="@p.PickupPointID">@p.PickupPointName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Distance (KM)</label>
+                            <input type="number" step="0.01" class="form-control" id="txtDistance" placeholder="0.00">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Pickup Time</label>
+                            <input type="text" class="form-control" id="txtTime" placeholder="07:30 AM">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Monthly Fees</label>
+                            <input type="number" step="0.01" class="form-control" id="txtFees" placeholder="0.00">
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" checked>
+                                <label class="form-check-label fw-bold" for="chkActive">Enable this point</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let selectedId = 0;
+    const canEdit = @canEdit.ToString().ToLower();
+    const canDelete = @canDelete.ToString().ToLower();
+
+    function selectItem(id, row) {
+        selectedId = id;
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        row.classList.add('bg-light');
+        //row.querySelector('input[type="radio"]').checked = true;
+
+        if (canEdit) document.getElementById('btnEdit').disabled = false;
+        if (canDelete) document.getElementById('btnDelete').disabled = false;
+                let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+        document.getElementById('txtSearchInput').addEventListener('keyup', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#tblRPP tbody tr.item-row').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+
+    function initSelect2() {
+        $('#ddlRoute').select2({
+            dropdownParent: $('#entryModal'),
+            width: '100%',
+            placeholder: "-- Select Route --"
+        });
+        $('#ddlPoint').select2({
+            dropdownParent: $('#entryModal'),
+            width: '100%',
+            placeholder: "-- Select Point --"
+        });
+    }
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = 'Add Route Pickup Point';
+        document.getElementById('hdnRPPID').value = 0;
+        document.getElementById('entryForm').reset();
+        document.getElementById('chkActive').checked = true;
+        document.getElementById('ddlRoute').disabled = false;
+        document.getElementById('ddlPoint').disabled = false;
+        
+        initSelect2();
+        $('#ddlRoute').val('').trigger('change');
+        $('#ddlPoint').val('').trigger('change');
+        
+        new bootstrap.Modal(document.getElementById('entryModal')).show();
+    }
+
+    function editSelected() {
+        if (!selectedId) return;
+        fetch(`/Transport/GetRoutePickupPointByID/${selectedId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'danger'); return; }
+                const d = res.data;
+                document.getElementById('modalTitle').textContent = 'Edit Route Pickup Point';
+                document.getElementById('hdnRPPID').value = d.routePickupPointID;
+                
+                initSelect2();
+                $('#ddlRoute').val(d.routeID).trigger('change');
+                $('#ddlPoint').val(d.pickupPointID).trigger('change');
+                
+                // Keep dropdowns enabled for editing if you want to allow re-assignment
+                document.getElementById('ddlRoute').disabled = false;
+                document.getElementById('ddlPoint').disabled = false;
+
+                document.getElementById('txtDistance').value = d.distance || '';
+                document.getElementById('txtTime').value = d.pickupTime || '';
+                document.getElementById('txtFees').value = d.monthlyFees || '';
+                document.getElementById('chkActive').checked = d.isActive;
+
+                new bootstrap.Modal(document.getElementById('entryModal')).show();
+            });
+    }
+
+    async function saveRecord() {
+        const routeId = $('#ddlRoute').val();
+        const pointId = $('#ddlPoint').val();
+
+        if (!routeId || !pointId) { 
+            showToast('Please select both a Route and a Pickup Point', 'warning');
+            return; 
+        }
+
+        const data = {
+            routePickupPointID: parseInt(document.getElementById('hdnRPPID').value),
+            routeID: parseInt(routeId),
+            pickupPointID: parseInt(pointId),
+            distance: document.getElementById('txtDistance').value ? parseFloat(document.getElementById('txtDistance').value) : null,
+            pickupTime: document.getElementById('txtTime').value.trim(),
+            monthlyFees: document.getElementById('txtFees').value ? parseFloat(document.getElementById('txtFees').value) : null,
+            isActive: document.getElementById('chkActive').checked
+        };
+
+        fetch('/Transport/UpsertRoutePickupPoint', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success ? 'success' : 'danger');
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+    }
+
+    function deleteSelected() {
+        if (!selectedId) return;
+        if (!confirm('Are you sure you want to remove this pickup point from the route?')) return;
+        fetch(`/Transport/DeleteRoutePickupPoint/${selectedId}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                showToast(res.message, res.success ? 'success' : 'danger');
+                if (res.success) setTimeout(() => location.reload(), 800);
+            });
+
+                   let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                          url: '/Transport/DeleteRoutePickupPoint',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+    }
+
+    function toggleStatus(id, isActive) {
+        fetch(`/Transport/ToggleRoutePickupPointStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 3000);
+    }
+
+    let exportTable;
+    $(document).ready(function () {
+        if ($.fn.DataTable.isDataTable('#tblRPP')) {
+            $('#tblRPP').DataTable().destroy();
+        }
+        exportTable = $('#tblRPP').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5], rows: ':visible' } },
+                { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5], rows: ':visible' } },
+                { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5], rows: ':visible' } },
+                { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5], rows: ':visible' } },
+                { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5], rows: ':visible' } }
+            ],
+            searching: false,
+            paging: false,
+            info: false,
+            ordering: false
+        });
+    });
+
+    function triggerExport(type) {
+        if (!exportTable) return;
+        if (type === 'copy') exportTable.button('.buttons-copy').trigger();
+        else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
+        else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
+        else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
+        else if (type === 'print') exportTable.button('.buttons-print').trigger();
+    }
+
+    document.getElementById('txtSearchInput').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#tblRPP tbody tr.item-row').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+</script>
+<style>
+    .select2-container--default .select2-selection--single {
+        height: 38px !important;
+        border: 1px solid #dee2e6 !important;
+        display: flex;
+        align-items: center;
+    }
+    .select2-container { z-index: 1060 !important; } /* Ensure Select2 is above modal */
+    .shadow-tbl { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); border-radius: 8px; overflow: hidden; }
+</style>
+}

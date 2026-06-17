@@ -1,0 +1,537 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = SchoolERP.Net
+build_property.RootNamespace = SchoolERP.Net
+build_property.ProjectDir = D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERPFinal\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = D:\SchoolERP\School ERP API Seprate project\School ERP API Seprate project\SchoolERPFinal
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 8.0
+build_property.EnableCodeStyleSeverity = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/AddTimeTable.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXEFkZFRpbWVUYWJsZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/AssignClassTeacher.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXEFzc2lnbkNsYXNzVGVhY2hlci5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/Class.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXENsYXNzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/ClassTimeTable.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXENsYXNzVGltZVRhYmxlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/PromoteStudents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXFByb21vdGVTdHVkZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/Subject.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXFN1YmplY3QuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/SubjectGroup.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXFN1YmplY3RHcm91cC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Academics/TeacherTimeTable.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWNhZGVtaWNzXFRlYWNoZXJUaW1lVGFibGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Alumni/Events.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWx1bW5pXEV2ZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Attendance/ApproveLeave.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXR0ZW5kYW5jZVxBcHByb3ZlTGVhdmUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Attendance/Attendance.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXR0ZW5kYW5jZVxBdHRlbmRhbmNlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Attendance/Report.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXR0ZW5kYW5jZVxSZXBvcnQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Auth/Login.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXV0aFxMb2dpbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Auth/Logout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXV0aFxMb2dvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/GenerateCertificate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcR2VuZXJhdGVDZXJ0aWZpY2F0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/GenerateStaffIdCard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcR2VuZXJhdGVTdGFmZklkQ2FyZC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/GenerateStudentIdCard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcR2VuZXJhdGVTdHVkZW50SWRDYXJkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/StaffIdCard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcU3RhZmZJZENhcmQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/StudentCertificate.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcU3R1ZGVudENlcnRpZmljYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Certificate/StudentIdCard.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2VydGlmaWNhdGVcU3R1ZGVudElkQ2FyZC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Currencies/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ3VycmVuY2llc1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Dashboard/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRGFzaGJvYXJkXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/DownloadCenter/ContentShareList.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG93bmxvYWRDZW50ZXJcQ29udGVudFNoYXJlTGlzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/DownloadCenter/ContentType.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG93bmxvYWRDZW50ZXJcQ29udGVudFR5cGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/DownloadCenter/UploadContent.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG93bmxvYWRDZW50ZXJcVXBsb2FkQ29udGVudC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/DownloadCenter/VideoTutorial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRG93bmxvYWRDZW50ZXJcVmlkZW9UdXRvcmlhbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Expense/ExpenseHead.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXhwZW5zZVxFeHBlbnNlSGVhZC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Expense/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXhwZW5zZVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Expense/Search.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRXhwZW5zZVxTZWFyY2guY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/AdmissionInquiry.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcQWRtaXNzaW9uSW5xdWlyeS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/Complaint.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcQ29tcGxhaW50LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/PhoneCallLog.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcUGhvbmVDYWxsTG9nLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/PostalDispatch.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcUG9zdGFsRGlzcGF0Y2guY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/PostalReceive.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcUG9zdGFsUmVjZWl2ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/Setup.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcU2V0dXAuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/FrontOffice/VisitorBook.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRnJvbnRPZmZpY2VcVmlzaXRvckJvb2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Homework/Add.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZXdvcmtcQWRkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Home/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Home/Privacy.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Hostel/HostelRoom.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9zdGVsXEhvc3RlbFJvb20uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Hostel/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9zdGVsXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Hostel/RoomType.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9zdGVsXFJvb21UeXBlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/AddStaff.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxBZGRTdGFmZi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/ApplyLeave.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxBcHBseUxlYXZlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/ApproveLeave.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxBcHByb3ZlTGVhdmUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/Department.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxEZXBhcnRtZW50LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/Designation.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxEZXNpZ25hdGlvbi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/DisableStaffs.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxEaXNhYmxlU3RhZmZzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/GeneratePayroll.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxHZW5lcmF0ZVBheXJvbGwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/ImportStaff.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxJbXBvcnRTdGFmZi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/LeaveType.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxMZWF2ZVR5cGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/Payroll.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxQYXlyb2xsLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/StaffAttendance.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxTdGFmZkF0dGVuZGFuY2UuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/StaffDetails.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxTdGFmZkRldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/HumanResource/Staffs.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSHVtYW5SZXNvdXJjZVxTdGFmZnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Income/IncomeHead.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5jb21lXEluY29tZUhlYWQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Income/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5jb21lXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Income/Search.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5jb21lXFNlYXJjaC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Language/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGFuZ3VhZ2VcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/AddStaff.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxBZGRTdGFmZi5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/AddStudents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxBZGRTdHVkZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/Books.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxCb29rcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/ImportBook.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxJbXBvcnRCb29rLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/Issue.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxJc3N1ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Library/Member.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGlicmFyeVxNZW1iZXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/MasterMenu/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWFzdGVyTWVudVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Organisation/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JnYW5pc2F0aW9uXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Permission/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVybWlzc2lvblxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Role/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Section/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2VjdGlvblxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Sessions/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2Vzc2lvbnNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/AttendanceType.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQXR0ZW5kYW5jZVR5cGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/BackupHistory.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQmFja3VwSGlzdG9yeS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Captcha.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ2FwdGNoYS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Companies.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ29tcGFuaWVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/CompanyMaster.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ29tcGFueU1hc3Rlci5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Currencies.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ3VycmVuY2llcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/CustomFields.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcQ3VzdG9tRmllbGRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/EmailSettings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRW1haWxTZXR0aW5ncy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/FileType.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcRmlsZVR5cGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/IdAutoGen.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcSWRBdXRvR2VuLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Languages.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTGFuZ3VhZ2VzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/LoginPageBG.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTG9naW5QYWdlQkcuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Logo.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTG9nby5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Maintenance.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTWFpbnRlbmFuY2UuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Miscellaneous.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTWlzY2VsbGFuZW91cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Modules.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTW9kdWxlcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Notifications.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcTm90aWZpY2F0aW9ucy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/PaymentMethods.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcUGF5bWVudE1ldGhvZHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/PrintHeaderFooter.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcUHJpbnRIZWFkZXJGb290ZXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Roles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcUm9sZXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Sessions.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU2Vzc2lvbnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/SidebarMenu.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU2lkZWJhck1lbnUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/SmsSettings.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU21zU2V0dGluZ3MuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/StudentGuardian.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU3R1ZGVudEd1YXJkaWFuLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/StudentProfile.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU3R1ZGVudFByb2ZpbGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/SystemFields.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcU3lzdGVtRmllbGRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Translations.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcVHJhbnNsYXRpb25zLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Settings/Users.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2V0dGluZ3NcVXNlcnMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/Components/Menu/Default.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXENvbXBvbmVudHNcTWVudVxEZWZhdWx0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/Unauthorized.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXFVuYXV0aG9yaXplZC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/_MenuPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9NZW51UGFydGlhbC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/_ValidationScriptsPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/BulkDelete.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXEJ1bGtEZWxldGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXERldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/DisabledStudents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXERpc2FibGVkU3R1ZGVudHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/DisableReason.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXERpc2FibGVSZWFzb24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/ImportStudent.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXEltcG9ydFN0dWRlbnQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/MultiClassStudents.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXE11bHRpQ2xhc3NTdHVkZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/StudentAdmission.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXFN0dWRlbnRBZG1pc3Npb24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/StudentCategory.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXFN0dWRlbnRDYXRlZ29yeS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/StudentHouse.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXFN0dWRlbnRIb3VzZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/StudentInformation/Students.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3R1ZGVudEluZm9ybWF0aW9uXFN0dWRlbnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Transport/PickupPoint.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNwb3J0XFBpY2t1cFBvaW50LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Transport/RoutePickupPoints.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNwb3J0XFJvdXRlUGlja3VwUG9pbnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Transport/Routes.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNwb3J0XFJvdXRlcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Transport/VehicleAssign.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNwb3J0XFZlaGljbGVBc3NpZ24uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Transport/Vehicles.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVHJhbnNwb3J0XFZlaGljbGVzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/UserType/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclR5cGVcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/User/AddUser.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxBZGRVc2VyLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/User/Index - Copy (2).cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxJbmRleCAtIENvcHkgKDIpLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/User/Index - Copy.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxJbmRleCAtIENvcHkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/User/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlclxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/SchoolERP/School ERP API Seprate project/School ERP API Seprate project/SchoolERPFinal/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = b-d6iq6ee36x

@@ -1,0 +1,98 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERPFinal\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{24A12DBC-7209-4228-8940-5FA885A47B7C}|..\\SchoolERP.API\\SchoolERP.API.csproj|d:\\schoolerp\\school erp api seprate project\\school erp api seprate project\\schoolerp.api\\services\\studentinformationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{24A12DBC-7209-4228-8940-5FA885A47B7C}|..\\SchoolERP.API\\SchoolERP.API.csproj|d:\\schoolerp\\school erp api seprate project\\school erp api seprate project\\schoolerp.api\\controllers\\studentinformationapicontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBD8A2FD-7F24-4059-B2D7-96B19D450AE1}|SchoolERP.Net.csproj|d:\\schoolerp\\school erp api seprate project\\school erp api seprate project\\schoolerpfinal\\controllers\\studentinformationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBD8A2FD-7F24-4059-B2D7-96B19D450AE1}|SchoolERP.Net.csproj|solutionrelative:controllers\\studentinformationcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CBD8A2FD-7F24-4059-B2D7-96B19D450AE1}|SchoolERP.Net.csproj|d:\\schoolerp\\school erp api seprate project\\school erp api seprate project\\schoolerpfinal\\models\\common\\paginationrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CBD8A2FD-7F24-4059-B2D7-96B19D450AE1}|SchoolERP.Net.csproj|solutionrelative:models\\common\\paginationrequest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "StudentInformationService.cs",
+              "DocumentMoniker": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERP.API\\Services\\StudentInformationService.cs",
+              "RelativeDocumentMoniker": "..\\SchoolERP.API\\Services\\StudentInformationService.cs",
+              "ToolTip": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERP.API\\Services\\StudentInformationService.cs",
+              "RelativeToolTip": "..\\SchoolERP.API\\Services\\StudentInformationService.cs",
+              "ViewState": "AgIAAGQDAAAAAAAAAIAxwHADAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-17T12:28:17.713Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PaginationRequest.cs",
+              "DocumentMoniker": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERPFinal\\Models\\Common\\PaginationRequest.cs",
+              "RelativeDocumentMoniker": "Models\\Common\\PaginationRequest.cs",
+              "ToolTip": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERPFinal\\Models\\Common\\PaginationRequest.cs",
+              "RelativeToolTip": "Models\\Common\\PaginationRequest.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-17T12:24:48.249Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "StudentInformationApiController.cs",
+              "DocumentMoniker": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERP.API\\Controllers\\StudentInformationApiController.cs",
+              "RelativeDocumentMoniker": "..\\SchoolERP.API\\Controllers\\StudentInformationApiController.cs",
+              "ToolTip": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERP.API\\Controllers\\StudentInformationApiController.cs",
+              "RelativeToolTip": "..\\SchoolERP.API\\Controllers\\StudentInformationApiController.cs",
+              "ViewState": "AgIAAMIAAAAAAAAAAIAxwNMAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-17T12:14:21.057Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "StudentInformationController.cs",
+              "DocumentMoniker": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERPFinal\\Controllers\\StudentInformationController.cs",
+              "RelativeDocumentMoniker": "Controllers\\StudentInformationController.cs",
+              "ToolTip": "D:\\SchoolERP\\School ERP API Seprate project\\School ERP API Seprate project\\SchoolERPFinal\\Controllers\\StudentInformationController.cs",
+              "RelativeToolTip": "Controllers\\StudentInformationController.cs",
+              "ViewState": "AgIAAJQAAAAAAAAAAIAxwKMAAAA7AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-17T12:13:13.354Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,699 @@
+@model HRPayrollPageViewModel
+@{
+    ViewData["Title"] = "Payroll";
+}
+@inject PermissionHelper PermHelper
+@{
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/Payroll", "Add");
+    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/Payroll", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/Payroll", "Export");
+
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Payroll </h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+         
+        @if (canAdd)
+        {
+            <button id="btnGenerate" onclick="handleGenerate()" class="btn btn-primary btn-sm d-inline-flex align-items-center" disabled><i class="ti ti-plus me-1"></i>Generate</button>
+            <button id="btnPay" onclick="handlePay()" class="btn btn-success btn-sm d-inline-flex align-items-center" disabled><i class="ti ti-wallet me-1"></i>Proceed To Pay</button>
+        }
+        
+        <button id="btnView" onclick="handleView()" class="btn btn-info btn-sm d-inline-flex align-items-center" disabled><i class="ti ti-eye me-1"></i>View Payslip</button>
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="payrollSearch" style="min-width: 220px;" placeholder="Search..." onkeyup="filterPayrollTable()" />
+                    </div>
+                    @* <input type="text" id="payrollSearch" class="form-control w-25 me-3" placeholder="Search..." onkeyup="filterPayrollTable()" /> *@
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                    <h6 class="mb-0 fw-bold">
+                                        Select Criteria
+                                    </h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="button" onclick="loadPayroll()" class="btn text-primary fs-6">Filter</button>
+                                    </div>
+                                </div>
+                                <div class="filter-body pb-0">
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">
+                                            Role
+                                        </label>
+                                        <select id="filterRole" class="form-select form-control select2">
+                                            <option value="">Select Role</option>
+                                            @foreach (var role in Model.Roles)
+                                            {
+                                                <option value="@role.RoleID">@role.RoleName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">
+                                            Month<span class="text-danger">*</span>
+                                        </label>
+                                        <select id="filterMonth" class="form-select form-control select2">
+                                            @for (int i = 1; i <= 12; i++)
+                                            {
+                                                <option value="@i" selected="@(i == Model.SelectedMonth)">@System.Globalization.DateTimeFormatInfo.CurrentInfo.GetMonthName(i)</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">
+                                            Year<span class="text-danger">*</span>
+                                        </label>
+                                        <select id="filterYear" class="form-select form-control select2">
+                                            @for (int y = DateTime.Now.Year - 5; y <= DateTime.Now.Year + 1; y++)
+                                            {
+                                                <option value="@y" selected="@(y == Model.SelectedYear)">@y</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="payrollTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Staff Code</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payrollBody">
+                            <!-- Data will be loaded via AJAX -->
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#payrollTable')) {
+                const table = $('#payrollTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+        function initializeDataTable() {
+
+            if ($.fn.DataTable.isDataTable('#payrollTable')) {
+                $('#payrollTable').DataTable().destroy();
+            }
+
+            $('#payrollTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false,
+                ordering: false,
+                destroy: true,
+                language: {
+                    emptyTable: "Please select criteria and click Filter to load data."
+                }
+            });
+        }
+
+$(document).ready(function () {
+            
+})
+
+
+        $(document).ready(function () {
+            // Initial load if desired
+            loadPayroll();
+            renderFilterBadges();
+        });
+
+        function loadPayroll() {
+            const roleId = $('#filterRole').val();
+            const month = $('#filterMonth').val();
+            const year = $('#filterYear').val();
+
+            console.log("Loading payroll for:", { month, year, roleId });
+
+            if (!month || !year) {
+                Swal.fire('Error', 'Please select month and year', 'error');
+                return;
+            }
+
+            // Close the filter dropdown
+            $('[data-bs-toggle="dropdown"]').dropdown('hide');
+
+            $.ajax({
+                url: `/api/HumanResourceApi/GetAllPayroll?month=${month}&year=${year}&roleId=${roleId || ''}`,
+                type: 'GET',
+                success: function (res) {
+                    console.log("Payroll API Response:", res);
+                    if (res.success) {
+                        renderPayrollTable(res.data);
+                        initializeDataTable();
+                        renderFilterBadges();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function(err) {
+                    console.error("Payroll API Error:", err);
+                    Swal.fire('Error', 'Failed to fetch payroll data', 'error');
+                }
+            });
+        }
+
+        function renderPayrollTable(data) {
+            const body = $('#payrollBody');
+            body.empty();
+
+            if (data.length === 0) {
+                
+                return;
+            }
+
+            data.forEach((item, index) => {
+                if (item.payrollID > 0) {
+                    if (item.status === 'Paid') {
+                        statusBadge = `<span class="badge badge-boxed badge-outline-dark">Paid</span>`;
+                    } else {
+                        statusBadge = `<span class="badge badge-boxed badge-outline-success">Generated</span>`;
+                    }
+                } else {
+                    statusBadge = `<span class="badge badge-boxed badge-outline-primary">Not Generated</span>`;
+                }
+
+                const row = `
+                    <tr>
+                        <td>
+                            <input type="radio" name="selectedStaff" 
+                                value="${item.staffID}" 
+                                data-payrollid="${item.payrollID}" 
+                                data-status="${item.status || ''}" 
+                                data-name="${item.staffName}" 
+                                data-netsalary="${item.netSalary}"
+                                data-monthyear="${item.month}-${item.year}"
+                                class="form-check-input staff-selector" 
+                                onchange="updateButtonStates()">
+                        </td>
+                        <td>${item.staffCode}</td>
+                        <td><a href="javascript:void(0)" onclick="viewStaffDetails(${item.staffID})">${item.staffName}</a></td>
+                        <td>${item.roleName || ''}</td>
+                        <td>${item.departmentName || ''}</td>
+                        <td>${item.designationName || ''}</td>
+                        <td>${item.mobileNo || ''}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+                body.append(row);
+            });
+        }
+
+        function updateButtonStates() {
+            const selected = $('input[name="selectedStaff"]:checked');
+            if (selected.length === 0) {
+                $('#btnGenerate, #btnPay, #btnView').prop('disabled', true);
+                return;
+            }
+
+            const payrollId = parseInt(selected.data('payrollid')) || 0;
+            const status = selected.data('status');
+
+            // Generate Button: Active only if no payroll exists
+            $('#btnGenerate').prop('disabled', payrollId > 0);
+
+            // Pay Button: Active if generated but not paid
+            $('#btnPay').prop('disabled', !(payrollId > 0 && status !== 'Paid'));
+
+            // View Button: Active if payroll exists
+            $('#btnView').prop('disabled', payrollId === 0);
+        }
+
+        function handleGenerate() {
+            const selected = $('input[name="selectedStaff"]:checked');
+            if (selected.length > 0) {
+                const staffId = selected.val();
+                const month = $('#filterMonth').val();
+                const year = $('#filterYear').val();
+                window.location.href = `/HumanResource/GeneratePayroll?id=${staffId}&month=${month}&year=${year}`;
+            }
+        }
+
+        function handlePay() {
+            const selected = $('input[name="selectedStaff"]:checked');
+            if (selected.length > 0) {
+                const payrollId = selected.data('payrollid');
+                const staffName = selected.data('name');
+                const netSalary = selected.data('netsalary');
+                const monthYear = selected.data('monthyear');
+                openPaymentModal(payrollId, staffName, netSalary, monthYear);
+            }
+        }
+
+        function handleView() {
+            const selected = $('input[name="selectedStaff"]:checked');
+            if (selected.length > 0) {
+                const payrollId = selected.data('payrollid');
+                viewPayslip(payrollId);
+            }
+        }
+
+        function viewPayslip(id) {
+            console.log("Fetching payslip for ID:", id);
+            $.ajax({
+                url: `/api/HumanResourceApi/GetPayrollDetails/${id}`,
+                type: 'GET',
+                success: function (res) {
+                    console.log("Payslip API Response:", res);
+                    if (res.success) {
+                        renderPayslip(res.data);
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function(err) {
+                    console.error("Payslip API Error:", err);
+                    Swal.fire('Error', 'Failed to fetch payslip details', 'error');
+                }
+            });
+        }
+
+        function renderPayslip(data) {
+            if (!data || !data.summary) {
+                Swal.fire('Error', 'Invalid payslip data received.', 'error');
+                return;
+            }
+            const summary = data.summary;
+            const details = data.details || [];
+
+            $('#slip_staffName').text(summary.staffName);
+            $('#slip_staffCode').text(summary.staffCode);
+            $('#slip_monthYear').text(`${getMonthName(summary.month)} ${summary.year}`);
+            $('#slip_designation').text(summary.designationName || '-');
+            $('#slip_department').text(summary.departmentName || '-');
+            $('#slip_basic').text(summary.basicSalary.toFixed(2));
+            $('#slip_attendance').text(summary.attendanceDays);
+            $('#slip_net').text(summary.netSalary.toFixed(2));
+            $('#slip_status').text(summary.status);
+            
+            const earningsBody = $('#slip_earningsBody');
+            const deductionsBody = $('#slip_deductionsBody');
+            earningsBody.empty();
+            deductionsBody.empty();
+
+            let totalEarnings = 0;
+            let totalDeductions = 0;
+
+            details.forEach(item => {
+                const row = `<tr><td>${item.componentName}</td><td class="text-end">${item.amount.toFixed(2)}</td></tr>`;
+                if (item.componentType === 'Earning') {
+                    earningsBody.append(row);
+                    totalEarnings += item.amount;
+                } else {
+                    deductionsBody.append(row);
+                    totalDeductions += item.amount;
+                }
+            });
+
+            $('#slip_totalEarnings').text(totalEarnings.toFixed(2));
+            $('#slip_totalDeductions').text(totalDeductions.toFixed(2));
+            
+            $('#payslipModal').modal('show');
+        }
+
+        function getMonthName(month) {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            return months[month - 1];
+        }
+
+        function printPayslip() {
+            const printContent = document.getElementById('payslipPrintArea').innerHTML;
+            const originalContent = document.body.innerHTML;
+            document.body.innerHTML = printContent;
+            window.print();
+            document.body.innerHTML = originalContent;
+            window.location.reload();
+        }
+
+        function viewStaffDetails(staffId) {
+            window.location.href = `/HumanResource/StaffDetails/${staffId}`;
+        }
+
+        function filterPayrollTable() {
+            const input = document.getElementById("payrollSearch");
+            const filter = input.value.toUpperCase();
+            const table = document.getElementById("payrollTable");
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let found = false;
+                const td = tr[i].getElementsByTagName("td");
+                for (let j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        const txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                tr[i].style.display = found ? "" : "none";
+            }
+            renderFilterBadges();
+        }
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'payrollSearch', label: 'Search', type: 'text' },
+                { id: 'filterRole', label: 'Role', type: 'select' },
+                { id: 'filterMonth', label: 'Month', type: 'select' },
+                { id: 'filterYear', label: 'Year', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                filterPayrollTable();
+            } else {
+                el.value = '';
+                loadPayroll();
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('payrollSearch').value = '';
+            document.getElementById('filterRole').value = '';
+            // Don't reset month/year to empty as they are usually required, maybe reset to current
+            // document.getElementById('filterMonth').value = new Date().getMonth() + 1;
+            // document.getElementById('filterYear').value = new Date().getFullYear();
+            
+            filterPayrollTable();
+            loadPayroll();
+        }
+        function openPaymentModal(payrollId, staffName, amount, monthYear) {
+            $('#pay_payrollID').val(payrollId);
+            $('#pay_staffName').val(staffName);
+            $('#pay_amount').val(amount);
+            $('#pay_monthYear').val(monthYear);
+            $('#paymentModal').modal('show');
+        }
+
+        function savePayment() {
+            const data = {
+                payrollID: $('#pay_payrollID').val(),
+                paymentMode: $('#pay_mode').val(),
+                paymentDate: $('#pay_date').val(),
+                note: $('#pay_note').val()
+            };
+
+            $.ajax({
+                url: '/api/HumanResourceApi/PayPayroll',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire('Success', res.message, 'success').then(() => {
+                            $('#paymentModal').modal('hide');
+                            loadPayroll();
+                        });
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'Failed to record payment', 'error');
+                }
+            });
+        }
+    </script>
+}
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">Proceed to Pay</h5>
+                <div>
+                    <button type="button" class="btn btn-success" onclick="savePayment()">
+                        <i class="ti ti-device-floppy me-1"></i> Confirm Payment
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="pay_payrollID" />
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Staff Name</label>
+                        <input type="text" id="pay_staffName" class="form-control bg-light" disabled />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Payment Amount</label>
+                        <input type="text" id="pay_amount" class="form-control bg-light" disabled />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Month-Year</label>
+                        <input type="text" id="pay_monthYear" class="form-control bg-light" disabled />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Payment Mode <span class="text-danger">*</span></label>
+                        <select id="pay_mode" class="form-select">
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Transfer To Bank Account">Transfer To Bank Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Payment Date <span class="text-danger">*</span></label>
+                        <input type="date" id="pay_date" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Note</label>
+                        <textarea id="pay_note" class="form-control" rows="3" placeholder="Enter payment details if any..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payslip Modal -->
+<div class="modal fade" id="payslipModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">Payslip Details</h5>
+                <div>
+                    <button type="button" class="btn btn-warning" onclick="printPayslip()">
+                        <i class="ti ti-printer me-1"></i> Print
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body" id="payslipPrintArea">
+                <div class="p-4 border rounded bg-white shadow-sm">
+                    <div class="text-center mb-4 pb-3 border-bottom">
+                        <h4 class="fw-bold mb-1 text-primary">STAFF PAYSLIP</h4>
+                        <p class="text-muted mb-0" id="slip_monthYear"></p>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th width="40%" class="text-muted">Staff Name</th><td id="slip_staffName" class="fw-semibold"></td></tr>
+                                <tr><th class="text-muted">Staff ID</th><td id="slip_staffCode" class="fw-semibold"></td></tr>
+                                <tr><th class="text-muted">Department</th><td id="slip_department"></td></tr>
+                                <tr><th class="text-muted">Designation</th><td id="slip_designation"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th width="40%" class="text-muted">Basic Salary</th><td class="fw-semibold">₹ <span id="slip_basic"></span></td></tr>
+                                <tr><th class="text-muted">Attendance</th><td id="slip_attendance"></td></tr>
+                                <tr><th class="text-muted">Status</th><td><span id="slip_status" class="badge bg-success-light text-success"></span></td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold border-bottom pb-2 text-success"><i class="ti ti-circle-plus me-1"></i>Earnings</h6>
+                            <table class="table table-sm table-hover">
+                                <tbody id="slip_earningsBody"></tbody>
+                                <tfoot class="table-light">
+                                    <tr><th class="fw-bold">Total Earnings</th><td class="text-end fw-bold text-success">₹ <span id="slip_totalEarnings"></span></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold border-bottom pb-2 text-danger"><i class="ti ti-circle-minus me-1"></i>Deductions</h6>
+                            <table class="table table-sm table-hover">
+                                <tbody id="slip_deductionsBody"></tbody>
+                                <tfoot class="table-light">
+                                    <tr><th class="fw-bold">Total Deductions</th><td class="text-end fw-bold text-danger">₹ <span id="slip_totalDeductions"></span></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-primary-light rounded d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold text-primary">Net Salary</h5>
+                        <h4 class="mb-0 fw-bold text-primary">₹ <span id="slip_net"></span></h4>
+                    </div>
+                    
+                    <div class="mt-5 pt-4 d-flex justify-content-between">
+                        <div class="text-center" style="width: 180px;">
+                            <div class="border-top pt-2 mt-4 text-muted small">Authorized Signatory</div>
+                        </div>
+                        <div class="text-center" style="width: 180px;">
+                            <div class="border-top pt-2 mt-4 text-muted small">Employee Signature</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

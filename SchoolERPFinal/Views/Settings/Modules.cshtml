@@ -1,0 +1,176 @@
+@*
+    ======================================================================
+    VIEW: Settings / Modules.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Modules</h6>
+    </div>    
+</div>
+<!-- End Page Header -->
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search Modules..." style="min-width: 220px;">
+                    </div>
+                    <ul class="nav nav-pills gap-1">
+                        <li class="nav-item active">
+                            <a class="nav-link active" data-bs-toggle="pill" href="#system">System</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#std">Student</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="pill" href="#prt">Parent</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- start row -->
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">            
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-----System Pane---->
+                    <div class="tab-pane active" id="system">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-----Student Pane---->
+                    <div class="tab-pane" id="std">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-----Parent Pane---->
+                    <div class="tab-pane" id="prt">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Transport
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="form-check form-switch ">
+                                                <input class="form-check-input float-end" type="checkbox" role="switch" id="switchCheckChecked" checked>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+
+
+                </div>
+
+            </div>
+            <!-- end card-body -->
+        </div>
+        <!-- end card -->
+    </div>
+    <!-- end col -->
+
+</div>
+<!-- end row -->

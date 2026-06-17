@@ -1,0 +1,681 @@
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Approve Leave";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canPrint = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/FrontOffice/Complaint", "Export");
+}
+
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Approve Leave</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#addLeaveModal" onclick="resetForm()">
+            <i class="ti ti-plus me-1"></i> Add Leave Request
+        </button>
+        <button id="btnEdit" class="btn btn-info" disabled onclick="handleEditAction()">
+            <i class="ti ti-pencil me-1"></i> Edit
+        </button>
+        <button id="btnDelete" class="btn btn-danger" disabled onclick="handleDeleteAction()">
+            <i class="ti ti-trash me-1"></i> Delete
+        </button>
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+
+        
+    </div>
+</div>
+
+<div class="row">
+    <!-- Filters -->
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search leave requests..." />
+                    </div>
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end me-2">
+                                    <button type="button" id="btnFilterSearch" class="btn text-primary fs-6 fw-medium">Filter</button>
+                                </div>
+                            </div>
+                            <div class="filter-body p-3">
+                                <form id="filterForm">
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Class</label>
+                                        <select id="classSelect" class="form-select form-control select2">
+                                            <option value="">All Classes</option>
+                                            @if (ViewBag.ClassList != null)
+                                            {
+                                                foreach (var c in ViewBag.ClassList)
+                                                {
+                                                    <option value="@c.ClassID">@c.ClassName</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Section</label>
+                                        <select id="sectionSelect" class="form-select form-control select2">
+                                            <option value="">All Sections</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-0">
+                                        <label class="form-label mb-1">Status</label>
+                                        <select id="statusSelect" class="form-select form-control select2">
+                                            <option value="0">Pending</option>
+                                            <option value="1">Approved</option>
+                                            <option value="2">Rejected</option>
+                                            <option value="-1">All</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-nowrap" id="tblLeave">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>#</th>
+                                <th>Student Name</th>
+                                <th>Admission No</th>
+                                <th>Class (Section)</th>
+                                <th>From Date</th>
+                                <th>To Date</th>
+                                <th>Reason</th>
+                                <th>Attachment</th>
+                                <th>Apply Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaveTableBody">
+                            
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-----Add Leave Request Modal------>
+<div class="modal fade" id="addLeaveModal">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Leave Request</h5>
+                <div>
+                    <button class="btn btn-success" id="btnSaveLeave"><i class="ti ti-cloud me-1"></i> Save</button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="leaveForm">
+                    <input type="hidden" id="leaveAppId" value="0" />
+                    <div class="row">
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">Class <span class="text-danger">*</span></label>
+                            <select id="modalClassSelect" class="form-select select2-modal" required>
+                                <option value="">Select Class</option>
+                                @if (ViewBag.ClassList != null)
+                                {
+                                    foreach (var c in ViewBag.ClassList)
+                                    {
+                                        <option value="@c.ClassID">@c.ClassName</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">Section <span class="text-danger">*</span></label>
+                            <select id="modalSectionSelect" class="form-select select2-modal" required>
+                                <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">Student Name <span class="text-danger">*</span></label>
+                            <select id="modalStudentSelect" class="form-select select2-modal" required>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">Apply Date</label>
+                            <input type="date" id="applyDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">From Date</label>
+                            <input type="date" id="fromDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+
+                        <div class="col-12 col-md-4 mb-3">
+                            <label class="form-label">To Date <span class="text-danger">*</span></label>
+                            <input type="date" id="toDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Reason</label>
+                            <textarea id="reason" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-12 mb-3">
+                            <label class="form-label d-block">Leave Status <span class="text-danger">*</span></label>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="leaveStatus" id="pen" value="0" checked>
+                                <label for="pen" class="form-check-label">Pending</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="leaveStatus" id="app" value="1">
+                                <label for="app" class="form-check-label">Approve</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="leaveStatus" id="disap" value="2">
+                                <label for="disap" class="form-check-label">Disapprove</label>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-12 mb-3">
+                            <label class="form-label">Attach Document</label>
+                            <input type="file" id="attachFile" class="form-control">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+         function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblLeave')) {
+                const table = $('#tblLeave').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+function initDataTable() {
+    if ($.fn.DataTable.isDataTable('#tblLeave')) {
+        $('#tblLeave').DataTable().clear().destroy();
+    }
+    $('#tblLeave').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+            { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+            { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] },
+              format: {
+                  body: function (data, row, column, node) {
+                      return node ? node.textContent.replace(/\s+/g, ' ').trim() : data;
+                  }
+              }
+            },
+            { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
+            { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } }
+        ],
+        searching: false,
+        paging: false,
+        info: false,
+        ordering: false
+    });
+}
+
+
+        $(document).ready(function () {
+            $('.select2').select2({ dropdownParent: $('#filter-dropdown') });
+            $('.select2-modal').select2({ dropdownParent: $('#addLeaveModal'), width: '100%' });
+
+            $('#classSelect').on('change', function () {
+                loadSections($(this).val(), '#sectionSelect');
+            });
+
+            $('#modalClassSelect').on('change', function () {
+                loadSections($(this).val(), '#modalSectionSelect');
+            });
+
+            $('#modalSectionSelect').on('change', function () {
+                loadStudents($('#modalClassSelect').val(), $(this).val());
+            });
+
+            $('#btnFilterSearch').on('click', function () {
+                loadLeaves();
+            });
+
+            $('#btnSaveLeave').on('click', function () {
+                saveLeave();
+            });
+
+            $('#filter-dropdown').on('click', function (e) {
+                e.stopPropagation();
+            });
+
+            loadLeaves();
+        });
+
+        let selectedId = 0;
+
+        function selectItem(id, row) {
+            selectedId = id;
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            //row.querySelector('input[type="radio"]').checked = true;
+
+            document.getElementById('btnEdit').disabled = false;
+            document.getElementById('btnDelete').disabled = false;
+
+                    let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function handleEditAction() {
+            if (selectedId) {
+                editLeave(selectedId);
+            }
+        }
+
+        function handleDeleteAction() {
+            if (selectedId) {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You want to delete this leave application?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        showToast('Delete functionality triggered for ID: ' + selectedId, 'info');
+                    }
+                });
+            }
+        }
+
+        function resetForm() {
+            $('#modalTitle').text('Add Leave Request');
+            $('#leaveAppId').val(0);
+            $('#leaveForm')[0].reset();
+            $('.select2-modal').val('').trigger('change');
+            $('#pen').prop('checked', true);
+            
+            // Clear selection
+            selectedId = 0;
+            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+            document.querySelectorAll('input[name="selectedItem"]').forEach(r => r.checked = false);
+            document.getElementById('btnEdit').disabled = true;
+            document.getElementById('btnDelete').disabled = true;
+                    let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function loadSections(classId, targetSelector) {
+            if (classId) {
+                return $.get('/Attendance/GetSectionsByClass', { classId: classId }, function (res) {
+                    if (res.success) {
+                        let html = `<option value="">Select Section</option>`;
+                        res.data.forEach(s => {
+                            html += `<option value="${s.sectionID}">${s.sectionName}</option>`;
+                        });
+                        $(targetSelector).html(html).trigger('change');
+                        renderFilterBadges();
+                    }
+                });
+            } else {
+                $(targetSelector).html('<option value="">Select Section</option>').trigger('change');
+                return $.Deferred().resolve().promise();
+            }
+        }
+
+        function loadStudents(classId, sectionId) {
+            if (classId && sectionId) {
+                return $.get('/Attendance/GetStudentsForLeave', { classId: classId, sectionId: sectionId }, function (res) {
+                    if (res.success) {
+                        let html = '<option value="">Select Student</option>';
+                        res.data.forEach(s => {
+                            html += `<option value="${s.studentID}">${s.fullName} (${s.rollNo})</option>`;
+                        });
+                        $('#modalStudentSelect').html(html).trigger('change');
+                    }
+                });
+            } else {
+                $('#modalStudentSelect').html('<option value="">Select Student</option>').trigger('change');
+                return $.Deferred().resolve().promise();
+            }
+        }
+
+        function loadLeaves() {
+            const classId = $('#classSelect').val();
+            const sectionId = $('#sectionSelect').val();
+            const status = $('#statusSelect').val();
+
+            //$('#leaveTableBody').html('<tr><td colspan="11" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
+
+            $.get('/Attendance/GetLeaveList', { 
+                classId: classId || 0, 
+                sectionId: sectionId || 0, 
+                status: status == -1 ? null : status 
+            }, function (res) {
+                if (res.success && res.data && res.data.length > 0) {
+                    let html = '';
+                    res.data.forEach((l, index) => {
+                        let statusBadge = '';
+
+                        if (l.status === 0) {
+                            statusBadge = '<span class="badge bg-warning">Pending</span>';
+                        } else if (l.status === 1) {
+                            statusBadge = '<span class="badge bg-success">Approved</span>';
+                        } else {
+                            statusBadge = '<span class="badge bg-danger">Rejected</span>';
+                        }
+
+                        let attachmentLink = l.hasAttachment ? `<a href="/Attendance/DownloadAttachment/${l.leaveAppID}" target="_blank" class="text-primary" title="${l.attachmentName}"><i class="ti ti-paperclip"></i></a>` : '-';
+
+                        const rowId = `row-${l.leaveAppID}`;
+                        html += `
+                            <tr id="${rowId}" class="item-row" onclick="selectItem(${l.leaveAppID}, this)" style="cursor: pointer;">
+                                <td class="ps-3">
+
+                                     <input type="checkbox" name="selectedItem" class="form-check-input student-checkbox" value="${l.leaveAppID}">
+                                </td>
+                                <td>${index + 1}</td>
+                                <td class="fw-medium">${l.studentName}</td>
+                                <td>${l.admissionNo}</td>
+                                <td>${l.className} (${l.sectionName})</td>
+                                <td>${new Date(l.fromDate).toLocaleDateString()}</td>
+                                <td>${new Date(l.toDate).toLocaleDateString()}</td>
+                                <td title="${l.reason}">${l.reason ? (l.reason.length > 20 ? l.reason.substring(0, 20) + '...' : l.reason) : '-'}</td>
+                                <td>${attachmentLink}</td>
+                                <td>${new Date(l.applyDate).toLocaleDateString()}</td>
+                                <td>${statusBadge}</td>
+                            </tr>`;
+                    });
+                    $('#leaveTableBody').html(html);
+                    
+                    // Store data safely using jQuery .data()
+                    res.data.forEach(l => {
+                        $(`#row-${l.leaveAppID}`).data('leave-info', l);
+                    });
+                } else {
+                    $('#leaveTableBody').html('');
+                }
+                
+                initDataTable();
+                
+                selectedId = 0;
+                document.getElementById('btnEdit').disabled = true;
+                document.getElementById('btnDelete').disabled = true;
+                        let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+                renderFilterBadges();
+                const toggle = document.getElementById('btnFilterToggle');
+                if (toggle) {
+                    bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+                }
+            }).fail(function() {
+                //$('#leaveTableBody').html('<tr><td colspan="11" class="text-center py-5 text-danger">Error connecting to server.</td></tr>');
+            });
+        }
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearchInput', label: 'Search', type: 'text' },
+                { id: 'classSelect', label: 'Class', type: 'select' },
+                { id: 'sectionSelect', label: 'Section', type: 'select' },
+                { id: 'statusSelect', label: 'Status', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '' && value !== '-1') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        if (selectedOption && selectedOption.value !== "") {
+                            text = selectedOption.text;
+                            activeCount++;
+                        }
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT' && filterId === 'txtSearchInput') {
+                el.value = '';
+                $(el).trigger('keyup');
+            } else {
+                el.value = '';
+                if (filterId === 'classSelect') {
+                    $('#sectionSelect').html('<option value="">All Sections</option>');
+                }
+                if (filterId === 'statusSelect') el.value = '0'; // Default to Pending
+                
+                if (window.jQuery && jQuery(el).data('select2')) {
+                    jQuery(el).trigger('change.select2');
+                }
+                loadLeaves();
+            }
+        }
+
+        function resetAllFilters() {
+            document.getElementById('txtSearchInput').value = '';
+            document.getElementById('classSelect').value = '';
+            document.getElementById('sectionSelect').value = '';
+            document.getElementById('statusSelect').value = '0';
+            
+            $('.select2').trigger('change.select2');
+            $('#txtSearchInput').trigger('keyup');
+            loadLeaves();
+        }
+
+        function editLeave(id) {
+            const rowData = $(`#row-${id}`).data('leave-info');
+            if (!rowData) return;
+
+            $('#modalTitle').text('Edit Leave Request');
+            $('#leaveAppId').val(rowData.leaveAppID);
+            $('#reason').val(rowData.reason);
+            $('#applyDate').val(new Date(rowData.applyDate).toISOString().split('T')[0]);
+            $('#fromDate').val(new Date(rowData.fromDate).toISOString().split('T')[0]);
+            $('#toDate').val(new Date(rowData.toDate).toISOString().split('T')[0]);
+            
+            $(`input[name="leaveStatus"][value="${rowData.status}"]`).prop('checked', true);
+
+            // Chained Population
+            $('#modalClassSelect').val(rowData.classID).trigger('change.select2');
+            
+            loadSections(rowData.classID, '#modalSectionSelect').then(() => {
+                $('#modalSectionSelect').val(rowData.sectionID).trigger('change.select2');
+                return loadStudents(rowData.classID, rowData.sectionID);
+            }).then(() => {
+                $('#modalStudentSelect').val(rowData.studentID).trigger('change.select2');
+            });
+
+            $('#addLeaveModal').modal('show');
+        }
+
+        function saveLeave() {
+            const formData = new FormData();
+            formData.append('LeaveAppID', $('#leaveAppId').val());
+            formData.append('StudentID', $('#modalStudentSelect').val());
+            formData.append('FromDate', $('#fromDate').val());
+            formData.append('ToDate', $('#toDate').val());
+            formData.append('ApplyDate', $('#applyDate').val());
+            formData.append('Reason', $('#reason').val());
+            formData.append('Status', $('input[name="leaveStatus"]:checked').val());
+
+            const fileInput = $('#attachFile')[0];
+            if (fileInput.files.length > 0) {
+                formData.append('Attachment', fileInput.files[0]);
+            }
+
+            if (!$('#modalStudentSelect').val() || !$('#toDate').val()) {
+                showToast('Please fill all required fields', 'error');
+                return;
+            }
+
+            $.ajax({
+                url: '/Attendance/UpsertLeave',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        $('#addLeaveModal').modal('hide');
+                        $('#leaveForm')[0].reset();
+                        $('.select2-modal').val('').trigger('change');
+                        loadLeaves();
+                    } else {
+                        showToast(res.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function updateStatus(id, status) {
+            const statusText = status === 1 ? 'Approve' : 'Reject';
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `You want to ${statusText} this leave application?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: status === 1 ? '#28a745' : '#dc3545',
+                confirmButtonText: `Yes, ${statusText} it!`
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/Attendance/UpdateLeaveStatus',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ LeaveAppID: id, Status: status }),
+                        success: function (res) {
+                            if (res.success) {
+                                showToast(res.message, 'success');
+                                loadLeaves();
+                            } else {
+                                showToast(res.message, 'error');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+
+    <script>
+        $("#txtSearchInput").on("keyup", function() {
+            var value = $(this).val().toLowerCase();
+            $("#leaveTableBody tr").filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+            renderFilterBadges();
+        });
+    </script>
+}

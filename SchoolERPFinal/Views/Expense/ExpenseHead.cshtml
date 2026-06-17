@@ -1,0 +1,347 @@
+@model SchoolERP.Net.Models.AccountHeadPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Expense Head";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Expense/ExpenseHead", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Expense/ExpenseHead", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Expense/ExpenseHead", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Expense/ExpenseHead", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Expense/ExpenseHead", "Export");
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Expense Head List</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i> Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i> Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+
+    <!-- Filters -->
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search by name..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+   
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblAccountHead">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Head Name</th>
+                                <th>Description</th>
+                                <th style="width: 100px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr class="item-row" onclick="selectItem(@item.AccountHeadID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="selectedItem"
+                                               class="form-check-input student-checkbox"
+                                               value="@item.AccountHeadID">                                        
+                                    </td>
+                                    <td>@item.HeadName</td>
+                                    <td>@item.HeadDescription</td>
+                                    <td>
+                                        <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   onchange="toggleStatus(@item.AccountHeadID, this.checked)"
+                                                   @(item.IsActive ? "checked" : "")
+                                                   @(canEdit ? "" : "disabled")>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Items.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted py-4">No records found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="headModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Add Expense Head</h5>
+                <div>
+                    <button class="btn btn-success" onclick="saveRecord()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="headForm">
+                    <input type="hidden" id="hdnAccountHeadID" value="0">
+                    <div class="row row-gap-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Expense Head Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtHeadName" required>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" id="txtHeadDescription" rows="3"></textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" checked>
+                                <label class="form-check-label" for="chkActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let selectedId = 0;
+    const canEdit = @canEdit.ToString().ToLower();
+    const canDelete = @canDelete.ToString().ToLower();
+    const headType = '@Model.HeadType';
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblAccountHead')) {
+                const table = $('#tblAccountHead').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+        $(document).ready(function () {
+            $('#tblAccountHead').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+        })
+
+
+    function selectItem(id, row) {
+        selectedId = id;
+        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
+        row.classList.add('bg-light');
+        //row.querySelector('input[type="radio"]').checked = true;
+
+        if (canEdit) document.getElementById('btnEdit').disabled = false;
+        if (canDelete) document.getElementById('btnDelete').disabled = false;
+
+        let checkedCount = $('.student-checkbox:checked').length;
+        $('#btnDelete').prop('disabled', checkedCount === 0);
+        // Edit sirf 1 record select hone par
+        $('#btnEdit').prop('disabled', checkedCount !== 1);
+    }
+
+        document.getElementById('txtSearchInput').addEventListener('keyup', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#tblAccountHead tbody tr').forEach(row => {
+            if (row.classList.contains('item-row')) {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            }
+        });
+    });
+
+    function openAddModal() {
+        document.getElementById('modalTitle').textContent = `Add ${headType} Head`;
+        document.getElementById('hdnAccountHeadID').value = 0;
+        document.getElementById('headForm').reset();
+        document.getElementById('chkActive').checked = true;
+        new bootstrap.Modal(document.getElementById('headModal')).show();
+    }
+
+    function editSelected() {
+        if (!selectedId) return;
+        fetch(`/Expense/GetAccountHeadByID/${selectedId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) { showToast(res.message, 'danger'); return; }
+                const d = res.data;
+                document.getElementById('modalTitle').textContent = `Edit ${headType} Head`;
+                document.getElementById('hdnAccountHeadID').value = d.accountHeadID;
+                document.getElementById('txtHeadName').value = d.headName;
+                document.getElementById('txtHeadDescription').value = d.headDescription || '';
+                document.getElementById('chkActive').checked = d.isActive;
+                new bootstrap.Modal(document.getElementById('headModal')).show();
+            });
+    }
+
+    function saveRecord() {
+        const form = document.getElementById('headForm');
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+
+        const data = {
+            accountHeadID:   parseInt(document.getElementById('hdnAccountHeadID').value) || 0,
+            headName:        document.getElementById('txtHeadName').value.trim(),
+            headDescription: document.getElementById('txtHeadDescription').value.trim() || null,
+            headType:        headType,
+            isActive:        document.getElementById('chkActive').checked
+        };
+
+        fetch('/Expense/UpsertAccountHead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success ? 'success' : 'danger');
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('headModal')).hide();
+                setTimeout(() => location.reload(), 800);
+            }
+        });
+    }
+
+    function deleteSelected() {
+        if (!selectedId) return;
+
+           let selectedIds = [];
+            $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+            if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                     url: '/Expense/DeleteAccountHead',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+    }
+
+    function toggleStatus(id, isActive) {
+        fetch(`/Expense/ToggleAccountHeadStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    }
+
+    function showToast(msg, type = 'success') {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+            <div class="d-flex"><div class="toast-body">${msg}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div></div>`;
+        document.body.appendChild(wrapper);
+        setTimeout(() => wrapper.remove(), 3000);
+    }
+</script>
+}

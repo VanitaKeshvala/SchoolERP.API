@@ -1,0 +1,174 @@
+/* TreeView Styling to match provided image */
+
+.tree-grid-container {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 70vh;
+}
+
+.tree-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: #333;
+}
+
+    .tree-grid th {
+        background: #f8f9fa;
+        padding: 10px 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+.tree-row {
+    -border-bottom: 1px solid #efefef;
+    transition: background-color 0.1s;
+}
+.tree-row tr:last-child{
+    border-bottom:0 !important;
+}
+
+    .tree-row:hover {
+        background-color: #f5f9ff;
+    }
+
+    .tree-row td {
+        padding: 6px 8px;
+        vertical-align: middle;
+    }
+
+/* ID Column */
+.id-column {
+    width: 50px;
+    text-align: left;
+    color: #888;
+    background: #fcfcfc;
+    border-right: 1px solid #eee;
+    padding-left: 12px !important;
+}
+
+/* Tree Structure Column */
+.tree-cell {
+    display: flex;
+    align-items: center;
+    position: relative;
+    white-space: nowrap;
+}
+
+.tree-indent {
+    width: 20px;
+    height: 24px;
+    display: inline-block;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Dotted vertical lines */
+.tree-line-v {
+    position: absolute;
+    left: 10px;
+    top: -6px;
+    bottom: -6px;
+    border-left: 1px dotted #ccc;
+}
+
+    .tree-line-v.last {
+        bottom: 50% !important; /* Stop halfway for the last sibling */
+    }
+
+/* Dotted horizontal lines */
+.tree-line-h {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    width: 10px;
+    border-top: 1px dotted #ccc;
+}
+
+/* Expand/Collapse Toggle */
+.tree-toggle {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #adb5bd;
+    background: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    border-radius: 2px;
+    z-index: 2;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+    .tree-toggle:hover {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+
+    .tree-toggle i {
+        font-size: 8px;
+        font-weight: bold;
+    }
+
+/* Icons */
+.tree-icon {
+    font-size: 16px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+    .tree-icon.folder {
+        -color: #6c757d; /* Warning yellow for folders */
+        color: #2E37A4;
+    }
+
+    .tree-icon.file {
+        -color: #6c757d; /* Muted gray for files */
+        color: #2F80ED;
+    }
+
+/* Checkbox */
+.perm-check-input {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Matrix columns */
+.matrix-col {
+    text-align: center;
+    border-left: 1px solid #f0f0f0;
+    width: 60px;
+}
+
+.matrix-label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #999;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+/* State management */
+.collapsed .tree-toggle i::before {
+    content: "\f067"; /* plus */
+}
+
+.expanded .tree-toggle i::before {
+    content: "\f068"; /* minus */
+}
+
+[data-parent-id] {
+    display: none; /* Hidden by default if it has a parent */
+}

@@ -1,0 +1,477 @@
+@model SchoolERP.Net.Models.HRApplyLeavePageViewModel
+@{
+    ViewData["Title"] = "Apply Leave";
+    Layout = "_Layout";
+}
+@inject PermissionHelper PermHelper
+@{
+    
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Export");
+
+}
+<style>
+    /* Remove validation icons */
+    .was-validated .form-control:valid, .was-validated .form-control:invalid,
+    .was-validated .form-select:valid, .was-validated .form-select:invalid {
+        background-image: none !important;
+        padding-right: 0.75rem !important;
+    }
+    
+    .select2-container--default .select2-selection--single.is-invalid {
+        border-color: #dc3545 !important;
+    }
+
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Apply Leave</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center" onclick="openAddModal()">
+            <i class="ti ti-plus me-1"></i>Apply Leave
+        </button>
+         @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        } 
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table" id="applyLeaveTable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-3">Staff</th>
+                                <th>Leave Type</th>
+                                <th>From Date</th>
+                                <th>To Date</th>
+                                <th>Days</th>
+                                <th>Apply Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Leaves != null && Model.Leaves.Any())
+                            {
+                                foreach (var item in Model.Leaves)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar avatar-sm bg-primary-subtle text-primary rounded-circle me-2">
+                                                    @(item.StaffName?.Substring(0, 1).ToUpper() ?? "S")
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark">@item.StaffName</div>
+                                                    <div class="small text-muted">@item.StaffCode</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-info-subtle text-info">@item.LeaveTypeName</span></td>
+                                        <td>@item.FromDate.ToString("dd MMM yyyy")</td>
+                                        <td>@item.ToDate.ToString("dd MMM yyyy")</td>
+                                        <td>@((item.ToDate - item.FromDate).Days + 1)</td>
+                                        <td>@item.ApplyDate.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @{
+                                                var badgeClass = item.Status == "Approved" ? "bg-success" : (item.Status == "Disapproved" ? "bg-danger" : "bg-warning");
+                                            }
+                                            <span class="badge @badgeClass">@item.Status</span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                           
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Leave Modal -->
+<div class="modal fade" id="leaveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title" id="modalTitle">Apply Leave</h5>
+                <div>
+                    <button type="button" class="btn btn-success" onclick="saveLeave()">
+                        <i class="ti ti-cloud me-1"></i> Save
+                    </button>
+                    <button class="btn btn-danger" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <form id="leaveForm" class="needs-validation" novalidate>
+                <div class="modal-body">
+                    <div id="divError" class="alert alert-danger d-none mb-3" role="alert">
+                        <i class="ti ti-alert-triangle me-2"></i>
+                        <span id="spnErrorMessage"></span>
+                    </div>
+                    <input type="hidden" id="hdnApplyLeaveID" value="0" />
+                    @if (Model.StaffList.Any())
+                    {
+                        <input type="hidden" id="ddlStaff" value="@Model.StaffList.First().StaffID" />
+                    }
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Leave Type <span class="text-danger">*</span></label>
+                            <select id="ddlLeaveType" class="form-select select2" required onchange="showBalanceInfo()">
+                                <option value="">Select Type</option>
+                                @foreach (var lt in Model.LeaveTypes)
+                                {
+                                    <option value="@lt.LeaveTypeID">@lt.LeaveTypeName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">Please select a leave type.</div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">From Date <span class="text-danger">*</span></label>
+                            <input type="date" id="txtFromDate" class="form-control" required onchange="clearError()">
+                            <div class="invalid-feedback">Required.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">To Date <span class="text-danger">*</span></label>
+                            <input type="date" id="txtToDate" class="form-control" required onchange="clearError()">
+                            <div class="invalid-feedback">Required.</div>
+                        </div>
+                        <div class="col-md-12" id="divBalance" style="display:none;">
+                            <div class="alert alert-info py-2 px-3 mb-0 d-flex align-items-center">
+                                <i class="ti ti-info-circle me-2 fs-5"></i>
+                                <span>Remaining Balance: <strong id="spnBalance">0</strong> Days</span>
+                                <span class="ms-auto small text-muted">Total Quota: <span id="spnTotalQuota">0</span> | Used: <span id="spnUsed">0</span></span>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Attachment</label>
+                            <input type="file" id="fileAttachment" class="form-control" />
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Reason</label>
+                            <textarea id="txtReason" class="form-control" rows="3" placeholder="Enter reason for leave..."></textarea>
+                        </div>
+                        <div class="col-md-6 d-none">
+                            <label class="form-label fw-semibold">Status</label>
+                            <select id="ddlStatus" class="form-select">
+                                <option value="Pending" selected>Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Disapproved">Disapproved</option>
+                            </select>
+                        </div>
+                       
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-none">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary px-4" onclick="saveLeave()">
+                        <i class="ti ti-device-floppy me-1"></i>Save Application
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#applyLeaveTable')) {
+                const table = $('#applyLeaveTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+$(document).ready(function () {
+           $('#applyLeaveTable').DataTable({
+    dom: 'Bfrtip',
+    buttons: [
+        { extend: 'copy' },
+        { extend: 'csv' },
+        { extend: 'excel' },
+        { extend: 'pdf' },
+        { extend: 'print' }
+    ],
+    searching: false,
+    paging: false,
+    info: false,
+     language: {
+        emptyTable: "No leave applications found."
+    }
+});
+})
+
+
+        $(document).ready(function () {
+            $('.select2').select2({
+                dropdownParent: $('#leaveModal'),
+                width: '100%'
+            });
+
+            // Remove validation error when select2 changes
+            $('.select2').on('change', function() {
+                $(this).next('.select2-container').removeClass('is-invalid');
+                if ($(this).val()) {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+        });
+
+        function openAddModal() {
+            $('#leaveForm')[0].reset();
+            $('#leaveForm').removeClass('was-validated');
+            $('#hdnApplyLeaveID').val(0);
+            $('#divBalance').hide();
+            clearError();
+            
+            // Automatically fetch balance for the logged-in staff
+            if ($('#ddlStaff').val()) {
+                fetchLeaveBalance();
+            }
+            
+            $('#leaveModal').modal('show');
+        }
+
+        function showError(msg) {
+            $('#spnErrorMessage').text(msg);
+            $('#divError').removeClass('d-none').fadeIn();
+        }
+
+        function clearError() {
+            $('#divError').addClass('d-none');
+        }
+
+        function showBalanceInfo() {
+            clearError();
+            const selectedOpt = $('#ddlLeaveType option:selected');
+            if (selectedOpt.val()) {
+                $('#spnBalance').text(selectedOpt.data('balance') || 0);
+                $('#spnTotalQuota').text(selectedOpt.data('total') || 0);
+                $('#spnUsed').text(selectedOpt.data('used') || 0);
+                $('#divBalance').fadeIn();
+            } else {
+                $('#divBalance').hide();
+            }
+        }
+
+        async function fetchLeaveBalance() {
+            clearError();
+            const staffId = $('#ddlStaff').val();
+
+            if (!staffId) {
+                $('#divBalance').hide();
+                return;
+            }
+
+            try {
+                const response = await fetch(`/HumanResource/GetStaffAllLeaveBalances?staffId=${staffId}`);
+                const res = await response.json();
+                console.log('Leave Balances Response:', res); // Debug log
+                
+                const ddl = $('#ddlLeaveType');
+                const currentVal = ddl.val(); 
+
+                if (res.success && res.data) {
+                    const balances = res.data;
+                    ddl.empty().append('<option value="">Select Type</option>');
+                    
+                    if (balances.length > 0) {
+                        balances.forEach(b => {
+                            // Ensure we handle both camelCase and PascalCase just in case
+                            const typeId = b.leaveTypeID || b.LeaveTypeID;
+                            const typeName = b.leaveTypeName || b.LeaveTypeName;
+                            const balance = b.balance ?? b.Balance ?? 0;
+                            const total = b.totalQuota ?? b.TotalQuota ?? 0;
+                            const used = b.totalUsed ?? b.TotalUsed ?? 0;
+
+                            const optionText = `${typeName} (Balance: ${balance})`;
+                            ddl.append(`<option value="${typeId}" data-balance="${balance}" data-total="${total}" data-used="${used}">${optionText}</option>`);
+                        });
+                    } else {
+                        console.warn('No leave balances found for staff:', staffId);
+                    }
+                    
+                    // Restore previous selection if it's still valid
+                    if (currentVal) {
+                        ddl.val(currentVal);
+                    }
+                    
+                    // Refresh Select2
+                    ddl.trigger('change');
+                }
+                showBalanceInfo();
+            } catch (error) {
+                console.error('Error fetching balances:', error);
+            }
+        }
+
+        async function editLeave(id) {
+            try {
+                const response = await fetch(`/HumanResource/GetApplyLeaveByID/${id}`);
+                const res = await response.json();
+                if (res.success) {
+                    const data = res.data;
+                    $('#modalTitle').text('Edit Leave Application');
+                    $('#hdnApplyLeaveID').val(data.applyLeaveID);
+                    $('#ddlStaff').val(data.staffID).trigger('change');
+                    $('#ddlLeaveType').val(data.leaveTypeID).trigger('change');
+                    $('#txtFromDate').val(data.fromDate.split('T')[0]);
+                    $('#txtToDate').val(data.toDate.split('T')[0]);
+                    $('#txtReason').val(data.reason);
+                    $('#ddlStatus').val(data.status);
+                    $('#txtNote').val(data.note);
+                    $('#leaveModal').modal('show');
+                } else {
+                    alert(res.message);
+                }
+            } catch (error) {
+                console.error('Error fetching leave details:', error);
+            }
+        }
+
+        async function saveLeave() {
+            clearError();
+            const form = document.getElementById('leaveForm');
+            form.classList.add('was-validated');
+
+            if (!form.checkValidity()) {
+                // Select2 validation check (Special case)
+                if (!$('#ddlStaff').val()) {
+                    $('#ddlStaff').next('.select2-container').addClass('is-invalid');
+                }
+                return;
+            }
+
+            // Remove invalid class from select2 if valid
+            $('.select2-container').removeClass('is-invalid');
+
+            // Calculate requested days
+            const fromDateStr = $('#txtFromDate').val();
+            const toDateStr = $('#txtToDate').val();
+            
+            if (!fromDateStr || !toDateStr) return;
+
+            const fromDate = new Date(fromDateStr);
+            const toDate = new Date(toDateStr);
+            
+            if (toDate < fromDate) {
+                showError('To Date cannot be earlier than From Date.');
+                return;
+            }
+
+            const diffTime = Math.abs(toDate - fromDate);
+            const requestedDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            // Get selected balance
+            const selectedOpt = $('#ddlLeaveType option:selected');
+            const balance = parseFloat(selectedOpt.data('balance')) || 0;
+
+            if (requestedDays > balance) {
+                showError(`Insufficient Balance! You are requesting ${requestedDays} days, but only ${balance} days are remaining for this leave type.`);
+                return;
+            }
+
+            const fileEl = document.getElementById('fileAttachment');
+            const file = fileEl.files[0];
+            let attachmentBase64 = null;
+            let docType = null;
+            let docName = null;
+
+            if (file) {
+                docType = file.type;
+                docName = file.name;
+                attachmentBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const data = {
+                applyLeaveID: parseInt($('#hdnApplyLeaveID').val()),
+                staffID: parseInt($('#ddlStaff').val()),
+                leaveTypeID: parseInt($('#ddlLeaveType').val()),
+                fromDate: $('#txtFromDate').val(),
+                toDate: $('#txtToDate').val(),
+                reason: $('#txtReason').val(),
+                status: $('#ddlStatus').val(),
+                attachmentBase64: attachmentBase64,
+                attachmentDocType: docType,
+                attachmentDocName: docName
+            };
+
+            try {
+                const response = await fetch('/HumanResource/UpsertApplyLeave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            } catch (error) {
+                console.error('Error saving leave:', error);
+            }
+        }
+
+        async function deleteLeave(id) {
+            if (!confirm('Are you sure you want to delete this leave application?')) return;
+            try {
+                const response = await fetch(`/HumanResource/DeleteApplyLeave/${id}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    location.reload();
+                } else {
+                    alert(res.message);
+                }
+            } catch (error) {
+                console.error('Error deleting leave:', error);
+            }
+        }
+    </script>
+}

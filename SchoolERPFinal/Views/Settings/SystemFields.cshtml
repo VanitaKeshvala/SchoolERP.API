@@ -1,0 +1,232 @@
+@model List<FieldModel>
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings/SystemFields", "Edit");
+    var canPrint = PermHelper.HasPermissionByUrl("/Settings/SystemFields", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Settings/SystemFields", "Export");
+}
+
+<style>
+    .dt-buttons { display: none !important; }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">System Fields</h6>        
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('copy')"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('csv')"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('excel')"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport('pdf')"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2 p-3">    
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                    <i class="fas fa-search search-icon-input"></i>
+                    <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search fields..." />
+                </div>
+                <ul class="nav nav-pills nav-pills-sm gap-2" id="moduleTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#student-fields" type="button">Student</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#staff-fields" type="button">Staff</button>
+                    </li>
+                </ul>
+            </div>
+           
+        </div>
+    </div>
+    <div class="col-md-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="tab-content" id="pills-tabContent">
+                    <!-- Student Fields -->
+                    <div class="tab-pane fade show active" id="student-fields" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table" id="studentFieldsTable">
+                                <thead>
+                                    <tr>
+                                        <th class="">Field Name</th>
+                                        <th class="text-end pe-4" style="width: 150px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var studentFields = Model.Where(f => f.BelongsTo == "students" || f.BelongsTo == "Student").OrderBy(f => f.DisplayOrder).ToList(); }
+                                    @if (studentFields.Any())
+                                    {
+                                        foreach (var field in studentFields)
+                                        {
+                                            <tr>
+                                                <td>@field.FieldName</td>
+                                                <td class="text-end pe-4">
+                                                    @if (canEdit)
+                                                    {
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" @(field.IsActive ? "checked" : "") 
+                                                                   onclick="toggleStatus(@field.FieldId, this.checked)">
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-light text-dark">@(field.IsActive ? "Enabled" : "Disabled")</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="2" class="text-center py-4 text-muted">No system fields found for this module.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Staff Fields -->
+                    <div class="tab-pane fade" id="staff-fields" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table" id="staffFieldsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Field Name</th>
+                                        <th class="text-end pe-4" style="width: 150px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var staffFields = Model.Where(f => f.BelongsTo == "staff" || f.BelongsTo == "Staff").OrderBy(f => f.DisplayOrder).ToList(); }
+                                    @if (staffFields.Any())
+                                    {
+                                        foreach (var field in staffFields)
+                                        {
+                                            <tr>
+                                                <td>@field.FieldName</td>
+                                                <td class="text-end pe-4">
+                                                    @if (canEdit)
+                                                    {
+                                                        <div class="form-check form-switch d-inline-block">
+                                                            <input class="form-check-input" type="checkbox" @(field.IsActive ? "checked" : "") 
+                                                                   onclick="toggleStatus(@field.FieldId, this.checked)">
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-light text-dark">@(field.IsActive ? "Enabled" : "Disabled")</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr>
+                                            <td colspan="2" class="text-center py-4 text-muted">No system fields found for this module.</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+    function triggerExport(type) {
+        let activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) return;
+        let tableId = activeTab.id === 'student-fields' ? '#studentFieldsTable' : '#staffFieldsTable';
+        if ($.fn.DataTable.isDataTable(tableId)) {
+            const table = $(tableId).DataTable();
+            if (type === 'copy') table.button('.buttons-copy').trigger();
+            else if (type === 'csv') table.button('.buttons-csv').trigger();
+            else if (type === 'excel') table.button('.buttons-excel').trigger();
+            else if (type === 'pdf') table.button('.buttons-pdf').trigger();
+            else if (type === 'print') table.button('.buttons-print').trigger();
+        }
+    }
+
+    $(document).ready(function () {
+        $('#studentFieldsTable, #staffFieldsTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [0] } },
+                { extend: 'csv', exportOptions: { columns: [0] } },
+                { extend: 'excel', exportOptions: { columns: [0] } },
+                { extend: 'pdf', exportOptions: { columns: [0] } },
+                { extend: 'print', exportOptions: { columns: [0] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false
+        });
+    });
+
+
+        $(document).ready(function() {
+            // Real-time Search
+            $('#txtSearchInput').on('keyup', function() {
+                var q = $(this).val().toLowerCase();
+                $('table tbody tr').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+            });
+        });
+
+        async function toggleStatus(id, isActive) {
+            try {
+                const response = await fetch('/Settings/ToggleFieldStatus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, isActive })
+                });
+                const result = await response.json();
+                if (!result.success) {
+                    alert(result.message);
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error toggling status:', error);
+            }
+        }
+    </script>
+}

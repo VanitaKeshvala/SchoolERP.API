@@ -1,0 +1,912 @@
+@model StudentDetailsViewModel
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = Model.BasicInfo.FullName + " - Profile";
+}
+@{
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    
+    var canEdit = PermHelper.HasPermissionByUrl("/StudentInformation/Details", "Edit");
+    var canAddTimeline = PermHelper.HasPermissionByUrl("/StudentInformation/Details", "Add");
+    var canEditTimeline = PermHelper.HasPermissionByUrl("/StudentInformation/Details", "Edit");
+    var canDeleteTimeline = PermHelper.HasPermissionByUrl("/StudentInformation/Details", "Delete");
+}
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Student Profile</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        
+        @if (canEdit)
+        {
+            <a href="/StudentInformation/StudentAdmission?id=@Model.BasicInfo.StudentID" class="btn btn-info d-inline-flex align-items-center">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </a>
+            @if (Model.BasicInfo.IsActive)
+            {
+                <button class="btn btn-danger d-inline-flex align-items-center" onclick="openDisableModal()">
+                    <i class="ti ti-user-x me-1"></i>Disable
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-success d-inline-flex align-items-center" onclick="toggleStatus(true)">
+                    <i class="ti ti-user-check me-1"></i>Enable
+                </button>
+            }
+        }
+        <a href="#loginDetails" data-bs-toggle="modal" class="btn btn-teal d-inline-flex align-items-center"><i class="ti ti-key me-1"></i>Login Info</a>
+        <a href="/Fees/Collect?id=@Model.BasicInfo.StudentID" class="btn btn-pink d-inline-flex align-items-center"><i class="ti ti-currency-rupee me-1"></i> Collect Fees</a>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+    <div class="col-xl-4">
+        <div class="card shadow-tbl-outer position-sticky" style="top: 70px;">
+            <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
+                <div class="me-3 doctor-profile-img" style="width: 85px;">
+                    @if (Model.BasicInfo.StudentPhoto != null)
+                    {
+                        <img src="data:@(Model.BasicInfo.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.StudentPhoto)" class="rounded w-100" alt="Student Photo">
+                    }
+                    else
+                    {
+                        <img src="/assets/img/profiles/avatar-01.jpg" class="rounded w-100" alt="Default Photo">
+                    }
+                </div>
+                <div class="flex-fill">
+                    <div class="d-flex align-items-center  mb-1">
+                        <h6 class="mb-2 fw-semibold">
+                            <a href="#">@Model.BasicInfo.FullName</a>
+                            @if (!Model.BasicInfo.IsActive)
+                            {
+                                <span class="badge bg-danger ms-2">Disabled</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success ms-2">Active</span>
+                            }
+                        </h6>
+                    </div>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Admission No </span> : @(Model.BasicInfo.AdmissionNo ?? "-")
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Roll Number</span> : @(Model.BasicInfo.RollNo ?? "-")
+                    </p>
+                </div>
+            </div>
+            <!-- end card body -->
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Class :</span> @(Model.BasicInfo.ClassName ?? "-")</li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Section :</span> @(Model.BasicInfo.SectionName ?? "-")</li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">RTE :</span> @(Model.BasicInfo.Caste == "RTE" ? "Yes" : "No")</li> @* Note: RTE logic might vary *@
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Gender :</span> @(Model.BasicInfo.Gender ?? "-")</li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Category :</span> @(Model.BasicInfo.CategoryName ?? "-")</li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">House :</span> @(Model.BasicInfo.HouseName ?? "-")</li>
+            </ul>
+        </div>
+        <!-- end card -->
+    </div>
+    <div class="col-xl-8 ps-md-0">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header">
+                <ul class="nav nav-pills gap-2 mb-3">
+                    <li class="nav-item"><a href="#profile" data-bs-toggle="pill" class="nav-link active">Profile</a></li>
+                    <li class="nav-item"><a href="#fees" data-bs-toggle="pill" class="nav-link">Fees</a></li>
+                    <li class="nav-item"><a href="#exam" data-bs-toggle="pill" class="nav-link">Exam</a></li>
+                    <li class="nav-item"><a href="#attendance" data-bs-toggle="pill" class="nav-link">Attendance</a></li>
+                    <li class="nav-item"><a href="#docs" data-bs-toggle="pill" class="nav-link">Documents</a></li>
+                    <li class="nav-item"><a href="#timeline" data-bs-toggle="pill" class="nav-link">Timeline</a></li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane active" id="profile">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="shadow rounded-2 overflow-hidden">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Admission Date :</span> @(Model.BasicInfo.AdmissionDate?.ToString("dd MMM yyyy") ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Date Of Birth :</span> @(Model.BasicInfo.DOB?.ToString("dd MMM yyyy") ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Category :</span> @(Model.BasicInfo.CategoryName ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Mobile Number :</span> @(Model.BasicInfo.MobileNo ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Caste :</span> @(Model.BasicInfo.Caste ?? "-")</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="shadow rounded-2 overflow-hidden">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Religion :</span> @(Model.BasicInfo.Religion ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Email :</span> @(Model.BasicInfo.Email ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Scholar Num :</span> -</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Enrollment :</span> -</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Note :</span> -</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <div class="shadow rounded-2 overflow-hidden">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><b>Address Details</b></li>
+                                        @foreach (var addr in Model.Addresses)
+                                        {
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                <span class="text-dark">@addr.AddressType Address :</span> 
+                                                <span>@addr.AddressDetails</span>
+                                            </li>
+                                        }
+                                        @if (!Model.Addresses.Any())
+                                        {
+                                            <li class="list-group-item text-muted">No address details found.</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="shadow rounded-2 overflow-hidden">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><b>Parent Guardian Detail</b></li>
+                                        <li class="list-group-item list-group-item-action">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <span class="text-dark">Father Name :</span> @(Model.BasicInfo.FatherName ?? "-")<br />
+                                                    <span class="text-dark">Phone :</span> @(Model.BasicInfo.FatherPhone ?? "-")<br />
+                                                    <span class="text-dark">Occupation :</span> @(Model.BasicInfo.FatherOccupation ?? "-")
+                                                </div>
+                                                @if (Model.BasicInfo.FatherPhoto != null)
+                                                {
+                                                    <img src="data:@(Model.BasicInfo.FatherPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.FatherPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Father" />
+                                                }
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item list-group-item-action">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <span class="text-dark">Mother Name :</span> @(Model.BasicInfo.MotherName ?? "-")<br />
+                                                    <span class="text-dark">Phone :</span> @(Model.BasicInfo.MotherPhone ?? "-")<br />
+                                                    <span class="text-dark">Occupation :</span> @(Model.BasicInfo.MotherOccupation ?? "-")
+                                                </div>
+                                                @if (Model.BasicInfo.MotherPhoto != null)
+                                                {
+                                                    <img src="data:@(Model.BasicInfo.MotherPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.MotherPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Mother" />
+                                                }
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item list-group-item-action">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div>
+                                                    <span class="text-dark">Guardian Name :</span> @(Model.BasicInfo.GuardianName ?? "-")<br />
+                                                    <span class="text-dark">Relation :</span> @(Model.BasicInfo.GuardianRelation ?? "-")<br />
+                                                    <span class="text-dark">Phone :</span> @(Model.BasicInfo.GuardianPhone ?? "-")<br />
+                                                    <span class="text-dark">Occupation :</span> @(Model.BasicInfo.GuardianOccupation ?? "-")
+                                                </div>
+                                                @if (Model.BasicInfo.GuardianPhoto != null)
+                                                {
+                                                    <img src="data:@(Model.BasicInfo.GuardianPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.GuardianPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Guardian" />
+                                                }
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="shadow rounded-2 overflow-hidden">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item"><b>Miscellaneous Details</b></li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Blood Group :</span> @(Model.BasicInfo.BloodGroup ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">House :</span> @(Model.BasicInfo.HouseName ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Height :</span> @(Model.BasicInfo.Height ?? "-")</li>
+                                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Weight :</span> @(Model.BasicInfo.Weight ?? "-")</li>
+                                        
+                                        @if (Model.Transport != null)
+                                        {
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Route :</span> @Model.Transport.RouteName</li>
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Pickup Point :</span> @Model.Transport.PickupPointName</li>
+                                        }
+
+                                        @if (Model.Hostel != null)
+                                        {
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Hostel :</span> @Model.Hostel.HostelName</li>
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">Room :</span> @Model.Hostel.RoomTitle</li>
+                                        }
+
+                                        @foreach (var custom in Model.CustomFields)
+                                        {
+                                            <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"><span class="text-dark">@custom.FieldName :</span> @custom.FieldValue</li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="fees">
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card shadow-tbl">
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-nowrap mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Fees Group</th>
+                                                        <th>Fees Code</th>
+                                                        <th>Due Date</th>
+                                                        <th>Status</th>
+                                                        <th>Amount (â‚¹)</th>
+                                                        <th>Payment ID</th>
+                                                        <th>Mode</th>
+                                                        <th>Date</th>
+                                                        <th>Discount </th>
+                                                        <th>Fine</th>
+                                                        <th>Paid</th>
+                                                        <th>Balance</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Class 1st (1 April 2025)</td>
+                                                        <td>01</td>
+                                                        <td>01-10-2024</td>
+                                                        <td>Paid</td>
+                                                        <td>500.00 + 0.00 </td>
+                                                        <td>-</td>
+                                                        <td>-</td>
+                                                        <td>-</td>
+                                                        <td>0.00</td>
+                                                        <td>0.00</td>
+                                                        <td>500.00</td>
+                                                        <td>-</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                    </div>
+                                    <!-- end card-body -->
+                                </div>
+                                <!-- end card -->
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="exam">
+                        <div class="row">
+                            <div class="col-xl-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        No Data
+                                    </div>
+                                    <!-- end card-body -->
+                                </div>
+                                <!-- end card -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="attendance">
+                        <div class="row">
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Present</p>
+                                    <h5 class="fw-bold mb-0 text-primary" id="att_total_present">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Late</p>
+                                    <h5 class="fw-bold mb-0 text-warning" id="att_total_late">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Absent</p>
+                                    <h5 class="fw-bold mb-0 text-danger" id="att_total_absent">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Half Day</p>
+                                    <h5 class="fw-bold mb-0 text-info" id="att_total_halfday">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Holiday</p>
+                                    <h5 class="fw-bold mb-0 text-success" id="att_total_holiday">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-4">
+                                <div class="card shadow-sm flex-fill w-100 mb-3 p-3 text-center">
+                                    <p class="mb-1 text-muted small">Total Leave</p>
+                                    <h5 class="fw-bold mb-0 text-secondary" id="att_total_leave">0</h5>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-12">
+                                <div class="card shadow-none border">
+                                    <div class="card-header bg-light py-2">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <label class="mb-0 fw-bold small">Year:</label>
+                                                <select id="att_year_select" class="form-select form-select-sm" style="width: 100px;" onchange="fetchStudentAttendance()">
+                                                    @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 5; y--)
+                                                    {
+                                                        <option value="@y">@y</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="d-flex align-items-center flex-wrap gap-1 flex-shrink-0">
+                                                <span class="badge bg-primary">P</span>
+                                                <span class="badge bg-warning text-dark">L</span>
+                                                <span class="badge bg-danger">A</span>
+                                                <span class="badge bg-info text-dark">F</span>
+                                                <span class="badge bg-success">H</span>
+                                                <span class="badge bg-secondary">V</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm mb-0 text-center" id="att_history_table">
+                                                <thead>
+                                                    <tr class="bg-light">
+                                                        <th style="width: 50px;">Day</th>
+                                                        <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
+                                                        <th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="att_history_body">
+                                                    <!-- Dynamic Content -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="docs">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var doc in Model.Documents)
+                                        {
+                                            <tr>
+                                                <td>@doc.DocumentTitle</td>
+                                                <td>
+                                                    @if (doc.DocumentContent != null)
+                                                    {
+                                                        string fileName = !string.IsNullOrEmpty(doc.DocumentPath) ? doc.DocumentPath : (doc.DocumentTitle ?? "Document");
+                                                        <a href="data:application/octet-stream;base64,@Convert.ToBase64String(doc.DocumentContent)" download="@fileName" class="btn btn-sm btn-primary">
+                                                            <i class="ti ti-download"></i> Download
+                                                        </a>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(doc.DocumentPath))
+                                                    {
+                                                        <a href="@doc.DocumentPath" target="_blank" class="btn btn-sm btn-info">
+                                                            <i class="ti ti-eye"></i> View
+                                                        </a>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                        @if (!Model.Documents.Any())
+                                        {
+                                            <tr>
+                                                <td colspan="2" class="text-danger text-center">No documents uploaded.</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="timeline">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <h5 class="fw-bold mb-0">Student Timeline</h5>
+                                    <div class="d-flex align-items-center gap-1">
+                                        @if (canAddTimeline)
+                                        {
+                                            <button class="btn btn-primary btn-sm d-inline-flex align-items-center" onclick="showAddTimelineModal()">
+                                                <i class="ti ti-plus me-1"></i> Add
+                                            </button>
+                                        }
+                                        @if (canEditTimeline)
+                                        {
+                                            <button id="btnEditTimeline" class="btn btn-warning btn-sm d-inline-flex align-items-center" onclick="handleEditTimeline()" disabled>
+                                                <i class="ti ti-edit me-1"></i> Edit
+                                            </button>
+                                        }
+                                        @if (canDeleteTimeline)
+                                        {
+                                            <button id="btnDeleteTimeline" class="btn btn-danger btn-sm d-inline-flex align-items-center" onclick="handleDeleteTimeline()" disabled>
+                                                <i class="ti ti-trash me-1"></i> Delete
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                                <div id="timelineContainer">
+                                    <div class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end col -->
+</div>
+<!-- end row -->
+<!-----Add Timeline Modal------>
+<div class="modal fade" id="timelineModal" tabindex="-1" aria-labelledby="timelineModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold" id="timelineModalTitle">Add Timeline</h5>
+                <div>
+                    <button type="button" class="btn btn-success btn-sm" onclick="saveTimeline()">
+                        <i class="ti ti-device-floppy me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <form id="timelineForm" class="needs-validation" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" id="hdnTimelineID" value="0" />
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                            <input type="text" id="txtTimelineTitle" class="form-control" placeholder="Enter title" required />
+                            <div class="invalid-feedback">Please enter a title.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                            <input type="date" id="txtTimelineDate" class="form-control" required />
+                            <div class="invalid-feedback">Please select a date.</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea id="txtTimelineDescription" class="form-control" rows="3" placeholder="Enter description"></textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Attach Document</label>
+                            <input type="file" id="fileTimelineDoc" class="form-control" />
+                            <small class="text-muted">Max size 2MB (PDF, JPG, PNG)</small>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="chkTimelineVisible" checked />
+                                <label class="form-check-label fw-semibold" for="chkTimelineVisible">
+                                    Visible to this person
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="loginDetails">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title">@Model.BasicInfo.FullName - Login Info</h5>
+                <div>
+                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>User Type</th>
+                            <th>Username</th>
+                            <th>Password</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Parent</td>
+                            <td>@(Model.BasicInfo.ParentUsername ?? "N/A")</td>
+                            <td>@(Model.BasicInfo.ParentPassword ?? "********")</td>
+                        </tr>
+                        <tr>
+                            <td>Student</td>
+                            <td>@(Model.BasicInfo.StudentUsername ?? "N/A")</td>
+                            <td>@(Model.BasicInfo.StudentPassword ?? "********")</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Disable Student Modal -->
+<div class="modal fade" id="disableStudentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header d-flex justify-content-between align-items-center">
+                <h5 class="modal-title fw-bold">Disable Student</h5>
+                <div>
+                    <button type="button" class="btn btn-success btn-sm" onclick="toggleStatus(false)">
+                        <i class="ti ti-device-floppy me-1"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-dismiss="modal">
+                        <i class="ti ti-x me-1"></i> Close
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <form id="disableForm">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Disable Reason <span class="text-danger">*</span></label>
+                        <select id="ddlDisableReason" class="form-select" required>
+                            <option value="">Select Reason</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                        <input type="date" id="txtDisableDate" class="form-control" required value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Note</label>
+                        <textarea id="txtDisableNote" class="form-control" rows="3" placeholder="Enter optional note"></textarea>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedTimelineID = null;
+        let timelineData = [];
+
+        $(document).ready(function () {
+            // Fetch timeline data when tab is clicked
+            $(document).on('shown.bs.tab', 'a[href="#timeline"]', function (e) {
+                fetchStudentTimeline();
+            });
+
+            // Fetch attendance data when tab is clicked
+            $(document).on('shown.bs.tab', 'a[href="#attendance"]', function (e) {
+                fetchStudentAttendance();
+            });
+
+            if (window.location.hash === '#timeline') {
+                fetchStudentTimeline();
+            }
+            if (window.location.hash === '#attendance') {
+                fetchStudentAttendance();
+            }
+        });
+
+        function fetchStudentAttendance() {
+            const studentId = @Model.BasicInfo.StudentID;
+            const year = $('#att_year_select').val();
+            
+            console.log("Fetching attendance for Student ID:", studentId, "Year:", year);
+            
+            // Show loading state in body
+            $('#att_history_body').html('<tr><td colspan="13" class="text-center py-4"><span class="spinner-border spinner-border-sm"></span> Loading...</td></tr>');
+
+            fetch(`/StudentInformation/GetStudentAttendanceHistory/${studentId}/${year}`)
+                .then(r => r.json())
+                .then(res => {
+                    console.log("Attendance API Response:", res);
+                    if (res.success && res.data) {
+                        renderAttendanceHistory(res.data);
+                    } else {
+                        $('#att_history_body').html(`<tr><td colspan="13" class="text-center text-danger py-4">${res.message || 'No data found.'}</td></tr>`);
+                    }
+                })
+                .catch(err => {
+                    console.error("Attendance Fetch Error:", err);
+                    $('#att_history_body').html('<tr><td colspan="13" class="text-center text-danger py-4">Failed to load attendance. Check console for details.</td></tr>');
+                });
+        }
+
+        function renderAttendanceHistory(data) {
+            // Handle both camelCase and PascalCase
+            const summaries = data.summaries || data.Summaries || [];
+            const days = data.days || data.Days || [];
+
+            
+
+            // 1. Update Summaries
+            const summary = summaries.reduce((acc, curr) => {
+                acc.present += (curr.present || curr.Present || 0);
+                acc.late += (curr.late || curr.Late || 0);
+                acc.absent += (curr.absent || curr.Absent || 0);
+                acc.halfDay += (curr.halfDay || curr.HalfDay || 0);
+                acc.holiday += (curr.holiday || curr.Holiday || 0);
+                acc.leave += (curr.leave || curr.Leave || 0);
+                return acc;
+            }, { present: 0, late: 0, absent: 0, halfDay: 0, holiday: 0, leave: 0 });
+
+            $('#att_total_present').text(summary.present);
+            $('#att_total_late').text(summary.late);
+            $('#att_total_absent').text(summary.absent);
+            $('#att_total_halfday').text(summary.halfDay);
+            $('#att_total_holiday').text(summary.holiday);
+            $('#att_total_leave').text(summary.leave);
+
+            // 2. Render Calendar Table (Days 1-31)
+            let html = '';
+            const daysMap = {};
+            days.forEach(d => {
+                const dayNum = d.day || d.Day;
+                const monthNum = d.month || d.Month;
+                const statusStr = d.status || d.Status;
+                daysMap[`${dayNum}-${monthNum}`] = statusStr;
+            });
+
+            for (let day = 1; day <= 31; day++) {
+                html += `<tr><td class="bg-light fw-bold small">${day}</td>`;
+                for (let month = 1; month <= 12; month++) {
+                    const status = daysMap[`${day}-${month}`] || '';
+                    let badgeClass = '';
+                    switch (status) {
+                        case 'P': badgeClass = 'bg-primary'; break;
+                        case 'L': badgeClass = 'bg-warning text-dark'; break;
+                        case 'A': badgeClass = 'bg-danger'; break;
+                        case 'F': badgeClass = 'bg-info text-dark'; break;
+                        case 'H': badgeClass = 'bg-success'; break;
+                        case 'V': badgeClass = 'bg-secondary'; break;
+                        default: badgeClass = '';
+                    }
+                    html += `<td class="p-1">${status ? `<span class="badge ${badgeClass}" style="width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; font-size:9px; padding:0;">${status}</span>` : '<span class="text-muted opacity-25">-</span>'}</td>`;
+                }
+                html += '</tr>';
+            }
+            $('#att_history_body').html(html);
+        }
+
+        function fetchStudentTimeline() {
+            const studentId = @Model.BasicInfo.StudentID;
+            fetch(`/StudentInformation/GetStudentTimeline/${studentId}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        timelineData = res.data;
+                        renderStudentTimeline(res.data);
+                    } else {
+                        $('#timelineContainer').html(`<div class="text-center py-3 text-danger">${res.message}</div>`);
+                    }
+                });
+        }
+
+        function renderStudentTimeline(data) {
+            const container = $('#timelineContainer');
+            container.empty();
+            if (!data || data.length === 0) {
+                container.html('<div class="text-center py-5 text-muted">No timeline records found.</div>');
+                return;
+            }
+
+            let html = '<div class="timeline">';
+            data.forEach(item => {
+                
+                const date = new Date(item.timelineDate).toLocaleDateString();
+                const id = item.timelineID;
+                const hasDoc = item.hasDocument;
+                
+                const visibility = item.isVisibleToStudent 
+                    ? '<span class="badge bg-success-subtle text-success ms-2">Visible</span>' 
+                    : '<span class="badge bg-secondary-subtle text-secondary ms-2">Private</span>';
+
+                html += `
+                <div class="card mb-2 shadow-none border timeline-card" onclick="selectTimelineItem(${id}, this)" style="cursor: pointer;">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="timelineSelect" id="radTimeline_${id}" class="form-check-input me-3" onclick="event.stopPropagation(); selectTimelineItem(${id}, this.closest('.timeline-card'))">
+                                <div>
+                                    <h6 class="fw-bold mb-0">${item.title} ${visibility}</h6>
+                                    <p class="mb-0 text-muted small text-truncate" style="max-width: 400px;">${item.description || 'No description'}</p>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-light text-dark d-block mb-1">${date}</span>
+                                ${hasDoc ? `
+                                <a href="/StudentInformation/DownloadTimelineDoc/${id}" class="text-primary small" onclick="event.stopPropagation()">
+                                    <i class="ti ti-download"></i> Doc
+                                </a>` : '<span class="text-muted small italic">No Doc</span>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            container.html(html);
+            
+            // Reset selection
+            selectedTimelineID = null;
+            $('#btnEditTimeline, #btnDeleteTimeline').prop('disabled', true);
+        }
+
+        function selectTimelineItem(id, el) {
+            selectedTimelineID = id;
+            $('.timeline-card').removeClass('border-primary shadow-sm bg-primary-subtle bg-opacity-10').addClass('border');
+            $(el).removeClass('border').addClass('border-primary shadow-sm bg-primary-subtle bg-opacity-10');
+            $(el).find('input[type="radio"]').prop('checked', true);
+            $('#btnEditTimeline, #btnDeleteTimeline').prop('disabled', false);
+        }
+
+        function showAddTimelineModal() {
+            selectedTimelineID = null;
+            $('#timelineModalTitle').text('Add Timeline');
+            $('#hdnTimelineID').val(0);
+            $('#timelineForm')[0].reset();
+            $('#txtTimelineDate').val(new Date().toISOString().split('T')[0]);
+            $('#timelineModal').modal('show');
+        }
+
+        function handleEditTimeline() {
+            if (!selectedTimelineID) return;
+            const item = timelineData.find(i => i.timelineID === selectedTimelineID);
+            if (!item) return;
+
+            $('#timelineModalTitle').text('Edit Timeline');
+            $('#hdnTimelineID').val(item.timelineID);
+            $('#txtTimelineTitle').val(item.title);
+            $('#txtTimelineDate').val(item.timelineDate.split('T')[0]);
+            $('#txtTimelineDescription').val(item.description);
+            $('#chkTimelineVisible').prop('checked', item.isVisibleToStudent);
+            $('#timelineModal').modal('show');
+        }
+
+        function saveTimeline() {
+            const form = document.getElementById('timelineForm');
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+
+            const fileInput = document.getElementById('fileTimelineDoc');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result.split(',')[1];
+                    submitTimeline(base64, file.name, file.type);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                submitTimeline(null, null, null);
+            }
+        }
+
+        function submitTimeline(base64, fileName, fileType) {
+            const data = {
+                TimelineID: parseInt($('#hdnTimelineID').val()),
+                StudentID: @Model.BasicInfo.StudentID,
+                Title: $('#txtTimelineTitle').val(),
+                TimelineDate: $('#txtTimelineDate').val(),
+                Description: $('#txtTimelineDescription').val(),
+                IsVisibleToStudent: $('#chkTimelineVisible').is(':checked'),
+                DocumentBase64: base64,
+                DocumentName: fileName,
+                DocumentType: fileType
+            };
+
+            fetch('/StudentInformation/UpsertTimeline', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    $('#timelineModal').modal('hide');
+                    fetchStudentTimeline();
+                    toastr.success(res.message);
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+
+        function handleDeleteTimeline() {
+            if (!selectedTimelineID || !confirm('Are you sure you want to delete this timeline entry?')) return;
+
+            fetch(`/StudentInformation/DeleteTimeline/${selectedTimelineID}`, { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        fetchStudentTimeline();
+                        showToast(res.message, 'success');
+                    } else {
+                        alert(res.message);
+                    }
+                });
+        }
+
+        function openDisableModal() {
+            // Fetch reasons if not loaded or just load every time for freshness
+            fetch('/StudentInformation/GetAllDisableReasons')
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        const ddl = $('#ddlDisableReason');
+                        ddl.empty().append('<option value="">Select Reason</option>');
+                        res.data.forEach(item => {
+                            ddl.append(`<option value="${item.disableReasonID}">${item.disableReasonTitle}</option>`);
+                        });
+                        $('#disableStudentModal').modal('show');
+                    }
+                });
+        }
+
+        function toggleStatus(isActive) {
+            const data = {
+                studentID: @Model.BasicInfo.StudentID,
+                isActive: isActive,
+                disableReasonID: isActive ? null : $('#ddlDisableReason').val(),
+                disableDate: isActive ? null : $('#txtDisableDate').val(),
+                disableNote: isActive ? null : $('#txtDisableNote').val()
+            };
+
+            if (!isActive && !data.disableReasonID) {
+                alert('Please select a reason for disabling.');
+                return;
+            }
+
+            if (!isActive && !data.disableDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            fetch('/StudentInformation/ToggleStatus', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert(res.message);
+                }
+            });
+        }
+    </script>
+}
+

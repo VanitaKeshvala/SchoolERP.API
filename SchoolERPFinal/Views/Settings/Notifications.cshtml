@@ -1,0 +1,118 @@
+@*
+    ======================================================================
+    VIEW: Settings / Notifications.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Notification Settings</h6>
+    </div>
+    <button class="btn btn-info shadow-sm" disabled>
+        <i class="ti ti-pencil me-1"></i>Edit
+    </button>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Event</th>
+                                <th>Destination</th>
+                                <th>Recipient</th>
+                                <th>Template ID</th>
+                                <th>Sample Message</th>                                
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4 text-center">
+                                    <input type="radio" name="selectedMenu" class="form-check-input" value="">
+                                </td>
+                                <td>Student Admission</td>
+                                <td>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="dest1Email" checked="">
+                                        <label class="form-check-label" for="dest1Email">Email</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="dest1Sms">
+                                        <label class="form-check-label" for="dest1Sms">SMS</label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="recip1Student" checked="">
+                                        <label class="form-check-label" for="recip1Student">Student</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="recip1Guardian" checked="">
+                                        <label class="form-check-label" for="recip1Guardian">Guardian</label>
+                                    </div>
+                                </td>
+                                <td>-</td>
+                                <td>
+                                    <div class="small" style="width: 320px;">
+                                        Dear {{student_name}} your admission is confirmed in Class: {{class}} Section: {{section}} for Session: {{current_session_name}}. For more details contact System Admin.
+                                    </div>
+                                </td>
+                                
+                            </tr>
+                            <tr>
+                                <td class="ps-4 text-center">
+                                    <input type="radio" name="selectedMenu" class="form-check-input" value="">
+                                </td>
+                                <td>Fee Payment</td>
+                                <td>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="dest2Email" checked="">
+                                        <label class="form-check-label" for="dest2Email">Email</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="dest2Sms" checked="">
+                                        <label class="form-check-label" for="dest2Sms">SMS</label>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="recip2Student" checked="">
+                                        <label class="form-check-label" for="recip2Student">Student</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input type="checkbox" class="form-check-input" id="recip2Guardian" checked="">
+                                        <label class="form-check-label" for="recip2Guardian">Guardian</label>
+                                    </div>
+                                </td>
+                                <td>-</td>
+                                <td>
+                                    <div class="small" style="width: 320px;">
+                                        Dear {{student_name}}, your fee payment of {{amount}} has been received. Receipt No: {{receipt_no}}. Thank you.
+                                    </div>
+                                </td>
+                               @*  <td class="text-center">
+                                    <div class="dropdown dropstart d-inline-block">
+                                        <a class="drop-arrow-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="ti ti-dots-vertical fs-18 text-muted"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li><a class="dropdown-item" href="#">Edit</a></li>
+                                        </ul>
+                                    </div>
+                                </td> *@
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

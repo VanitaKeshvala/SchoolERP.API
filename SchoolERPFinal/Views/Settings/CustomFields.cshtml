@@ -1,0 +1,411 @@
+@model List<SchoolERP.Net.Models.FieldModel>
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    // Permission variables for JS and buttons
+    var canAdd = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Delete");
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Custom Fields</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+       
+        @if (canAdd)
+        {
+            <button type="button" class="btn btn-primary shadow-sm" id="btnAdd" onclick="openModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }
+        @if (canEdit)
+        {
+            <button type="button" class="btn btn-info shadow-sm" id="btnEdit" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button type="button" class="btn btn-danger shadow-sm" id="btnDelete" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row">
+
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2 p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                    <i class="fas fa-search search-icon-input"></i>
+                    <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search fields..." />
+                </div>                
+            </div>
+
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="tblCustomFields" class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Order</th>
+                                <th>Module</th>
+                                <th>Field Name</th>
+                                <th>Type</th>
+                                <th>Grid</th>
+                                <th>Required</th>
+                                <th>On Table</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                foreach (var field in Model)
+                                {
+                                    <tr onclick="selectItem(@field.FieldId, this)" style="cursor: pointer;">
+                                        <td>
+                                            <input type="checkbox" name="selectedField"
+                                                   class="form-check-input student-checkbox"
+                                                   value="@field.FieldId">
+                                        </td>
+                                        <td>@field.DisplayOrder</td>
+                                        <td><span class="badge bg-light text-dark">@field.BelongsTo</span></td>
+                                        <td>@field.FieldName</td>
+                                        <td><span class="badge bg-light text-dark">@field.FieldType</span></td>
+                                        <td>col-md-@field.GridColumn</td>
+                                        <td>
+                                            @if (field.IsRequired)
+                                            {
+                                                <span class="badge bg-danger">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (field.OnTable)
+                                            {
+                                                <span class="badge bg-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                <input class="form-check-input" type="checkbox" @(field.IsActive ? "checked" : "") onclick="toggleStatus(@field.FieldId, this.checked)">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-danger">No custom fields found.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="fieldModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add Custom Field</h5>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    @if (canAdd || canEdit)
+                    {
+                        <button type="button" class="btn btn-sm btn-success shadow-sm px-3" onclick="saveField()">
+                            <i class="ti ti-cloud me-1"></i>Save
+                        </button>
+                    }
+                    <button class="btn-out-close" data-bs-dismiss="modal"><i class="ti ti-x"></i> Close</button>
+                </div>
+            </div>
+            <div class="modal-body p-4">
+                <form id="fieldForm">
+                    <input type="hidden" id="FieldId" value="0" />
+                    <input type="hidden" id="IsSystemField" value="false" />
+
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Field Belongs To <small class="text-danger">*</small></label>
+                            <select id="BelongsTo" class="form-select" required>
+                                <option value="">Select</option>
+                                <option value="students">Student</option>
+                                <option value="staff">Staff</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label fw-semibold">Field Type <small class="text-danger">*</small></label>
+                            <select id="FieldType" class="form-select" required onchange="handleTypeChange()">
+                                <option value="">Select</option>
+                                <option value="input">Input</option>
+                                <option value="number">Number</option>
+                                <option value="textarea">Textarea</option>
+                                <option value="select">Dropdown</option>
+                                <option value="multiselect">Multi Select</option>
+                                <option value="checkbox">Checkbox</option>
+                                <option value="date_picker">Date Picker</option>
+                                <option value="date_picker_time">Datetime Picker</option>
+                                <option value="colorpicker">Color Picker</option>
+                                <option value="link">Hyperlink</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Field Name <small class="text-danger">*</small></label>
+                            <input type="text" id="FieldName" class="form-control" placeholder="Enter label name" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Grid (Bootstrap Column eg. 6) - Max is 12</label>
+                            <div class="input-group">
+                                <span class="input-group-text">col-md-</span>
+                                <input type="number" id="GridColumn" class="form-control" value="12" min="1" max="12" />
+                            </div>
+                        </div>
+                        <div class="col-12 d-none" id="divValues">
+                            <label class="form-label fw-semibold">Field Values (Separate By Comma)</label>
+                            <textarea id="FieldValues" class="form-control" rows="3" placeholder="Option1, Option2, Option3"></textarea>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Validation</label>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="IsRequired">
+                                <label class="form-check-label" for="IsRequired">Required</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Visibility</label>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="OnTable">
+                                <label class="form-check-label" for="OnTable">On Table</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Display Order</label>
+                            <input type="number" id="DisplayOrder" class="form-control" value="0" />
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="IsActive" checked>
+                                <label class="form-check-label" for="IsActive">Is Active?</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Real-time Search
+            $('#txtSearchInput').on('keyup', function() {
+                var q = $(this).val().toLowerCase();
+                $('#tblCustomFields tbody tr').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+            });
+        });
+
+        let selectedFieldId = 0;
+
+        function selectItem(id, row) {
+            selectedFieldId = id;
+            
+            // Highlight row
+            document.querySelectorAll('#tblCustomFields tbody tr').forEach(tr => tr.classList.remove('table-activee'));
+            row.classList.add('table-activee');
+            
+            // Check radio
+            //row.querySelector('input[type="radio"]').checked = true;
+            
+            // Enable buttons
+            $('#btnEdit').prop('disabled', false);
+            $('#btnDelete').prop('disabled', false);
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function openModal() {
+            $('#modalTitle').text('Add Custom Field');
+            $('#fieldForm')[0].reset();
+            $('#FieldId').val(0);
+            $('#GridColumn').val(12);
+            $('#divValues').addClass('d-none');
+            $('#fieldModal').modal('show');
+        }
+
+        function handleTypeChange() {
+            const type = $('#FieldType').val();
+            if (type === 'select' || type === 'multiselect' || type === 'checkbox') {
+                $('#divValues').removeClass('d-none');
+            } else {
+                $('#divValues').addClass('d-none');
+            }
+        }
+
+        async function editSelected() {
+            if (selectedFieldId === 0) return;
+            
+            try {
+                const response = await fetch(`/Settings/GetFieldByID/${selectedFieldId}`);
+                const result = await response.json();
+                if (result.success) {
+                    const data = result.data;
+                    $('#FieldId').val(data.fieldId);
+                    $('#BelongsTo').val(data.belongsTo);
+                    $('#FieldName').val(data.fieldName);
+                    $('#FieldType').val(data.fieldType);
+                    $('#FieldValues').val(data.fieldValues);
+                    $('#IsRequired').prop('checked', data.isRequired);
+                    $('#OnTable').prop('checked', data.onTable);
+                    $('#IsActive').prop('checked', data.isActive);
+                    $('#DisplayOrder').val(data.displayOrder);
+                    $('#GridColumn').val(data.gridColumn);
+                    
+                    $('#modalTitle').text('Edit Custom Field');
+                    handleTypeChange();
+                    $('#fieldModal').modal('show');
+                }
+            } catch (error) {
+                console.error('Error fetching field details:', error);
+            }
+        }
+
+        async function deleteSelected() {
+            if (selectedFieldId === 0) return;
+            
+
+            let selectedIds = [];
+           $('.student-checkbox:checked').each(function () {
+                    selectedIds.push(parseInt($(this).val()));
+                });
+           if (selectedIds.length === 0) {
+                    alert("Please select at least one custom fields.");
+                    return;
+                }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You are about to delete this custom fields record. This action cannot be undone!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                customClass: {
+                    confirmButton: 'btn btn-danger me-2',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                         url: '/Settings/DeleteField',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(selectedIds),
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Deleted!', 'Custom fields record has been deleted.', 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Error!', res.message || 'Failed to delete custom fields.', 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        async function saveField() {
+            const data = {
+                fieldId: parseInt($('#FieldId').val()),
+                belongsTo: $('#BelongsTo').val(),
+                fieldName: $('#FieldName').val(),
+                fieldType: $('#FieldType').val(),
+                fieldValues: $('#FieldValues').val(),
+                isSystemField: false,
+                isRequired: $('#IsRequired').is(':checked'),
+                onTable: $('#OnTable').is(':checked'),
+                isActive: $('#IsActive').is(':checked'),
+                displayOrder: parseInt($('#DisplayOrder').val() || 0),
+                gridColumn: parseInt($('#GridColumn').val() || 12)
+            };
+
+            if (!data.belongsTo || !data.fieldName || !data.fieldType) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/Settings/UpsertField', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert(result.message);
+                }
+            } catch (error) {
+                console.error('Error saving field:', error);
+            }
+        }
+
+        async function toggleStatus(id, isActive) {
+            try {
+                await fetch('/Settings/ToggleFieldStatus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, isActive })
+                });
+            } catch (error) {
+                console.error('Error toggling status:', error);
+            }
+        }
+    </script>
+}

@@ -1,0 +1,278 @@
+@model HRPayrollGenerationViewModel
+@{
+    ViewData["Title"] = "Generate Payroll";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Generate Payroll</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <button onclick="savePayroll()" class="btn btn-success d-inline-flex align-items-center"><i class="ti ti-cloud me-1"></i>Save</button>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
+                <div class="me-3 doctor-profile-img">
+                    <a href="#"><img src="/assets/img/profiles/avatar-01.jpg" class="rounded" alt="" onerror="this.src='/assets/img/profiles/avatar-01.jpg'" /></a>
+                </div>
+                <div class="flex-fill">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <h6 class="mb-2 fw-semibold">
+                            <a href="#">@Model.Staff.FirstName @Model.Staff.LastName</a>
+                        </h6>
+                    </div>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Mobile</span> : @Model.Staff.MobileNo
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">EPF No</span> : @(Model.Staff.EPFNo ?? "-")
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Department</span> : @Model.Staff.DepartmentName
+                    </p>
+                </div>
+                <div class="flex-fill">
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Staff ID</span> : @Model.Staff.StaffCode
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Email</span> : @Model.Staff.Email
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Role</span> : @Model.Staff.RoleName
+                    </p>
+                    <p class="mb-2 fs-13">
+                        <span class="text-dark">Designation</span> : @Model.Staff.DesignationName
+                    </p>
+                </div>
+                <div class="border rounded overflow-hidden">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th colspan="7" class="text-center">Attendance Summary</th>
+                            </tr>
+                            <tr>
+                                <th>Month</th>
+                                <th>P</th>
+                                <th>L</th>
+                                <th>A</th>
+                                <th>H</th>
+                                <th>V</th>
+                                <th>HD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var att in Model.AttendanceHistory)
+                            {
+                                <tr>
+                                    <td>@att.MonthName</td>
+                                    <td>@att.Present</td>
+                                    <td>@att.Leave</td>
+                                    <td>@att.Absent</td>
+                                    <td>@att.Holiday</td>
+                                    <td>0</td> <!-- Vacation or other -->
+                                    <td>@att.HalfDay</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <h5 class="card-title">Earnings</h5>
+                <button class="btn p-2 px-0" onclick="addRow('earnings')"><i class="ti ti-plus fw-bold"></i></button>
+            </div>
+            <div class="card-body" id="earningsContainer">
+                <div class="d-flex gap-2 mb-2 earning-row">
+                    <input type="text" class="form-control component-name" placeholder="Earning Type">
+                    <input type="number" class="form-control component-amount earning-amount" value="0" style="width: 100px;" onchange="calculateTotal()">
+                    <button class="btn btn-sm text-danger" onclick="removeRow(this)"><i class="ti ti-trash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <h5 class="card-title">Deductions</h5>
+                <button class="btn p-2 px-0" onclick="addRow('deductions')"><i class="ti ti-plus fw-bold"></i></button>
+            </div>
+            <div class="card-body" id="deductionsContainer">
+                <div class="d-flex gap-2 mb-2 deduction-row">
+                    <input type="text" class="form-control component-name" placeholder="Deduction Type">
+                    <input type="number" class="form-control component-amount deduction-amount" value="0" style="width: 100px;" onchange="calculateTotal()">
+                    <button class="btn btn-sm text-danger" onclick="removeRow(this)"><i class="ti ti-trash"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <h5 class="card-title">Payroll Summary (₹)</h5>
+                <button class="btn btn-primary py-1 px-2" onclick="calculateTotal()">Calculate</button>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="flex-shrink-0">Basic Salary</label>
+                    <input type="number" id="basicSalary" class="form-control w-50" value="@Model.BasicSalary" onchange="calculateTotal()">
+                </div>
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="flex-shrink-0">Total Earnings</label>
+                    <input type="number" id="totalEarnings" class="form-control w-50" value="0" readonly>
+                </div>
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="flex-shrink-0">Total Deduction</label>
+                    <input type="number" id="totalDeductions" class="form-control w-50" value="0" readonly>
+                </div>
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="flex-shrink-0">Gross Salary</label>
+                    <input type="number" id="grossSalary" class="form-control w-50" value="0" readonly>
+                </div>
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="flex-shrink-0">Tax</label>
+                    <input type="number" id="taxAmount" class="form-control w-50" value="0" onchange="calculateTotal()">
+                </div>
+                <hr>
+                <div class="d-flex gap-2 align-items-center mb-2 justify-content-between">
+                    <label class="fw-bold flex-shrink-0">Net Salary</label>
+                    <input type="number" id="netSalary" class="form-control w-50 fw-bold border-primary" value="0" readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        function addRow(type) {
+            const container = type === 'earnings' ? $('#earningsContainer') : $('#deductionsContainer');
+            const rowClass = type === 'earnings' ? 'earning-row' : 'deduction-row';
+            const amountClass = type === 'earnings' ? 'earning-amount' : 'deduction-amount';
+            const placeholder = type === 'earnings' ? 'Earning Type' : 'Deduction Type';
+
+            const html = `
+                <div class="d-flex gap-2 mb-2 ${rowClass}">
+                    <input type="text" class="form-control component-name" placeholder="${placeholder}">
+                    <input type="number" class="form-control component-amount ${amountClass}" value="0" style="width: 100px;" onchange="calculateTotal()">
+                    <button class="btn btn-sm text-danger" onclick="removeRow(this)"><i class="ti ti-trash"></i></button>
+                </div>
+            `;
+            container.append(html);
+        }
+
+        function removeRow(btn) {
+            $(btn).closest('.d-flex').remove();
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let basic = parseFloat($('#basicSalary').val()) || 0;
+            let earnings = 0;
+            $('.earning-amount').each(function() {
+                earnings += parseFloat($(this).val()) || 0;
+            });
+
+            let deductions = 0;
+            $('.deduction-amount').each(function() {
+                deductions += parseFloat($(this).val()) || 0;
+            });
+
+            let tax = parseFloat($('#taxAmount').val()) || 0;
+
+            $('#totalEarnings').val(earnings.toFixed(2));
+            $('#totalDeductions').val(deductions.toFixed(2));
+            
+            let gross = basic + earnings;
+            $('#grossSalary').val(gross.toFixed(2));
+
+            let net = gross - deductions - tax;
+            $('#netSalary').val(net.toFixed(2));
+        }
+
+        function savePayroll() {
+            calculateTotal();
+            
+            const data = {
+                staffID: @Model.Staff.StaffID,
+                month: @Model.Month,
+                year: @Model.Year,
+                basicSalary: parseFloat($('#basicSalary').val()),
+                totalEarnings: parseFloat($('#totalEarnings').val()),
+                totalDeductions: parseFloat($('#totalDeductions').val()),
+                netSalary: parseFloat($('#netSalary').val()),
+                details: []
+            };
+
+            $('.earning-row').each(function() {
+                const name = $(this).find('.component-name').val();
+                const amount = parseFloat($(this).find('.earning-amount').val()) || 0;
+                if (name && amount > 0) {
+                    data.details.push({ componentName: name, componentType: 'Earning', amount: amount });
+                }
+            });
+
+            $('.deduction-row').each(function() {
+                const name = $(this).find('.component-name').val();
+                const amount = parseFloat($(this).find('.deduction-amount').val()) || 0;
+                if (name && amount > 0) {
+                    data.details.push({ componentName: name, componentType: 'Deduction', amount: amount });
+                }
+            });
+
+            // Add tax if greater than 0
+            const tax = parseFloat($('#taxAmount').val()) || 0;
+            if (tax > 0) {
+                data.details.push({ componentName: 'Tax', componentType: 'Deduction', amount: tax });
+            }
+
+            Swal.fire({
+                title: 'Confirm Save',
+                text: "Do you want to save this payroll record?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Save'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/HumanResource/SaveDetailedPayroll',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Success', res.message, 'success').then(() => {
+                                    window.location.href = '/HumanResource/Payroll';
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'An error occurred while saving payroll.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            calculateTotal();
+        });
+    </script>
+}
+

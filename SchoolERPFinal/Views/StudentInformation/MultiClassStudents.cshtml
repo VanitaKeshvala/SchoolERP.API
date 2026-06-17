@@ -1,0 +1,390 @@
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Multi Class Students";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/StudentInformation/MultiClassStudents", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/StudentInformation/MultiClassStudents", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/StudentInformation/MultiClassStudents", "Delete");
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Multi Class Students</h6>
+    </div>
+</div>
+<!-- End Page Header -->
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white" style="min-width: 300px;">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" placeholder="Search by name or roll no..." />
+                    </div>
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-white border btn-lg d-inline-flex align-items-center" data-bs-toggle="dropdown">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                                    <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                    <button type="button" class="btn text-primary fs-6" onclick="fetchStudents()">Filter</button>
+                                </div>
+                                <div class="filter-body p-3">
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Class</label>
+                                        <select id="ddlFilterClass" class="form-select select2">
+                                            <option value="">Select Class</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label mb-1">Section</label>
+                                        <select id="ddlFilterSection" class="form-select select2">
+                                            <option value="">Select Section</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="studentCardsContainer">
+    <div class="col-12 text-center py-5">
+        <i class="ti ti-info-circle fs-2 d-block mb-2 text-muted"></i>
+        <p class="mt-2 text-muted">Use filters to search for students...</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let allClasses = [];
+        let allSections = [];
+        const canAdd = @canAdd.ToString().ToLower();
+        const canEdit = @canEdit.ToString().ToLower();
+        const canDelete = @canDelete.ToString().ToLower();
+
+        $(document).ready(function () {
+            loadInitialData();
+
+            $('#txtSearchInput').on('keyup', function (e) {
+                var q = $(this).val().toLowerCase();
+                $('.student-card-item').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+
+                if (e.key === 'Enter') fetchStudents();
+                renderFilterBadges();
+            });
+
+            $('#ddlFilterClass').on('change', function () {
+                loadSectionsByClass($(this).val(), '#ddlFilterSection');
+            });
+        });
+
+        async function loadInitialData() {
+            try {
+                const resp = await fetch('/StudentInformation/GetClasses');
+                const res = await resp.json();
+                if (res.success) {
+                    allClasses = res.data;
+                    const ddl = $('#ddlFilterClass');
+                    allClasses.forEach(c => ddl.append(`<option value="${c.classID}">${c.className}</option>`));
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadSectionsByClass(classId, targetDdlId) {
+            const ddl = $(targetDdlId);
+            ddl.empty().append('<option value="">Select Section</option>');
+            if (!classId) return;
+
+            try {
+                const resp = await fetch(`/StudentInformation/GetSectionsByClass/${classId}`);
+                const res = await resp.json();
+                if (res.success) {
+                    res.data.forEach(s => ddl.append(`<option value="${s.sectionID}">${s.sectionName}</option>`));
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function fetchStudents() {
+            const classId = $('#ddlFilterClass').val();
+            const sectionId = $('#ddlFilterSection').val();
+            const search = $('#txtSearchInput').val();
+
+            const container = $('#studentCardsContainer');
+            container.html('<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>');
+
+            try {
+                const url = `/StudentInformation/GetMultiClassStudents?classId=${classId || ''}&sectionId=${sectionId || ''}&searchTerm=${encodeURIComponent(search || '')}`;
+                const resp = await fetch(url);
+                const res = await resp.json();
+
+                if (res.success) {
+                    renderStudentCards(res.data);
+                    renderFilterBadges();
+                } else {
+                    container.html(`<div class="col-12 text-center py-5 text-danger">${res.message}</div>`);
+                }
+            } catch (err) {
+                container.html('<div class="col-12 text-center py-5 text-danger">An error occurred while fetching data.</div>');
+            }
+        }
+
+        function renderStudentCards(students) {
+            const container = $('#studentCardsContainer');
+            if (!students || students.length === 0) {
+                container.html('<div class="col-12 text-center py-5 text-muted">No students found.</div>');
+                return;
+            }
+
+            let html = '';
+            students.forEach(s => {
+                html += `
+                <div class="col-xl-6 mb-3 student-card-item">
+                    <div class="card shadow-tbl h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center bg-light-subtle">
+                            <div>
+                                <h6 class="card-title mb-0 fs-12">${s.fullName}</h6>
+                                <small class="text-muted">${s.rollNo || 'No Roll No'}</small>
+                            </div>
+                            <div>
+                                ${canAdd ? `
+                                <button class="btn btn-primary btn-sm" onclick="addMultiClassRow(${s.studentID})">
+                                    <i class="ti ti-plus me-1"></i>Add
+                                </button>` : ''}
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="px-3 py-2 border-bottom">                                
+                                <div class="d-flex gap-3">
+                                    <span><strong>Class:</strong> ${s.primaryClassName}</span>
+                                    <span><strong>Section:</strong> ${s.primarySectionName}</span>
+                                </div>
+                            </div>
+                            <div id="multiClassRows_${s.studentID}" class="multi-class-list">
+                                ${s.additionalClasses.map(ac => renderMultiClassRow(s.studentID, ac)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            container.html(html);
+        }
+
+        function renderMultiClassRow(studentId, data = null) {
+            const isNew = !data;
+            const rowId = data ? data.multiClassID : `new_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            
+            return `
+            <div class="multi-class-row p-3 border-bottom" id="row_${rowId}">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label mb-1 fs-12">Class</label>
+                        <select class="form-select form-select-sm ddl-class" onchange="handleClassChange(this, '${rowId}')">
+                            <option value="">Select Class</option>
+                            ${allClasses.map(c => `<option value="${c.classID}" ${data && data.classID == c.classID ? 'selected' : ''}>${c.className}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 fs-12">Section</label>
+                        <select class="form-select form-select-sm ddl-section">
+                            <option value="">Select Section</option>
+                            ${data ? `<option value="${data.sectionID}" selected>${data.sectionName}</option>` : ''}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-1">
+                        ${canAdd || canEdit ? `
+                        <button class="btn btn-success flex-fill" onclick="saveMultiClass('${rowId}', ${studentId})">
+                            <i class="ti ti-cloud"></i>
+                        </button>` : ''}
+                        ${canDelete ? `
+                        <button class="btn btn-danger flex-fill" onclick="removeMultiClassRow('${rowId}', ${data ? data.multiClassID : 0})">
+                            <i class="ti ti-trash"></i>
+                        </button>` : ''}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function addMultiClassRow(studentId) {
+            $(`#multiClassRows_${studentId}`).append(renderMultiClassRow(studentId));
+        }
+
+        async function handleClassChange(el, rowId) {
+            const classId = $(el).val();
+            const sectionDdl = $(`#row_${rowId} .ddl-section`);
+            await loadSectionsByClass(classId, sectionDdl);
+        }
+
+        async function saveMultiClass(rowId, studentId) {
+            const row = $(`#row_${rowId}`);
+            const classId = row.find('.ddl-class').val();
+            const sectionId = row.find('.ddl-section').val();
+            const multiClassId = rowId.startsWith('new_') ? 0 : parseInt(rowId.replace('row_', ''));
+
+            if (!classId || !sectionId) {
+                showToast('Please select both class and section.', 'warning');
+                return;
+            }
+
+            const data = {
+                multiClassID: multiClassId,
+                studentID: studentId,
+                classID: parseInt(classId),
+                sectionID: parseInt(sectionId)
+            };
+
+            try {
+                const resp = await fetch('/StudentInformation/UpsertMultiClass', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    fetchStudents(); // Refresh to get the actual ID if it was new
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) {
+                alert('An error occurred while saving.');
+            }
+        }
+
+        async function removeMultiClassRow(rowId, multiClassId) {
+            if (multiClassId === 0) {
+                $(`#row_${rowId}`).remove();
+                return;
+            }
+
+            if (!confirm('Are you sure you want to remove this class assignment?')) return;
+
+            try {
+                const resp = await fetch(`/StudentInformation/DeleteMultiClass/${multiClassId}`, { method: 'POST' });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    $(`#row_${rowId}`).remove();
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) {
+                alert('An error occurred while deleting.');
+            }
+        }
+
+        // --- Filter Badges Logic ---
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearchInput', label: 'Search', type: 'text' },
+                { id: 'ddlFilterClass', label: 'Class', type: 'select' },
+                { id: 'ddlFilterSection', label: 'Section', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+                $('#txtSearchInput').trigger('keyup');
+            } else {
+                el.value = '';
+                if (filterId === 'ddlFilterClass') {
+                    $('#ddlFilterSection').empty().append('<option value="">Select Section</option>');
+                }
+            }
+
+            if (window.jQuery && jQuery(el).data('select2')) {
+                jQuery(el).trigger('change.select2');
+            }
+
+            fetchStudents();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('txtSearchInput').value = '';
+            document.getElementById('ddlFilterClass').value = '';
+            document.getElementById('ddlFilterSection').value = '';
+            
+            $('.select2').trigger('change.select2');
+            
+            renderFilterBadges();
+            $('#studentCardsContainer').html('<div class="col-12 text-center py-5"><i class="ti ti-info-circle fs-2 d-block mb-2 text-muted"></i><p class="mt-2 text-muted">Use filters to search for students...</p></div>');
+        }
+    </script>
+}

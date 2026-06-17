@@ -1,0 +1,66 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SchoolERP.API.Interfaces;
+using SchoolERP.API.Models;
+using SchoolERP.API.Services;
+using System.Security.Claims;
+
+namespace SchoolERP.API.Controllers.Api
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    /// <summary>
+    /// This controller provides the technical endpoints for user registration and login through the API.
+    /// </summary>
+    public class UsersApiController : ControllerBase
+    {
+        private readonly IUserService _userService;
+        private readonly IAuthServices _authService;
+
+        public UsersApiController(IUserService userService, IAuthServices authService)
+        {
+            _userService = userService;
+            _authService = authService;
+        }
+
+        /// <summary>
+        /// Creates a new user account in the system with the information you provided.
+        /// </summary>
+        [HttpPost("create")]
+        public IActionResult CreateUser([FromBody] UserUpsertRequest request)
+        {
+            int currentUserId = GetCurrentUserId();
+            if (currentUserId <= 0)
+                return Unauthorized(new { Success = false, Message = "User is not authenticated." });
+
+            var (result, message) = _userService.CreateUser(request, currentUserId);
+            
+            if (result > 0)
+                return Ok(new { Success = true, Message = message });
+            
+            return BadRequest(new { Success = false, Message = message });
+        }
+
+        /// <summary>
+        /// Verifies a user's login details and provides access if they are correct.
+        /// </summary>
+        [HttpPost("login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            var response = await _authService.LoginAsync(request.Username, request.Password);
+
+            if (response.Success)
+                return Ok(new { Success = true, Message = response.Message, Data = response.Data });
+
+            return Unauthorized(new { Success = false, Message = response.Message });
+        }
+
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+            return (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId)) ? userId : 0;
+        }
+    }
+}

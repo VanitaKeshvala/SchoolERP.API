@@ -1,0 +1,501 @@
+@model SchoolERP.Net.Models.HRStaffPageViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Staff Directory";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Export");
+
+
+}
+
+<style>
+.dt-buttons { display: none !important; }
+</style>
+
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Staff Directory</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a asp-action="AddStaff" class="btn btn-primary">
+                <i class="ti ti-plus me-1"></i>Add Staff
+            </a>
+            <a asp-action="ImportStaff" class="btn btn-warning">
+                <i class="ti ti-file-import me-1"></i>Import Staff
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button type="button" id="btnTopEdit" class="btn btn-info" onclick="handleEdit()" disabled>
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button type="button" id="btnTopDelete" class="btn btn-danger" onclick="handleDelete()" disabled>
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <form method="post" action="/HumanResource/Staffs" id="staffFilterForm">
+                    <input type="hidden" name="viewType" id="hdnViewType" value="@Model.ViewType" />
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" class="form-control border-0 ps-2" id="txtSearch"
+                                   placeholder="Search by name or code..." value="@Model.SearchTerm" style="min-width: 220px;">
+                        </div>
+                        <!--<input type="text" name="search" id="txtSearch" class="form-control w-25 me-3" placeholder="Search by name or code..." value="@Model.SearchTerm" />-->
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <button type="submit" class="btn text-primary fs-6">Apply</button>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="mb-2">
+                                            <label class="form-label mb-1">Role</label>
+                                            <select name="roleName" id="fltRole" class="form-select select2">
+                                                <option value="">All Roles</option>
+                                                @foreach (var r in Model.Roles)
+                                                {
+                                                    <option value="@r.RoleName" selected="@(Model.SelectedRole == r.RoleName)">@r.RoleName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label mb-1">Department</label>
+                                            <select name="departmentName" id="fltDept" class="form-select select2">
+                                                <option value="">All Departments</option>
+                                                @foreach (var d in Model.Departments)
+                                                {
+                                                    <option value="@d.DepartmentName" selected="@(Model.SelectedDepartment == d.DepartmentName)">@d.DepartmentName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label mb-1">Designation</label>
+                                            <select name="designationName" id="fltDesig" class="form-select select2">
+                                                <option value="">All Designations</option>
+                                                @foreach (var d in Model.Designations)
+                                                {
+                                                    <option value="@d.DesignationName" selected="@(Model.SelectedDesignation == d.DesignationName)">@d.DesignationName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <!--<a href="/HumanResource/Staffs" class="btn btn-sm btn-light w-100 mt-2">Reset Filters</a>-->
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-muted rounded px-1 py-1 d-flex gap-1">
+                                <button type="button" onclick="switchView('list')" id="btn-list-view" class="btn btn-sm rounded @(Model.ViewType == "list" ? "btn-primary" : "btn-white border")">
+                                    <i class="ti ti-list fs-14"></i>
+                                </button>
+                                <button type="button" onclick="switchView('card')" id="btn-card-view" class="btn btn-sm rounded @(Model.ViewType == "card" ? "btn-primary" : "btn-white border")">
+                                    <i class="ti ti-layout-grid fs-14"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Containers -->
+    <div class="col-12" id="staffContainer">
+        <div id="card-view-container" class="row @(Model.ViewType == "card" ? "" : "d-none")">
+            @foreach (var s in Model.StaffList)
+            {
+                <div class="col-xl-3 col-md-4 col-sm-6 mb-3">
+                    <div class="card border shadow-sm h-100 staff-card position-relative" onclick="selectStaffCard(@s.StaffID, this)">
+                        <div class="card-body text-center p-3">
+                            <div class="position-absolute top-0 start-0 p-2">
+                                <input type="checkbox" name="staffSelectCard"
+                                       class="form-check-input student-checkbox" value="@s.StaffID"
+                                       id="radCard_@s.StaffID" onclick="event.stopPropagation();selectStaff(@s.StaffID)">
+                                 
+                            </div>
+
+                            <a href="/HumanResource/StaffDetails/@s.StaffID" class="text-primary fw-semibold">
+                                <h6 class="mb-0 text-primary text-truncate">@s.FirstName @s.LastName</h6>
+                            </a>
+                            <small class="text-muted d-block mb-2 text-truncate">@(s.DesignationName ?? "No Designation")</small>
+                            <div class="d-flex flex-column gap-1 text-start fs-13 mt-2 border-top pt-2">
+                                <span class="text-truncate"><i class="ti ti-id me-1 text-primary"></i>@s.StaffCode</span>
+                                <span class="text-truncate"><i class="ti ti-building me-1 text-primary"></i>@(s.DepartmentName ?? "N/A")</span>
+                                <span class="text-truncate">
+                                    <i class="ti ti-shield me-1 text-primary"></i>
+                                    @if (s.DisplayRoles != null && s.DisplayRoles.Any())
+                                    {
+                                        foreach (var role in s.DisplayRoles)
+                                        {
+                                            <span class="badge bg-soft-primary text-primary me-1">@role</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-soft-secondary text-secondary">No Role</span>
+                                    }
+                                </span>
+                                <span class="text-truncate"><i class="ti ti-phone me-1 text-primary"></i>@(s.MobileNo ?? "N/A")</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!Model.StaffList.Any())
+            {
+                <div class="col-12 text-center py-5 text-muted">No staff records found.</div>
+            }
+        </div>
+        <div id="list-view-container" class="card shadow-tbl @(Model.ViewType == "list" ? "" : "d-none")">
+            <div class="card-body">
+                @{
+                    var activeCustomFieldsOnTable = Model.CustomFields?.Where(f => f.IsActive && f.OnTable).OrderBy(f => f.DisplayOrder).ToList() ?? new List<FieldModel>();
+                    int colSpanCount = 7 + activeCustomFieldsOnTable.Count;
+                }
+                <div class="table-responsive">
+                    <table class="table mb-0" id="staffTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th>Staff ID</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Mobile</th>
+                                @foreach (var field in activeCustomFieldsOnTable)
+                                {
+                                    <th>@field.FieldName</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody id="list-tbody">
+                            @foreach (var s in Model.StaffList)
+                            {
+                                <tr class="staff-item-row" onclick="selectStaff(@s.StaffID, this)" style="cursor: pointer;">
+                                    <td>
+                                        <input type="checkbox" name="staffSelect"
+                                               class="form-check-input student-checkbox" value="@s.StaffID"
+                                               onclick="selectStaff(@s.StaffID)">
+                                    <td>@s.StaffCode</td>
+                                    <td>
+                                        <a href="/HumanResource/StaffDetails/@s.StaffID" class="text-primary">@s.FirstName @s.LastName</a>
+                                    </td>
+                                    <td>
+                                        @if (s.DisplayRoles != null && s.DisplayRoles.Any())
+                                        {
+                                            foreach (var role in s.DisplayRoles)
+                                            {
+                                                <span class="badge bg-soft-primary text-primary me-1">@role</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-soft-secondary text-secondary">No Role</span>
+                                        }
+                                    </td>
+                                    <td>@(s.DepartmentName ?? "N/A")</td>
+                                    <td>@(s.DesignationName ?? "N/A")</td>
+                                    <td>@(s.MobileNo ?? "N/A")</td>
+                                    @foreach (var field in activeCustomFieldsOnTable)
+                                    {
+                                        var val = s.CustomFieldValues?.FirstOrDefault(v => v.FieldID == field.FieldId)?.FieldValue ?? "";
+                                        <td>@val</td>
+                                    }
+                                </tr>
+                            }
+                            @if (!Model.StaffList.Any())
+                            {
+                                <tr><td colspan="@colSpanCount" class="text-center py-4 text-muted">No staff records found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentView = '@Model.ViewType';
+        let selectedStaffID = null;
+        const canEdit = @canEdit.ToString().ToLower();
+        const canDelete = @canDelete.ToString().ToLower();
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#staffTable')) {
+                const table = $('#staffTable').DataTable();
+                table.button(index).trigger();
+            }
+        }
+
+        $(document).ready(function () {
+            $('#staffTable').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } },
+                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7] } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+        })
+
+
+        $(document).ready(function () {
+            $('.select2').select2({ width: '100%' });
+        });
+
+        function selectStaffCard(id, el) {
+            selectStaff(id, el);
+        }
+
+        // --- Filter Badges Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFilterBadges();
+        });
+
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearch', label: 'Search', type: 'text' },
+                { id: 'fltRole', label: 'Role', type: 'select' },
+                { id: 'fltDept', label: 'Department', type: 'select' },
+                { id: 'fltDesig', label: 'Designation', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+            } else {
+                el.value = '';
+            }
+
+            document.getElementById('staffFilterForm').submit();
+        }
+
+        function resetAllFilters() {
+            const filters = ['txtSearch', 'fltRole', 'fltDept', 'fltDesig'];
+            filters.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.tagName === 'INPUT') el.value = '';
+                else el.value = '';
+            });
+            document.getElementById('staffFilterForm').submit();
+        }
+
+        function selectStaff(id, element) {
+            selectedStaffID = id;
+            toggleTopButtons();
+
+            // Sync radio buttons and highlights
+            if (currentView === 'card') {
+                $(`#radCard_${id}`).prop('checked', true);
+                $('.staff-card').removeClass('border-primary shadow');
+                $(`#radCard_${id}`).closest('.staff-card').addClass('border-primary shadow');
+            } else {
+                $('.staff-item-row').removeClass('bg-light');
+                if (element) $(element).addClass('bg-light');
+                $(element).find('input[type="checkbox"]').prop('checked', true);
+            }
+        }
+
+        function selectStaffCard(id, el) {
+            $(el).find('input[type="checkbox"]').prop('checked', true);
+            selectStaff(id, el);
+        }
+
+        function toggleTopButtons() {
+            const disabled = selectedStaffID === null;
+            if (canEdit) $('#btnTopEdit').prop('disabled', disabled);
+            if (canDelete) $('#btnTopDelete').prop('disabled', disabled);
+
+        }
+
+        function handleEdit() {
+            if (selectedStaffID) {
+                location.href = `/HumanResource/AddStaff/${selectedStaffID}`;
+            }
+        }
+
+        function handleDelete() {
+            if (selectedStaffID) {
+                deleteStaff(selectedStaffID);
+            }
+        }
+
+        function switchView(view) {
+            currentView = view;
+            $('#hdnViewType').val(view);
+            if (view === 'list') {
+                $('#list-view-container').removeClass('d-none');
+                $('#card-view-container').addClass('d-none');
+                $('#btn-list-view').addClass('btn-primary').removeClass('btn-white border');
+                $('#btn-card-view').removeClass('btn-primary').addClass('btn-white border');
+            } else {
+                $('#list-view-container').addClass('d-none');
+                $('#card-view-container').removeClass('d-none');
+                $('#btn-card-view').addClass('btn-primary').removeClass('btn-white border');
+                $('#btn-list-view').removeClass('btn-primary').addClass('btn-white border');
+            }
+        }
+
+        function deleteStaff(id) {
+            
+
+                       let selectedIds = [];
+        $('.student-checkbox:checked').each(function () {
+                 selectedIds.push(parseInt($(this).val()));
+             });
+        if (selectedIds.length === 0) {
+                 alert("Please select at least one student.");
+                 return;
+             }
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: '/HumanResource/DeleteStaff',
+                     type: 'POST',
+                     contentType: 'application/json',
+                     data: JSON.stringify(selectedIds),
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
+        }
+    </script>
+}

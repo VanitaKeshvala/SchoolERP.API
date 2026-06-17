@@ -1,0 +1,74 @@
+@*
+    ======================================================================
+    VIEW: Settings / FileType.cshtml
+    PURPOSE: User interface rendering for the Settings module.
+    ======================================================================
+*@
+@{
+    Layout = "_Layout";
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">File Types</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <a href="#" class="btn btn-success d-inline-flex align-items-center"><i class="ti ti-cloud me-1"></i>Save</a>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+    <div class="col-xl-6">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header">
+                <h6 class="card-title">Setting For Files</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="" class="form-label">Allowed Extension  <span class="mdtry">*</span></label>
+                    <textarea name="" id="" class="form-control" rows="3">pdf, zip, jpg, jpeg, png, txt, 7z, gif, csv, docx, mp3, mp4, accdb, odt, ods, ppt, pptx, xlsx, wmv, jfif, apk, ppt, bmp, jpe, mdb, rar, xls, svg</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="" class="form-label">Allowed MIME Type <span class="mdtry">*</span></label>
+                    <textarea name="" id="" class="form-control" rows="8">application/pdf, image/zip, image/jpg, image/png, image/jpeg, text/plain, application/x-zip-compressed, application/zip, image/gif, text/csv, application/vnd.openxmlformats-officedocument.wordprocessingml.document, audio/mpeg, application/msaccess, application/vnd.oasis.opendocument.text, application/vnd.oasis.opendocument.spreadsheet, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, video/x-ms-wmv, video/mp4, image/jpeg, application/vnd.android.package-archive, application/x-msdownload, application/vnd.ms-powerpoint, image/bmp, image/jpeg, application/msaccess, application/vnd.ms-excel, image/svg+xml</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="" class="form-label">Upload Size (In Bytes)  <span class="mdtry">*</span></label>
+                    <input type="text" value="100048576" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end col -->
+
+    <div class="col-xl-6">
+        <div class="card shadow-tbl-outer">
+            <div class="card-header">
+                <h6 class="card-title">Setting For Image</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="" class="form-label">Allowed Extension  <span class="mdtry">*</span></label>
+                    <textarea name="" id="" class="form-control" rows="3">jfif, png, jpe, jpeg, jpg, bmp, gif, svg</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="" class="form-label">Allowed MIME Type <span class="mdtry">*</span></label>
+                    <textarea name="" id="" class="form-control" rows="8">image/jpeg, image/png, image/jpeg, image/jpeg, image/bmp, image/gif, image/x-ms-bmp, image/svg+xml</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="" class="form-label">Upload Size (In Bytes)  <span class="mdtry">*</span></label>
+                    <input type="text" value="100048576" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end col -->
+
+</div>
+<!-- end row -->

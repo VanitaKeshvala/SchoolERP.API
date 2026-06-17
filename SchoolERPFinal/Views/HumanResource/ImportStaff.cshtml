@@ -1,0 +1,175 @@
+
+@using SchoolERP.Net.Models
+@{
+    ViewData["Title"] = "Import Staff";
+    var roles = ViewBag.Roles as List<MstRoleViewModel> ?? new List<MstRoleViewModel>();
+    var designations = ViewBag.Designations as List<HRDesignationViewModel> ?? new List<HRDesignationViewModel>();
+    var departments = ViewBag.Departments as List<HRDepartmentViewModel> ?? new List<HRDepartmentViewModel>();
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Staff Import</h6>
+    </div>
+    <div>
+        <a href="~/staff_csvfile.csv" class="btn btn-warning d-inline-flex align-items-center" download><i class="ti ti-download me-1"></i>Download Sample Import File</a>
+    </div>
+</div>
+<!-- End Page Header -->
+
+<!-- start row -->
+<div class="row">
+    <div class="col-xl-12">
+        <form id="importForm" enctype="multipart/form-data">
+            <div class="card shadow-tbl-outer mb-2">
+                <div class="card-body">
+
+                    <div class="bg-light p-3 rounded-3 mb-3">
+                        <ol class="m-0 p-0 px-3">
+                            <li class="mb-2">Your CSV data should be in the format below. The first line of your CSV file should be the column headers as in the table example. Also make sure that your file is UTF-8 to avoid unnecessary encoding problems.</li>
+                            <li>If the column you are trying to import is date make sure that is formatted in format Y-m-d (2018-06-06).</li>
+                            <li>Role, Designation, and Department selected below will be applied to all records in the file.</li>
+                        </ol>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="RoleId" class="form-label">Role <span class="text-danger">*</span></label>
+                                <select name="roleId" id="RoleId" class="form-select form-control" required>
+                                    <option value="">Select Role</option>
+                                    @foreach (var r in roles)
+                                    {
+                                        <option value="@r.RoleID">@r.RoleName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="DesignationId" class="form-label">Designation <span class="text-danger">*</span></label>
+                                <select name="designationId" id="DesignationId" class="form-select form-control" required>
+                                    <option value="">Select Designation</option>
+                                    @foreach (var d in designations)
+                                    {
+                                        <option value="@d.HRDesignationID">@d.DesignationName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="DepartmentId" class="form-label">Department <span class="text-danger">*</span></label>
+                                <select name="departmentId" id="DepartmentId" class="form-select form-control" required>
+                                    <option value="">Select Department</option>
+                                    @foreach (var d in departments)
+                                    {
+                                        <option value="@d.DepartmentID">@d.DepartmentName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="CsvFile" class="form-label">Select CSV File <span class="text-danger">*</span></label>
+                                <input type="file" name="file" id="CsvFile" class="form-control" accept=".csv" required />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary" id="btnImport">
+                            <i class="ti ti-upload me-1"></i>Import Staff
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="card shadow-tbl" id="resultContainer" style="display:none;">
+            <div class="card-header">
+                <h6 class="fw-bold mb-0">Import Results</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0" id="resultTable">
+                    <thead>
+                        <tr>
+                            <th>Staff ID</th>
+                            <th>Full Name</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#importForm').submit(function (e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                var btn = $('#btnImport');
+                var btnHtml = btn.html();
+
+                btn.html('<span class="spinner-border spinner-border-sm me-1"></span>Processing...').prop('disabled', true);
+                $('#resultContainer').hide();
+                $('#resultTable tbody').empty();
+
+                $.ajax({
+                    url: '/HumanResource/ImportStaff',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function (res) {
+                        if (res.success) {
+                            $('#resultContainer').show();
+                            $.each(res.results, function (i, item) {
+                                var statusClass = item.success ? 'text-success' : 'text-danger';
+                                var statusIcon = item.success ? 'ti-check' : 'ti-x';
+                                var row = `<tr>
+                                    <td>${item.staffCode || ''}</td>
+                                    <td>${item.name || ''}</td>
+                                    <td class="${statusClass} fw-bold"><i class="ti ${statusIcon} me-1"></i>${item.success ? 'Success' : 'Failed'}</td>
+                                    <td class="${statusClass}">${item.message}</td>
+                                </tr>`;
+                                $('#resultTable tbody').append(row);
+                            });
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Completed',
+                                text: 'Staff import process has finished.',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: res.message
+                            });
+                        }
+                    },
+                    error: function () {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred during import.'
+                        });
+                    },
+                    complete: function () {
+                        btn.html(btnHtml).prop('disabled', false);
+                    }
+                });
+            });
+        });
+    </script>
+}
+

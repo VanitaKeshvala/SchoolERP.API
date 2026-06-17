@@ -1,0 +1,272 @@
+@model SchoolERP.Net.Models.AccountEntrySearchViewModel
+@{
+    ViewData["Title"] = "Search " + Model.EntryType;
+}
+@inject PermissionHelper PermHelper
+@{
+
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/Expense/Search", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Expense/Search", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Expense/Search", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Expense/Search", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Expense/Search", "Export");
+
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+</style>
+<!-- Page Header -->
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Search @Model.EntryType</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">        
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search results..." style="min-width: 220px;">
+                    </div>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters" onclick="$('#searchForm').submit()">Filter</button>
+                                </div>
+                            </div>
+                            <form id="searchForm" asp-action="Search" method="post">
+                                <input type="hidden" name="EntryType" value="@Model.EntryType" />
+                                <div class="filter-body pb-0">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label mb-1">Search Type</label>
+                                            <select class="form-select" name="SearchType" id="search_type" onchange="showdate(this.value)" required>
+                                                <option value="">Select</option>
+                                                <option value="today" selected="@(Model.SearchType == "today")">Today</option>
+                                                <option value="this_week" selected="@(Model.SearchType == "this_week")">This Week</option>
+                                                <option value="last_week" selected="@(Model.SearchType == "last_week")">Last Week</option>
+                                                <option value="this_month" selected="@(Model.SearchType == "this_month")">This Month</option>
+                                                <option value="last_month" selected="@(Model.SearchType == "last_month")">Last Month</option>
+                                                <option value="last_3_month" selected="@(Model.SearchType == "last_3_month")">Last 3 Months</option>
+                                                <option value="last_6_month" selected="@(Model.SearchType == "last_6_month")">Last 6 Months</option>
+                                                <option value="last_12_month" selected="@(Model.SearchType == "last_12_month")">Last 12 Months</option>
+                                                <option value="this_year" selected="@(Model.SearchType == "this_year")">This Year</option>
+                                                <option value="last_year" selected="@(Model.SearchType == "last_year")">Last Year</option>
+                                                <option value="period" selected="@(Model.SearchType == "period")">Period</option>
+                                            </select>
+                                        </div>
+                                        <div id="date_result" class="row p-0 m-0" style="display: @(Model.SearchType == "period" ? "flex" : "none")">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Date From</label>
+                                                <div class="input-icon-start position-relative">
+                                                    <span class="input-icon-addon">
+                                                        <i class="ti ti-calendar"></i>
+                                                    </span>
+                                                    <input name="DateFrom" id="date_from" type="text" class="form-control datetimepicker" value="@Model.DateFrom">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Date To</label>
+                                                <div class="input-icon-start position-relative">
+                                                    <span class="input-icon-addon">
+                                                        <i class="ti ti-calendar"></i>
+                                                    </span>
+                                                    <input name="DateTo" id="date_to" type="text" class="form-control datetimepicker" value="@Model.DateTo">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SearchType))
+    {
+        <div class="col-xl-12" id="activeFilterBadges">
+            <div class="card shadow-tbl border-0 py-1 mb-2">
+                <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                    <div id="badgeContainer" class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-primary-transparent text-primary border-primary fw-medium px-2 py-1 fs-12">
+                            Type: @(System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(Model.SearchType.Replace("_", " ")))
+                        </span>
+                        @if (Model.SearchType == "period")
+                        {
+                            @if (!string.IsNullOrEmpty(Model.DateFrom))
+                            {
+                                <span class="badge bg-primary-transparent text-primary border-primary fw-medium px-2 py-1 fs-12">
+                                    From: @Model.DateFrom
+                                </span>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.DateTo))
+                            {
+                                <span class="badge bg-primary-transparent text-primary border-primary fw-medium px-2 py-1 fs-12">
+                                    To: @Model.DateTo
+                                </span>
+                            }
+                        }
+                    </div>
+                    <a href="@Url.Action("Search", new { entryType = Model.EntryType })" class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none">
+                        <i class="ti ti-trash me-1"></i>Clear All
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Name</th>
+                                <th>Invoice Number</th>
+                                <th>Expense Head</th>
+                                <th>Date</th>
+                                <th class="text-end pe-3">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Results)
+                            {
+                                <tr>
+                                    <td class="ps-3">@item.Name</td>
+                                    <td>@item.InvoiceNo</td>
+                                    <td>@item.HeadName</td>
+                                    <td>@item.Date.ToString("dd-MM-yyyy")</td>
+                                    <td class="text-end pe-3">@item.Amount.ToString("N2")</td>
+                                </tr>
+                            }
+                            
+                        </tbody>
+                        @if (Model.Results.Any())
+                        {
+                            <tfoot>
+                                <tr class="table-light fw-bold">
+                                    <td colspan="4" class="text-end ps-3 text-dark">Grand Total</td>
+                                    <td class="text-end pe-3 text-dark">@Model.TotalAmount.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        }
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#resultsTable')) {
+                const table = $('#resultsTable').DataTable();
+            table.button(index).trigger();
+        }
+    }
+
+$(document).ready(function () {
+            $('#resultsTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'copy', exportOptions: { columns: [0,1, 2, 3, 4] } },
+                { extend: 'csv', exportOptions: { columns: [0,1, 2, 3, 4] } },
+                    { extend: 'excel', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                    { extend: 'pdf', exportOptions: { columns: [0, 1, 2, 3, 4] } },
+                    { extend: 'print', exportOptions: { columns: [0, 1, 2, 3, 4] } }
+            ],
+            searching: false,
+            paging: false,
+            info: false,
+                language: {
+                    emptyTable: "No records found."
+                }
+        });
+})
+
+
+        function showdate(val) {
+            if (val === 'period') {
+                $('#date_result').css('display', 'flex');
+            } else {
+                $('#date_result').hide();
+            }
+        }
+
+        document.getElementById('txtSearchInput').addEventListener('keyup', function() {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#resultsTable tbody tr').forEach(row => {
+                if (!row.classList.contains('no-records')) {
+                    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+                }
+            });
+        });
+
+        $(document).ready(function() {
+            setTimeout(function() {
+                if (typeof $.fn.datetimepicker === 'function') {
+                    $('.datetimepicker').datetimepicker({
+                        format: 'DD-MM-YYYY',
+                        icons: {
+                            up: "fas fa-angle-up",
+                            down: "fas fa-angle-down",
+                            next: 'fas fa-angle-right',
+                            previous: 'fas fa-angle-left'
+                        }
+                    });
+                }
+            }, 200);
+        });
+    </script>
+}

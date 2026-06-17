@@ -1,0 +1,514 @@
+@model StudentListPageViewModel
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Students List";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    var canAdd = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Export");
+    var activeCustomFieldsOnTable = Model.CustomFields?.Where(f => f.IsActive && f.OnTable).OrderBy(f => f.DisplayOrder).ToList() ?? new List<FieldModel>();
+}
+
+@section Styles {
+    <style>
+        .dt-buttons {
+            display: none !important;
+        }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Student Details</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (canAdd)
+        {
+            <a href="/StudentInformation/StudentAdmission" class="btn btn-primary d-inline-flex align-items-center">
+                <i class="ti ti-plus me-1"></i>New Admission
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<div class="row">
+
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <form method="post" action="/StudentInformation/Students" id="filterForm">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <input type="hidden" name="viewType" id="hdnViewType" value="@Model.ViewType" />
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search by name, roll, admission..." />
+                        </div>
+                        <!--<input type="text" name="search" id="txtSearchInput" class="form-control w-25 me-3" placeholder="Search by name, roll, admission..." value="@Model.SearchTerm" />-->
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn text-primary fs-6">Apply Filter</button>
+                                        </div>
+                                    </div>
+                                    <div class="filter-body pb-0 p-3">
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Class</label>
+                                            <select name="classId" id="classSelect" class="form-select form-control select2">
+                                                <option value="">All Classes</option>
+                                                @foreach (var c in ViewBag.Classes)
+                                                {
+                                                    <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label mb-1">Section</label>
+                                            <select name="sectionId" id="sectionSelect" class="form-select form-control select2">
+                                                <option value="">All Sections</option>
+                                                @foreach (var s in ViewBag.Sections)
+                                                {
+                                                    <option value="@s.SectionID" selected="@(Model.SelectedSectionId == s.SectionID)">@s.SectionName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-muted rounded px-1 py-1 text-center d-flex align-items-center justify-content-center">
+                                <a href="#list-v" id="list-view-btn" class="btn rounded d-flex align-items-center justify-content-center @(Model.ViewType == "list" ? "active" : "")">
+                                    <i class="ti ti-list fs-14 text-body"></i>
+                                </a>
+                                <a href="#card-v" id="card-view-btn" class="btn rounded d-flex align-items-center justify-content-center @(Model.ViewType == "card" ? "active" : "")">
+                                    <i class="ti ti-layout-grid fs-14 text-body"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-12 @(Model.ViewType == "card" ? "" : "d-none")" id="card-v">
+        <div class="row">
+            @foreach (var student in Model.Students)
+            {
+                <div class="col-xl-6 col-md-12 student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                    <div class="card shadow-tbl-outer mb-2">
+                        <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
+                            <div class="me-3 d-flex align-items-center">
+                                
+                                <input type="checkbox" name="selectedStudent"
+                                       class="form-check-input student-checkbox me-3 position-absolute"                                       
+                                       value="@student.StudentID">
+                                <div class="doctor-profile-img">
+                                    @if (student.StudentPhoto != null)
+                                    {
+                                        <img src="data:@(student.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(student.StudentPhoto)" class="rounded" alt="Student Photo" style="width: 100%;" />
+                                    }
+                                    else
+                                    {
+                                        <img src="/assets/img/profiles/avatar-01.jpg" class="rounded" alt="Default Photo" style="width: 100%;height:100%;object-fit:cover;" />
+                                    }
+                                </div>
+                            </div>
+                            <div>
+                                <h6 class="mb-2 fs-15">
+                                    <a href="/StudentInformation/Details/@student.StudentID" class="text-primary">@student.FullName</a>
+                                </h6>
+                                <div class="d-flex justify-content-between mb-1 gap-2">
+                                    <div class="flex-fill">
+                                        <p class="mb-2 fs-13"><span class="text-dark">Class</span> : @student.ClassName (@student.SectionName)</p>
+                                        <p class="mb-2 fs-13"><span class="text-dark">Admission No</span> : @(student.AdmissionNo ?? "-")</p>
+                                        <p class="mb-2 fs-13"><span class="text-dark">Roll No</span> : @(student.RollNo ?? "-")</p>
+                                        <p class="mb-2 fs-13"><span class="text-dark">Mobile</span> : @(student.MobileNo ?? "-")</p>
+                                    </div>
+                                    <div class="flex-fill">
+                                        <p class="mb-2 fs-13"><span class="text-dark">Father Name</span> : @(student.FatherName ?? "-")</p>
+                                        <p class="mb-2 fs-13"><span class="text-dark">DOB</span> : @(student.DOB?.ToString("dd-MM-yyyy") ?? "-")</p>
+                                        <p class="mb-2 fs-13"><span class="text-dark">Gender</span> : @student.Gender</p>
+
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!Model.Students.Any())
+            {
+                <div class="col-12 text-center py-5">
+                    <h5 class="text-muted">No students found matching the criteria.</h5>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-xl-12 @(Model.ViewType == "list" ? "" : "d-none")" id="list-v">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-nowrap mb-0" id="tblStudents">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Admission No</th>
+                                <th>Student Name</th>
+                                <th>Roll No.</th>
+                                <th>Class</th>
+                                <th>Father Name</th>
+                                <th>DOB</th>
+                                <th>Gender</th>
+                                <th>Mobile Number</th>
+                                @foreach (var field in activeCustomFieldsOnTable)
+                                {
+                                    <th>@field.FieldName</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var student in Model.Students)
+                            {
+                                <tr class="student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                                    <td class="ps-3">
+                                        <input type="checkbox" name="selectedStudent"
+                                               class="form-check-input student-checkbox"                                               
+                                               value="@student.StudentID">
+
+                                    </td>
+                                    <td>@student.AdmissionNo</td>
+                                    <td>
+                                        <a href="/StudentInformation/Details/@student.StudentID" class="text-primary">
+                                            @student.FullName
+                                        </a>
+                                    </td>
+                                    <td>@student.RollNo</td>
+                                    <td>@student.ClassName (@student.SectionName)</td>
+                                    <td>@student.FatherName</td>
+                                    <td>@(student.DOB?.ToString("dd-MM-yyyy") ?? "-")</td>
+                                    <td>@student.Gender</td>
+                                    <td>@student.MobileNo</td>
+                                    @foreach (var field in activeCustomFieldsOnTable)
+                                    {
+                                        var valObj = student.CustomFieldValues?.FirstOrDefault(v => v.FieldID == field.FieldId);
+                                        <td>@(valObj?.FieldValue ?? "-")</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- end col -->
+</div>
+<!-- end row -->
+@section Scripts {
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script>
+        let selectedStudentId = 0;
+
+        function selectStudent(id, element) {
+            selectedStudentId = id;
+
+            // UI Feedback
+            $('.student-item-row .card').removeClass('border-primary shadow-sm bg-light');
+            $('.student-item-row').removeClass('bg-light');
+
+            const $row = $(element);
+            if ($row.hasClass('col-xl-6')) { // Card view
+                $row.find('.card').addClass('border-primary shadow-sm bg-light');
+            } else { // List view
+                $row.addClass('bg-light');
+            }
+
+            $row.find('input[type="radio"]').prop('checked', true);
+
+            // Enable Buttons
+            //$('#btnEdit, #btnDelete').prop('disabled', false);
+             let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+        }
+
+        function editSelected() {
+            if (selectedStudentId > 0) {
+                window.location.href = '/StudentInformation/StudentAdmission?id=' + selectedStudentId;
+            }
+        }
+
+        // --- Filter Badges Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderFilterBadges();
+        });
+
+        function renderFilterBadges() {
+            const container = document.getElementById('badgeContainer');
+            const mainContainer = document.getElementById('activeFilterBadges');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const filters = [
+                { id: 'txtSearchInput', label: 'Search', type: 'text' },
+                { id: 'classSelect', label: 'Class', type: 'select' },
+                { id: 'sectionSelect', label: 'Section', type: 'select' }
+            ];
+
+            let activeCount = 0;
+
+            filters.forEach(f => {
+                const el = document.getElementById(f.id);
+                if (!el) return;
+
+                let value = el.value;
+                let text = '';
+
+                if (f.type === 'text') {
+                    if (value.trim()) {
+                        text = value;
+                        activeCount++;
+                    }
+                } else if (f.type === 'select') {
+                    if (value && value !== 'all' && value !== '') {
+                        const selectedOption = el.options[el.selectedIndex];
+                        text = selectedOption ? selectedOption.text : value;
+                        activeCount++;
+                    }
+                }
+
+                if (text) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
+                    container.appendChild(badge);
+                }
+            });
+
+            if (activeCount > 0) {
+                mainContainer.style.display = 'block';
+            } else {
+                mainContainer.style.display = 'none';
+            }
+        }
+
+        function removeFilter(filterId) {
+            const el = document.getElementById(filterId);
+            if (!el) return;
+
+            if (el.tagName === 'INPUT') {
+                el.value = '';
+            } else {
+                el.value = '';
+            }
+
+            document.getElementById('filterForm').submit();
+        }
+
+        function resetAllFilters() {
+            const filters = ['txtSearchInput', 'classSelect', 'sectionSelect'];
+            filters.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.tagName === 'INPUT') el.value = '';
+                else el.value = '';
+            });
+            document.getElementById('filterForm').submit();
+        }
+
+        function deleteSelected() {
+             deleteStudent();
+        }
+
+        function deleteStudent()
+        {
+           let selectedIds = [];
+           $('.student-checkbox:checked').each(function () {
+                    selectedIds.push(parseInt($(this).val()));
+                });
+           if (selectedIds.length === 0) {
+                    alert("Please select at least one student.");
+                    return;
+                }
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You are about to delete this student record. This action cannot be undone!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                customClass: {
+                    confirmButton: 'btn btn-danger me-2',
+                    cancelButton: 'btn btn-secondary'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                         url: '/StudentInformation/DeleteStudent',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(selectedIds),
+                        success: function (res) {
+                            if (res.success) {
+                                Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                    .then(() => location.reload());
+                            } else {
+                                Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                            }
+                        },
+                        error: function () {
+                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function triggerExport(index) {
+            if ($.fn.DataTable.isDataTable('#tblStudents')) {
+                const table = $('#tblStudents').DataTable();
+                table.button(index).trigger();
+            } else {
+                Swal.fire('Info', 'No data available to export', 'info');
+            }
+        }
+
+        $(document).ready(function () {
+            // Calculate total columns dynamically for export
+            var totalCols = 9 + @activeCustomFieldsOnTable.Count;
+            var exportCols = [];
+            for (var i = 1; i < totalCols; i++) {
+                exportCols.push(i);
+            }
+
+            // Initialize DataTable
+            $('#tblStudents').DataTable({
+                dom: 'Bfrtip',
+                buttons: [
+                    { extend: 'copy', exportOptions: { columns: exportCols } },
+                    { extend: 'csv', exportOptions: { columns: exportCols } },
+                    { extend: 'excel', exportOptions: { columns: exportCols } },
+                    { extend: 'pdf', exportOptions: { columns: exportCols } },
+                    { extend: 'print', exportOptions: { columns: exportCols } }
+                ],
+                searching: false,
+                paging: false,
+                info: false
+            });
+            // View Toggle
+            $('#list-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#card-v').addClass('d-none');
+                $('#list-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#card-view-btn').removeClass('active');
+                $('#hdnViewType').val('list');
+            });
+
+            $('#card-view-btn').click(function (e) {
+                e.preventDefault();
+                $('#list-v').addClass('d-none');
+                $('#card-v').removeClass('d-none');
+                $(this).addClass('active');
+                $('#list-view-btn').removeClass('active');
+                $('#hdnViewType').val('card');
+            });
+
+            // Real-time Search
+            $('#txtSearchInput').on('keyup', function() {
+                var q = $(this).val().toLowerCase();
+
+                // Filter Table
+                $('#tblStudents tbody tr').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+
+                // Filter Cards
+                $('#card-v .student-item-row').each(function() {
+                    var text = $(this).text().toLowerCase();
+                    $(this).toggle(text.indexOf(q) > -1);
+                });
+            });
+
+            // Auto-update Sections on Class Change
+            $('#classSelect').change(function () {
+                var classId = $(this).val();
+                $('#sectionSelect').empty().append('<option value="">All Sections</option>');
+                if (classId) {
+                    $.get('/StudentInformation/GetSections', { classId: classId }, function (data) {
+                        $.each(data, function (i, item) {
+                            $('#sectionSelect').append('<option value="' + item.id + '">' + item.name + '</option>');
+                        });
+                    });
+                }
+            });
+        });
+    </script>
+}
