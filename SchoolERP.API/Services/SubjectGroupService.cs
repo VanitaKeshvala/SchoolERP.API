@@ -2,8 +2,8 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -28,7 +28,7 @@ namespace SchoolERP.API.Services
             using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            return conn.Query<MstSubjectGroupViewModel>(
+            var result= conn.Query<MstSubjectGroupViewModel>(
                 "sp_SubjectGroup_GetAll",
                 new
                 {
@@ -38,6 +38,14 @@ namespace SchoolERP.API.Services
                 },
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -165,26 +173,27 @@ namespace SchoolERP.API.Services
         /// - success: Indicates whether the status update was successful.
         /// - message: Status or error message returned by the stored procedure.
         /// </returns>
-        public (bool success, string message) ToggleStatus(int id, bool isActive, int userId)
+        public (bool success, string message) ToggleStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@SUBJECTGROUPID", request.Ids);
+                parameters.Add("@ISACTIVE", request.IsActive);
+                parameters.Add("@USERID", request.DoneBy);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_SubjectGroup_ToggleStatus",
-                    new
-                    {
-                        SubjectGroupID = id,
-                        IsActive = isActive,
-                        UserId = userId
-                    },
+                    parameters,
                     commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result?.Result ?? 0) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)

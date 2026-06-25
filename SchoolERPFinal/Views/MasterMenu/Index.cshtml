@@ -4,14 +4,12 @@
     PURPOSE: Menu Management — Proper Tree-View UI with Drag & Drop Reordering
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MenusPageViewModel
+@model SchoolERP.Shared.Models.MenusPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
 @using System.Linq
 @using System.Collections.Generic
-@using SchoolERP.Net.Helpers
-@using SchoolERP.Net.Models
-@inject PermissionHelper PermHelper
+@using SchoolERP.Shared.Models
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Menu Management";
@@ -22,13 +20,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd    = PermHelper.HasPermissionByUrl("/MasterMenu", "Add");
-    var canEdit   = PermHelper.HasPermissionByUrl("/MasterMenu", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/MasterMenu", "Delete");
-    var canPrint  = PermHelper.HasPermissionByUrl("/MasterMenu", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/MasterMenu", "Export");
+    var p = Model.Permissions;
 
     var menuGroups = (Model.Menus ?? new List<MenuViewModel>()).ToLookup(m => m.ParentID);
 
@@ -106,34 +98,34 @@
         </h6>        
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">       
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary shadow-sm" id="btnAddMenu" onclick="openAddModal()">
+            <button class="btn btn-primary shadow-sm top-btn" id="btnAddMenu" onclick="openAddModal()">
                 <i class="ti ti-plus me-1"></i>Add
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -202,7 +194,7 @@
 
                             @* Drag Handle *@
                             <td class="text-center">
-                                @if (canEdit)
+                                @if (p.CanEdit)
                                 {
                                     <i class="ti ti-selector drag-handle cursor-move" title="Drag to reorder"></i>
                                 }
@@ -288,7 +280,7 @@
 
                             @* Status *@
                             <td onclick="event.stopPropagation()">
-                                @if (canEdit)
+                                @if (p.CanEdit)
                                 {
                                     <div class="form-check form-switch mb-0">
                                         <input class="form-check-input" type="checkbox" role="switch"
@@ -400,9 +392,9 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
     /* ── Permissions ── */
-    const permCanAdd    = @Html.Raw(JsonSerializer.Serialize(canAdd));
-    const permCanEdit   = @Html.Raw(JsonSerializer.Serialize(canEdit));
-    const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+    const permCanAdd    = @Html.Raw(JsonSerializer.Serialize(p.CanAdd));
+    const permCanEdit   = @Html.Raw(JsonSerializer.Serialize(p.CanEdit));
+    const permCanDelete = @Html.Raw(JsonSerializer.Serialize(p.CanDelete));
 
     const IV         = window.InlineFormValidation;
     const menuModal  = new bootstrap.Modal(document.getElementById('menuModal'));

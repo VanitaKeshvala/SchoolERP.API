@@ -2,8 +2,8 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -165,24 +165,29 @@ namespace SchoolERP.API.Services
         /// <param name="isActive">Status to apply.</param>
         /// <param name="userId">Current user identifier.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) ToggleStatus(int companyId, bool isActive, int userId)
+        public (bool success, string message) ToggleStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
+               
+                var parameters = new DynamicParameters();
+                parameters.Add("@COMPANYID", request.Ids);
+                parameters.Add("@ISACTIVE", request.IsActive);
+                parameters.Add("@USERID", request.DoneBy);
+
                 var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Companies_ToggleStatus",
-                    new
-                    {
-                        CompanyId = companyId,
-                        IsActive = isActive,
-                        UserId = userId
-                    },
+                    parameters,
                     commandType: CommandType.StoredProcedure);
 
-                return (result?.Result == 1, result?.Message ?? string.Empty);
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
+
             }
             catch (Exception ex)
             {

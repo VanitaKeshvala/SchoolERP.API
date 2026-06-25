@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.API.Services;
 using System;
 using System.Security.Claims;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SchoolERP.API.Controllers.Api
 {
@@ -201,18 +202,30 @@ namespace SchoolERP.API.Controllers.Api
         /// Provides a list of all staff members. 
         /// It can be filtered to show only active or only inactive staff.
         /// </summary>
-        public IActionResult GetAllStaff(bool? isActive = null)
+        public IActionResult GetAllStaff(bool? isActive = null,int? sessionID=null)
         {
-            var data = _hrService.GetAllStaff(GetCompanyId(), GetSessionId());
-            if (isActive.HasValue)
+            try
             {
-                data = data.Where(s => s.IsActive == isActive.Value).ToList();
+                if(sessionID == null) 
+                {
+                    sessionID = GetSessionId();
+                }
+                var data = _hrService.GetAllStaff(GetCompanyId(), sessionID.Value);
+                if (isActive.HasValue)
+                {
+                    data = data.Where(s => s.IsActive == isActive.Value).ToList();
+                }
+                else
+                {
+                    data = data.ToList();
+                }
+                return Ok(new { success = true, data });
             }
-            else
+            catch (Exception ex)
             {
-                data = data.ToList();
+                return Ok(new { success = false, ex.Message });
             }
-            return Ok(new { success = true, data });
+            
         }
 
         [HttpGet("GetStaffByID/{id}")]
@@ -226,14 +239,22 @@ namespace SchoolERP.API.Controllers.Api
         [HttpPost("UpsertStaff")]
         public async Task<IActionResult> UpsertStaff([FromBody] HRStaffUpsertRequest req)
         {
-            var isCreate = req.StaffID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, StaffMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add staff." });
-            if (!isCreate && !await _menuPerm.Has(User, StaffMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit staff." });
+            try
+            {
+                var isCreate = req.StaffID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, StaffMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add staff." });
+                if (!isCreate && !await _menuPerm.Has(User, StaffMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit staff." });
 
-            var res = _hrService.UpsertStaff(req, GetCompanyId(), GetSessionId(), GetUserId());
-            return Ok(new { success = res.Success, message = res.Message });
+                var res = _hrService.UpsertStaff(req, GetCompanyId(), GetSessionId(), GetUserId());
+                return Ok(new { success = res.Result, message = res.Message,Data=res.StaffID });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeleteStaff")]
@@ -542,6 +563,21 @@ namespace SchoolERP.API.Controllers.Api
 
                 var (result, message) = _userService.ChangePassword(staff.UserID.Value, req.NewPassword, GetUserId());
                 return Ok(new { success = result == 1, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "Database Error: " + ex.Message });
+            }
+        }
+
+
+        [HttpPost("UpdateProfile")]
+        public IActionResult UpdateProfile([FromBody] HRStaffProfileRequest req)
+        {
+            try
+            {
+                var result = _hrService.UpdateProfile(req.StaffId, req.PhotoDoc, GetUserId());
+                return Ok(new { success = result.Success, message = result.Message });
             }
             catch (Exception ex)
             {

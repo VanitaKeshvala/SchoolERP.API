@@ -1,8 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -37,11 +37,19 @@ namespace SchoolERP.API.Services
             parameters.Add("@SessionID", sessionId);
             parameters.Add("@IncludeDeleted", includeDeleted);
 
-            return conn.Query<RoomTypeViewModel>(
+            var result= conn.Query<RoomTypeViewModel>(
                 "sp_Mst_RoomType_GetAll",
                 parameters,
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -57,11 +65,19 @@ namespace SchoolERP.API.Services
             var parameters = new DynamicParameters();
             parameters.Add("@RoomTypeID", id);
 
-            return conn.QueryFirstOrDefault<RoomTypeViewModel>(
+            var result= conn.QueryFirstOrDefault<RoomTypeViewModel>(
                 "sp_Mst_RoomType_GetByID",
                 parameters,
                 commandType: CommandType.StoredProcedure
             );
+
+            // If SP returned no rows at all
+            if (result == null) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -202,11 +218,19 @@ namespace SchoolERP.API.Services
             parameters.Add("@SessionID", sessionId);
             parameters.Add("@IncludeDeleted", includeDeleted);
 
-            return conn.Query<HostelViewModel>(
+            var result= conn.Query<HostelViewModel>(
                 "sp_Mst_Hostel_GetAll",
                 parameters,
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -375,11 +399,19 @@ namespace SchoolERP.API.Services
             parameters.Add("@SessionID", sessionId);
             parameters.Add("@IncludeDeleted", includeDeleted);
 
-            return conn.Query<HostelRoomViewModel>(
+            var result= conn.Query<HostelRoomViewModel>(
                 "sp_Mst_HostelRoom_GetAll",
                 parameters,
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>

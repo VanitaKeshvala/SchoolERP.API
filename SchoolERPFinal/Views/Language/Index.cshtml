@@ -4,11 +4,9 @@
     PURPOSE: User interface rendering for the Language module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstLanguagePageViewModel
+@model SchoolERP.Shared.Models.MstLanguagePageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Language Management";
@@ -18,13 +16,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canAdd = PermHelper.HasPermissionByUrl("/Language", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Language", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Language", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Language", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Language", "Export");
+    var p = Model.Permissions;
 }
 
 @* Local alert div removed in favor of global toast system *@
@@ -38,34 +30,34 @@
         <h6 class="fw-bold mb-0">Language Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary shadow-sm" id="btnAddLanguage" onclick="openAddModal()">
+            <button class="btn btn-primary shadow-sm top-btn" id="btnAddLanguage" onclick="openAddModal()">
                 <i class="fas fa-plus me-2"></i>Add
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
                 <i class="fas fa-pencil me-2"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
                 <i class="fas fa-trash me-2"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -130,7 +122,7 @@
                                     </td>
                                     <td><span class="">@l.CreatedOn.ToString("dd MMM yyyy")</span></td>
                                     <td>
-                                        @if (canEdit)
+                                        @if (p.CanEdit)
                                         {
                                             <div class="form-check form-switch" onclick="event.stopPropagation()">
                                                 <input class="form-check-input language-status-switch" type="checkbox" @(l.IsActive ? "checked" : "") onchange="toggleStatus(@l.LanguageId, this.checked)">
@@ -220,9 +212,9 @@
 
 @section Scripts {
     <script>
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(p.CanAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(p.CanEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(p.CanDelete));
         const IV = window.InlineFormValidation;
         const languageFieldMap = {
             txtLanguageTitle: 'errTxtLanguageTitle',

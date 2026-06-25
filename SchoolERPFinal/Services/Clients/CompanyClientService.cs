@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -58,9 +58,9 @@ namespace SchoolERP.Net.Services.Clients
         /// <summary>
         /// Sends a request to the server to update whether a company is currently active.
         /// </summary>
-        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(int id, bool isActive)
+        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request)
         {
-            return await PostAsync<dynamic>($"api/CompanyApi/ToggleStatus?id={id}&isActive={isActive}", null);
+            return await PostAsync<dynamic>($"api/CompanyApi/ToggleStatus", request);
         }
 
         /// <summary>

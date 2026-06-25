@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.API.Services;
 using System;
 using System.Collections.Generic;
@@ -82,10 +82,11 @@ namespace SchoolERP.API.Controllers.Api
                 {
                     using (var ms = new MemoryStream())
                     {
-                        await form.DriverPhoto.CopyToAsync(ms);
-                        req.VehicleDriverPhotoAttach = ms.ToArray();
-                        req.VehicleDriverPhotoName = form.DriverPhoto.FileName;
-                        req.VehicleDriverPhotoType = form.DriverPhoto.ContentType;
+                        //vanita tempory code commit
+                        //await form.DriverPhoto.CopyToAsync(ms);
+                        //req.VehicleDriverPhotoAttach = ms.ToArray();
+                        //req.VehicleDriverPhotoName = form.DriverPhoto.FileName;
+                        //req.VehicleDriverPhotoType = form.DriverPhoto.ContentType;
                     }
                 }
 

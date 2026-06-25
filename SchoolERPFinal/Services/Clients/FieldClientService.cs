@@ -1,5 +1,5 @@
-﻿using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+﻿using SchoolERP.Shared.Models;
+using Common = SchoolERP.Shared.Models.Common;
 using static System.Collections.Specialized.BitVector32;
 
 namespace SchoolERP.Net.Services.Clients
@@ -11,7 +11,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <summary>
         /// Retrieves all custom fields from the API.
         /// </summary>
-        public async Task<ApiResponse<List<FieldModel>>> GetAllFieldsAsync(
+        public async Task<Common.ApiResponse<List<FieldModel>>> GetAllFieldsAsync(
             int companyId,
             int sessionId,
             bool? isSystemField = null,
@@ -34,7 +34,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <returns>
         /// Returns a list of ID auto-generation settings.
         /// </returns>
-        public async Task<ApiResponse<List<IDAutoGenSettings>>> GetIDAutoGenSettingsAsync(
+        public async Task<Common.ApiResponse<List<IDAutoGenSettings>>> GetIDAutoGenSettingsAsync(
             int companyId,
             int sessionId)
         {

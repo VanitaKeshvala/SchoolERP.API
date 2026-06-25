@@ -1,8 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -29,8 +29,8 @@ namespace SchoolERP.API.Services
         /// <returns>List of sections.</returns>
         public List<MstSectionViewModel> GetAllSections(
             int companyId,
-            int sessionId,
-            bool includeDeleted = false)
+            int sessionId,            
+            bool includeDeleted = false, int? userId=null)
         {
             using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
@@ -38,13 +38,22 @@ namespace SchoolERP.API.Services
             var parameters = new DynamicParameters();
             parameters.Add("@CompanyID", companyId);
             parameters.Add("@SessionID", sessionId);
+            parameters.Add("@UserId", userId);
             parameters.Add("@IncludeDeleted", includeDeleted);
 
-            return conn.Query<MstSectionViewModel>(
+            var result= conn.Query<MstSectionViewModel>(
                 "sp_Sections_GetAll",
                 parameters,
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -179,10 +188,7 @@ namespace SchoolERP.API.Services
         /// <param name="isActive">Status to set.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) ToggleSectionStatus(
-            int sectionId,
-            bool isActive,
-            int userId)
+        public (bool success, string message) ToggleSectionStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -190,9 +196,9 @@ namespace SchoolERP.API.Services
                     _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@SectionID", sectionId);
-                parameters.Add("@IsActive", isActive);
-                parameters.Add("@UserId", userId);
+                parameters.Add("@SectionID", request.Ids);
+                parameters.Add("@IsActive", request.IsActive);
+                parameters.Add("@UserId", request.DoneBy);
 
                 var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Sections_ToggleStatus",
@@ -209,5 +215,46 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
+
+        /// <summary>
+        /// Copies selected sections to a target session.
+        /// Skips duplicates automatically.
+        /// </summary>
+        public (bool success, string message, int inserted, int skipped) CopySectionsToSession(
+            string sectionIds,
+            int targetSessionId,
+            int companyId,
+            int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@SECTIONIDS", sectionIds);
+                parameters.Add("@TARGETSESSIONID", targetSessionId);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<CopyResult>(
+                    "sp_Sections_CopyToSession",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed.",
+                    result?.Inserted ?? 0,
+                    result?.Skipped ?? 0
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message, 0, 0);
+            }
+        }
+
+        
     }
 }

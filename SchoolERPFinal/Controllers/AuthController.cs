@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services.Clients;
 using System.Threading.Tasks;
 
@@ -34,7 +34,7 @@ namespace SchoolERP.Net.Controllers
         /// Takes the username and password you entered, checks if they are correct, and lets you into the system if they match.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> Login(LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             // Ensure the data annotations on the LoginRequest model are valid before making a network call.
             if (!ModelState.IsValid) return View(request);
@@ -45,11 +45,22 @@ namespace SchoolERP.Net.Controllers
             // Check if the service returned a successful validation flag.
             if (response.Success)
             {
-                // In a real application, the authentication cookie or JWT would be materialized here 
-                // e.g. HttpContext.SignInAsync(...)
-                
+                string redirectUrl = "/Dashboard/Index"; // default fallback
+                                                         // In a real application, the authentication cookie or JWT would be materialized here 
+                                                         // e.g. HttpContext.SignInAsync(...)
+
+                if (response.Data.DashboardURL != null) 
+                {
+                    redirectUrl = response.Data.DashboardURL;
+                }
                 // Route the successfully authenticated user into the secure system layout.
-                return RedirectToAction("Index", "Dashboard");
+                return Json(new
+                {
+                    success = true,
+                    message = response.Message,
+                    redirectUrl = redirectUrl,
+                    data = response.Data
+                });
             }
 
             // Validation failed. Pass the failure string back to the user interface natively.

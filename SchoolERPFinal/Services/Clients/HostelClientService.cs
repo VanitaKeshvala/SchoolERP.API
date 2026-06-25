@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -10,8 +10,8 @@ namespace SchoolERP.Net.Services.Clients
     {
         public HostelClientService(HttpClient httpClient) : base(httpClient) { }
 
-        public Task<ApiResponse<List<RoomTypeViewModel>>> GetAllRoomTypesAsync(bool includeDeleted = false)
-            => GetAsync<List<RoomTypeViewModel>>($"api/HostelApi/GetAllRoomTypes?includeDeleted={includeDeleted}");
+        public Task<ApiResponse<List<RoomTypeViewModel>>> GetAllRoomTypesAsync(bool includeDeleted = false, int? sessionId = null)
+            => GetAsync<List<RoomTypeViewModel>>($"api/HostelApi/GetAllRoomTypes?includeDeleted={includeDeleted}&sessionId={sessionId}");
 
         public Task<ApiResponse<RoomTypeViewModel>> GetRoomTypeByIDAsync(int id)
             => GetAsync<RoomTypeViewModel>($"api/HostelApi/GetRoomTypeByID/{id}");
@@ -26,8 +26,8 @@ namespace SchoolERP.Net.Services.Clients
             => PostAsync<dynamic>($"api/HostelApi/ToggleRoomTypeStatus?id={id}&isActive={isActive}", null!);
 
         // Hostel
-        public Task<ApiResponse<List<HostelViewModel>>> GetAllHostelsAsync(bool includeDeleted = false)
-            => GetAsync<List<HostelViewModel>>($"api/HostelApi/GetAllHostels?includeDeleted={includeDeleted}");
+        public Task<ApiResponse<List<HostelViewModel>>> GetAllHostelsAsync(bool includeDeleted = false, int? sessionId = null)
+            => GetAsync<List<HostelViewModel>>($"api/HostelApi/GetAllHostels?includeDeleted={includeDeleted}&sessionId={sessionId}");
 
         public Task<ApiResponse<HostelViewModel>> GetHostelByIDAsync(int id)
             => GetAsync<HostelViewModel>($"api/HostelApi/GetHostelByID/{id}");
@@ -42,8 +42,8 @@ namespace SchoolERP.Net.Services.Clients
             => PostAsync<dynamic>($"api/HostelApi/ToggleHostelStatus?id={id}&isActive={isActive}", null!);
 
         // Hostel Room
-        public Task<ApiResponse<List<HostelRoomViewModel>>> GetAllHostelRoomsAsync(bool includeDeleted = false)
-            => GetAsync<List<HostelRoomViewModel>>($"api/HostelApi/GetAllHostelRooms?includeDeleted={includeDeleted}");
+        public Task<ApiResponse<List<HostelRoomViewModel>>> GetAllHostelRoomsAsync(bool includeDeleted = false,int? sessionId=null)
+            => GetAsync<List<HostelRoomViewModel>>($"api/HostelApi/GetAllHostelRooms?includeDeleted={includeDeleted}&sessionId={sessionId}");
 
         public Task<ApiResponse<HostelRoomViewModel>> GetHostelRoomByIDAsync(int id)
             => GetAsync<HostelRoomViewModel>($"api/HostelApi/GetHostelRoomByID/{id}");

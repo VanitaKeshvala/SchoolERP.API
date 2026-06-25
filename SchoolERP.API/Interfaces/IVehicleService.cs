@@ -1,4 +1,4 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
 
 namespace SchoolERP.API.Interfaces
 {

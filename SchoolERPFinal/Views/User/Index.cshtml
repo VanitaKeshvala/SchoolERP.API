@@ -1,97 +1,97 @@
-@*
+﻿@*
     ======================================================================
     VIEW: User / Index.cshtml
     PURPOSE: User interface rendering for the User module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.UsersPageViewModel
+@model SchoolERP.Shared.Models.UsersPageViewModel
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
-    var canPrint = PermHelper.HasPermissionByUrl("/User", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/User", "Export");
-
+    // ── compute at top of view ────────────────────────────────────────
+    int totalPages = Model.PageSize > 0
+                     ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                     : 0;
+    var pb = Model.Permissions;
 }
 
 <link rel="stylesheet" href="~/css/treeview.css" />
 <style>
     .choices__list--dropdown .choices__item--selectable, .choices__list[aria-expanded] .choices__item--selectable {
-        padding-right: 0;
+    padding-right: 0;
     }
 
     /* --- Wizard Step 3 Redesign --- */
     .role-sidebar {
-        -background: #f8f9fa;
-        min-height: 400px;
+    -background: #f8f9fa;
+    min-height: 400px;
     }
 
     .role-item-card {
-        cursor: pointer;
-        transition: all 0.2s ease;
-        -border: 1px solid transparent !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -border: 1px solid transparent !important;
     }
 
-        .role-item-card:hover {
-            background-color: #f1f3f9 !important;
-            -transform: translateX(4px);
-        }
+    .role-item-card:hover {
+    background-color: #f1f3f9 !important;
+    -transform: translateX(4px);
+    }
 
-        .role-item-card.active {
-            background-color: #eef2ff !important;
-            border-color: #5e72e4 !important;
-            box-shadow: 0 2px 8px rgba(94, 114, 228, 0.15) !important;
-        }
+    .role-item-card.active {
+    background-color: #eef2ff !important;
+    border-color: #5e72e4 !important;
+    box-shadow: 0 2px 8px rgba(94, 114, 228, 0.15) !important;
+    }
 
-            .role-item-card.active i {
-                color: #5e72e4 !important;
-                opacity: 1 !important;
-            }
+    .role-item-card.active i {
+    color: #5e72e4 !important;
+    opacity: 1 !important;
+    }
 
     .x-small {
-        font-size: 0.7rem;
+    font-size: 0.7rem;
     }
 
     .tree-grid {
-        border: 1px solid #ddd;
+    border: 1px solid #ddd;
     }
 
-        .tree-grid th {
-            padding: 10px 8px;
-        }
+    .tree-grid th {
+    padding: 10px 8px;
+    }
 
     .w-s-nowrap {
-        -white-space: nowrap;
-        text-align: center !important;
+    -white-space: nowrap;
+    text-align: center !important;
     }
 
 
 
     .tree-grid-wrapper {
-        border-radius: 0;
+    border-radius: 0;
     }
 
     /* Indicators */
     .wizard-step {
-        cursor: pointer;
+    cursor: pointer;
     }
 
-        .wizard-step.completed .step-num {
-            background: #2dce89 !important;
-        }
+    .wizard-step.completed .step-num {
+    background: #2dce89 !important;
+    }
 
-        .wizard-step.active .step-num {
-            background: #5e72e4 !important;
-        }
+    .wizard-step.active .step-num {
+    background: #5e72e4 !important;
+    }
 
 
     .top-6 {
-        top: 6px;
+    top: 6px;
     }
 
     .dt-buttons {
-        display: none !important;
+    display: none !important;
     }
 </style>
 
@@ -102,30 +102,56 @@
         <h6 class="fw-bold mb-0">User Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
+        @if(pb.CanAdd)
+        {            
+            <a asp-action="AddUser" class="btn btn-primary top-btn" style="display:none">
+                <i class="ti ti-plus me-1"></i>Add
+            </a>
 
-        <a asp-action="AddUser" class="btn btn-primary" style="display:none" asp-permission="Add" asp-permission-url="/User">
-            <i class="ti ti-plus me-1"></i>Add
-        </a>
+            <a asp-action="AddUser" class="btn btn-primary top-btn" >
+                <i class="ti ti-plus me-1"></i>Add
+            </a>
+        }
+        @if(pb.CanEdit)
+        {
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if(pb.CanDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
 
+
+
+        @* 
         <button class="btn btn-primary" id="btnAddUsers" onclick="openAddModal()" asp-permission="Add" asp-permission-url="/User">
             <i class="ti ti-plus me-1"></i>Add
-        </button>
-        <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()" asp-permission="Edit" asp-permission-url="/User">
-            <i class="ti ti-pencil me-1"></i>Edit
-        </button>
-        <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()" asp-permission="Delete" asp-permission-url="/User">
-            <i class="ti ti-trash me-1"></i>Delete
-        </button>
-        @if (canPrint)
+        </button> *@
+
+        @if(pb.CanEdit)
         {
-            <button class="btn btn-dark d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="updateUserStatus(true)">
+            <i class="ti ti-circle-check"></i> Active
+        </button>
+        <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="updateUserStatus(false)">
+            <i class="ti ti-circle-x"></i> Inactive
+        </button>
+        }
+        
+        @if (pb.CanPrint)
+        {
+            <button class="btn btn-dark d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (pb.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-secondary dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-secondary dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -158,15 +184,16 @@
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
                         <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="">
-                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
-                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                <div class="d-flex align-items-center justify-content-end">
-                                    <!--<button type="button" class="btn btn-light btn-md me-2 fw-medium" id="btnResetFilters">Reset</button>
-                                    <a href="javascript:void(0);" class="btn btn-secondary btn-md me-2 fw-medium" id="close-filter">Close</a>-->
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                            
+                            <form method="get" asp-action="Index" id="frmSearch">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                    <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <!--<button type="button" class="btn btn-light btn-md me-2 fw-medium" id="btnResetFilters">Reset</button>
+                                        <a href="javascript:void(0);" class="btn btn-secondary btn-md me-2 fw-medium" id="close-filter">Close</a>-->
+                                        <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters" onchange="this.form.submit()">Filter</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <form action="#">
                                 <div class="filter-body pb-0">
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
@@ -208,6 +235,19 @@
                                                 <option value="locked">Locked</option>
                                             </select>
                                         </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label mb-1">Page Size</label>
+                                            <select name="pageSize" class="form-select" id="ddlPageSize"
+                                                    onchange="this.form.submit()">
+                                                @foreach (var ps in new[] { 10, 20, 50, 100 })
+                                                {
+                                                    var isSelected = Model.PageSize == ps;
+                                                    <option value="@ps" selected="@isSelected">
+                                                        @ps per page
+                                                    </option>
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -245,14 +285,8 @@
                                 <th class="">User Type</th>
                                 <th class="">Role(s)</th>
                                 <th class="">Company/School</th>
-                                <th style="width: 70px;">
+                                <th>
                                     Status
-
-                                    <div class="form-check form-switch d-flex justify-content-start mb-0" onclick="event.stopPropagation()">
-                                        <input class="form-check-input" type="checkbox"
-                                               checked onchange="updateUserStatus(this.checked)"
-                                               id="statusSwitch">
-                                    </div>
                                 </th>
                                 <th class="">Created</th>
                             </tr>
@@ -412,6 +446,111 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                @if (totalPages > 1)
+                {
+                    <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2">
+
+                        <!-- Record info -->
+                        <div class="text-muted small">
+                            Showing
+                            <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                            –
+                            <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                            of
+                            <strong>@Model.TotalRecords</strong> users
+                        </div>
+
+                        <!-- Page buttons -->
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+
+                                <!-- First -->
+                                <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                           pageIndex  = 1,
+                           pageSize   = Model.PageSize,
+                           search     = Model.SearchTerm,
+                           companyId  = Model.CompanyId,
+                           isActive   = Model.IsActive,
+                           userTypeId = Model.UserTypeId
+                       })">
+                                        <i class="ti ti-chevrons-left"></i>
+                                    </a>
+                                </li>
+
+                                <!-- Prev -->
+                                <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                           pageIndex  = Model.PageNumber - 1,
+                           pageSize   = Model.PageSize,
+                           search     = Model.SearchTerm,
+                           companyId  = Model.CompanyId,
+                           isActive   = Model.IsActive,
+                           userTypeId = Model.UserTypeId
+                       })">
+                                        <i class="ti ti-chevron-left"></i>
+                                    </a>
+                                </li>
+
+                                <!-- Page numbers — show 5 around current -->
+                                @{
+                                    int start = Math.Max(1, Model.PageNumber - 2);
+                                    int end = Math.Min(totalPages, start + 4);
+                                    start = Math.Max(1, end - 4);
+                                }
+                                @for (int p = start; p <= end; p++)
+                                {
+                                    <li class="page-item @(p == Model.PageNumber ? "active" : "")">
+                                        <a class="page-link"
+                                           href="@Url.Action("Index", new {
+                               pageIndex  = p,
+                               pageSize   = Model.PageSize,
+                               search     = Model.SearchTerm,
+                               companyId  = Model.CompanyId,
+                               isActive   = Model.IsActive,
+                               userTypeId = Model.UserTypeId
+                           })">@p</a>
+                                    </li>
+                                }
+
+                                <!-- Next -->
+                                <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                           pageIndex  = Model.PageNumber + 1,
+                           pageSize   = Model.PageSize,
+                           search     = Model.SearchTerm,
+                           companyId  = Model.CompanyId,
+                           isActive   = Model.IsActive,
+                           userTypeId = Model.UserTypeId
+                       })">
+                                        <i class="ti ti-chevron-right"></i>
+                                    </a>
+                                </li>
+
+                                <!-- Last -->
+                                <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new {
+                           pageIndex  = totalPages,
+                           pageSize   = Model.PageSize,
+                           search     = Model.SearchTerm,
+                           companyId  = Model.CompanyId,
+                           isActive   = Model.IsActive,
+                           userTypeId = Model.UserTypeId
+                       })">
+                                        <i class="ti ti-chevrons-right"></i>
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </nav>
+                    </div>
+                }
 
                 @if (Model.Users.Count == 0)
                 {
@@ -761,7 +900,6 @@
 </div>
 
 @* Local toast container removed in favor of global layout toast *@
-
 @section Scripts {
     <script>
         const userModal = new bootstrap.Modal(document.getElementById('userModal'));
@@ -842,9 +980,32 @@
 
             // Apply button should close dropdown (and later you can apply table filtering here)
             document.getElementById('btnApplyFilters')?.addEventListener('click', () => {
-                const toggle = document.getElementById('btnFilterToggle');
-                if (!toggle) return;
-                bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+                
+                    const request = {
+                    pageIndex: 1,
+                    pageSize: $('#pageSize').val(),
+                    search: $('#txtSearch').val(),
+                    companyId: $('#ddlFilterCompany').val(),
+                    isActive: $('#ddlFilterStatus').val(),
+                    userTypeId: $('#ddlFilterUserType').val()
+                };
+
+                $.ajax({
+                    url: '/User/Index',
+                    type: 'GET',
+                    data: request,
+                    success: function (response) {
+                        $('#userGridContainer').html(response);
+                    },
+                    error: function () {
+                        alert('Error loading data');
+                    }
+                });
+
+                bootstrap.Dropdown.getOrCreateInstance(
+                    document.getElementById('btnFilterToggle')
+                ).hide();
+               
             });
         });
 
@@ -913,6 +1074,8 @@
             // Enable buttons
             document.getElementById('btnEdit').disabled = false;
             document.getElementById('btnDelete').disabled = false;
+              document.getElementById('btnActive').disabled = false;
+            document.getElementById('btnInactive').disabled = false;
             const btnUnlock = document.getElementById('btnUnlock');
             if (btnUnlock) btnUnlock.disabled = !isLocked;
         }
@@ -945,6 +1108,8 @@
             document.querySelectorAll('input[name="selectedUser"]').forEach(r => r.checked = false);
             document.getElementById('btnEdit').disabled = true;
             document.getElementById('btnDelete').disabled = true;
+            document.getElementById('btnActive').disabled = true;
+            document.getElementById('btnInactive').disabled = true;
             const btnUnlock = document.getElementById('btnUnlock');
             if (btnUnlock) btnUnlock.disabled = true;
         }
@@ -987,18 +1152,16 @@
         // ========================================
         // Search & Multi-Criteria Filtering
         // ========================================
-        const filterControls = [
-            'txtSearchInput', 'ddlStatusFilter',
-            'ddlFilterUserType', 'ddlFilterCompany',
-            'ddlFilterRole', 'ddlFilterStatus'
-        ];
+               // ── Server-side search with debounce ─────────────────────────────────────
+        // Replaces all client-side JS filtering
+        let searchTimer = null;
 
-        filterControls.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                const event = el.tagName === 'INPUT' ? 'input' : 'change';
-                el.addEventListener(event, applyFilters);
-            }
+        document.getElementById('txtSearchInput').addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                document.querySelector('input[name="pageIndex"]').value = 1;
+                document.getElementById('frmSearch').submit();
+            }, 500);  // 500ms debounce — waits for user to stop typing
         });
 
         // Sync local status filters
@@ -2384,47 +2547,63 @@
         }
 
         async function updateUserStatus(isActive) {
-            let userIds = [];
-
-            $('.user-checkbox:checked').each(function () {
-
-                userIds.push($(this).val());
-
-            });
-
-            if (userIds.length === 0) {
-                showToast('Please select at least one user', false);
-                return;
-            }
-
-            const request = {
-                userIds: userIds.join(','),
-                isActive: isActive
-            };
-
             try {
-
-                const response = await fetch('/api/user/bluk-toggle-status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(request)
+                let userIds = [];
+                $('.user-checkbox:checked').each(function () {
+                    userIds.push($(this).val());
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    showToast('User status updated successfully', true);
-                    setTimeout(() => location.reload(), 1000);
-                }
-                else {
-                    showToast(result.message, false);
+                if (userIds.length === 0) {
+                    showToast('Please select at least one user', false);
+                    return;
                 }
 
+                const request = {
+                    userIds: userIds.join(','),
+                    isActive: isActive
+                };
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: isActive
+                        ? "You are about to activate selected user(s)."
+                        : "You are about to deactivate selected user(s).",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, proceed!',
+                    customClass: {
+                        confirmButton: 'btn btn-danger me-2',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            // ✅ fixed typo bluk → bulk
+                            url: '/User/BulkToggleStatus',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(request),
+                            success: function (res) {
+                                if (res.success) {
+                                    Swal.fire('Updated!', res.message || 'Status updated successfully.', 'success')
+                                        .then(() => location.reload());
+                                } else {
+                                    Swal.fire('Error!', res.message || 'Failed to update status.', 'error');
+                                }
+                            },
+                            error: function (xhr) {
+                                // ✅ log xhr for debugging
+                                console.error('Status update error:', xhr.status, xhr.responseText);
+                                Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                            }
+                        });
+                    }
+                });
             }
             catch (err) {
-
                 console.error(err);
                 showToast('Error updating status', false);
             }
@@ -2505,40 +2684,40 @@
                 showToast('Please select at least one user', false);
                 return;
             }
-
-            try {
-
-                const response = await fetch(`/api/user/delete-bulk?ids=${userIds.join(',')}`,
-                    {
-                        method: 'POST'
-                    });
-
-                const result = await response.json();
-
-                if (result.success) {
-
-                    showToast(
-                        result.message || 'Users deleted successfully',
-                        true
-                    );
-
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
-
-                } else {
-
-                    showToast(
-                        result.message || 'Error deleting users',
-                        false
-                    );
-                }
-
-            } catch (err) {
-
-                console.error(err);
-                showToast('Error deleting users', false);
-            }
+              
+         Swal.fire({
+             title: 'Are you sure?',
+             text: "You are about to delete this student record. This action cannot be undone!",
+             icon: 'warning',
+             showCancelButton: true,
+             confirmButtonColor: '#d33',
+             cancelButtonColor: '#3085d6',
+             confirmButtonText: 'Yes, delete it!',
+             customClass: {
+                 confirmButton: 'btn btn-danger me-2',
+                 cancelButton: 'btn btn-secondary'
+             },
+             buttonsStyling: false
+         }).then((result) => {
+             if (result.isConfirmed) {
+                 $.ajax({
+                      url: `/User/DeleteBulkUser?ids=${userIds.join(',')}`,
+                     type: 'POST',
+                     contentType: 'application/json',
+                     success: function (res) {
+                         if (res.success) {
+                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
+                                 .then(() => location.reload());
+                         } else {
+                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
+                         }
+                     },
+                     error: function () {
+                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                     }
+                 });
+             }
+         });
         }
     </script>
 }

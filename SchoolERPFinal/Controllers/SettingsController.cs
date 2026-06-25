@@ -1,17 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using SchoolERP.Shared.Models.Common;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller is the central hub for all system settings, including company details, roles, email, SMS, and more.
     /// </summary>
-    public class SettingsController : Controller
+    public class SettingsController : BaseController
     {
         private readonly ISettingsClientService _settingsClient;
         private readonly IRoleClientService _roleClient;
@@ -35,7 +37,8 @@ namespace SchoolERP.Net.Controllers
             ICompanyClientService companyClient,
             ISessionClientService sessionClient,
             ICurrencyClientService currencyClient,
-            IUserMenuPermissionClientService menuPerm)
+            IUserMenuPermissionClientService menuPerm,
+            PermissionHelper permHelper) : base(permHelper)
         {
             _settingsClient = settingsClient;
             _roleClient = roleClient;
@@ -158,9 +161,18 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> EmailSettings()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings"
+           );
             ViewData["Title"] = "Email Settings";
             var response = await _emailClient.GetEmailConfigAsync();
-            var model = (response.Success && response.Data != null) ? response.Data : new MstEmailConfigViewModel();
+            //var model = (response.Success && response.Data != null) ? response.Data : new MstEmailConfigViewModel();
+            var model = new EmailConfigPageViewModel
+            {
+                mstEmail = (response.Success && response.Data != null) ? response.Data : new MstEmailConfigViewModel()
+            };
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -182,9 +194,18 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> SmsSettings()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings"
+           );
             ViewData["Title"] = "SMS Settings";
             var response = await _smsClient.GetSmsConfigAsync();
-            var model = (response.Success && response.Data != null) ? response.Data : new MstSmsConfigViewModel();
+            //var model = (response.Success && response.Data != null) ? response.Data : new MstSmsConfigViewModel();
+            var model = new MstSmsConfigPageViewModel
+            {
+                mstSms= (response.Success && response.Data != null) ? response.Data : new MstSmsConfigViewModel()
+            };
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -257,6 +278,10 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> PaymentMethods()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings"
+           );
             ViewData["Title"] = "Payment Methods";
             var companyResponse = await _companyClient.GetUserCurrentCompanyAsync();
             int companyId = companyResponse.Success ? (companyResponse.Data ?? 0) : 0;
@@ -266,6 +291,7 @@ namespace SchoolERP.Net.Controllers
             {
                 PaymentMethod = response.Success ? response.Data : null
             };
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -333,9 +359,19 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> SystemFields()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings/SystemFields"
+           );
+
             ViewData["Title"] = "System Fields";
             var response = await _settingsClient.GetAllFieldsAsync(isSystemField: true);
-            var model = response.Success ? response.Data : new List<FieldModel>();
+            //var model = response.Success ? response.Data : new List<FieldModel>();
+            var model = new FieldPageViewModel
+            {
+                fieldModels = response.Success ? response.Data : new List<FieldModel>()
+            };
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -359,9 +395,18 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> CustomFields()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings/CustomFields"
+           );
             ViewData["Title"] = "Custom Fields";
             var response = await _settingsClient.GetAllFieldsAsync(isSystemField: false);
-            var model = response.Success ? response.Data : new List<FieldModel>();
+            //var model = response.Success ? response.Data : new List<FieldModel>();
+            var model = new FieldPageViewModel
+            {
+                fieldModels = response.Success ? response.Data : new List<FieldModel>()
+            };
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -409,6 +454,10 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Companies()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Settings"
+           );
             ViewData["Title"] = "Company Master";
 
             var companiesResponse = await _companyClient.GetAllAsync();
@@ -426,7 +475,7 @@ namespace SchoolERP.Net.Controllers
                 Sessions = sessionsResponse.Success ? sessionsResponse.Data : new List<MstSessionViewModel>(),
                 Currencies = currenciesResponse.Success ? currenciesResponse.Data : new List<MstCurrencyViewModel>()
             };
-
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -501,12 +550,12 @@ namespace SchoolERP.Net.Controllers
         /// Turns a company's active status on or off.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> ToggleCompanyStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleCompanyStatus([FromBody] StatusUpdateRequest request)
         {
             if (!(await _menuPerm.Has(SettingsMenuPath, "Edit")).Data)
                 return Json(new { success = false, message = "You do not have permission to change company status." });
 
-            var response = await _companyClient.ToggleStatusAsync(id, isActive);
+            var response = await _companyClient.ToggleStatusAsync(request);
             return Json(new { success = response.Success, message = response.Message });
         }
 
@@ -516,7 +565,7 @@ namespace SchoolERP.Net.Controllers
         public async Task<IActionResult> Users()
         {
             ViewData["Title"] = "Users";
-
+            
             var usersResponse = await _userClient.GetAllUsersAsync();
             var rolesResponse = await _userClient.GetRolesDropdownAsync();
             var typesResponse = await _userClient.GetUserTypesDropdownAsync();

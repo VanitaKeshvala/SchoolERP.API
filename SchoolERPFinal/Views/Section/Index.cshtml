@@ -1,14 +1,12 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Section / Index.cshtml
     PURPOSE: User interface rendering for the Section Management module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstSectionPageViewModel
+@model SchoolERP.Shared.Models.MstSectionPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Section Management";
@@ -18,13 +16,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canAdd = PermHelper.HasPermissionByUrl("/Section", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Section", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Section", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Section", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Section", "Export");
+    var p = Model.Permissions;
 }
 
 <style>
@@ -36,34 +28,50 @@
         <h6 class="fw-bold mb-0">Section Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary" id="btnAddSection" onclick="openAddModal()">
+            <a asp-action="Add" class="btn btn-primary top-btn">
                 <i class="ti ti-plus me-1"></i>Add
-            </button>
+            </a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanEdit)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanAdd)
+        {
+            <button id="btnCopy" class="btn btn-primary top-btn" disabled
+            onclick="openCopyModal()">
+                <i class="ti ti-copy me-1"></i>Copy
+            </button>
+        }
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -92,32 +100,51 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var s in Model.Sections)
+                            @if (Model.Sections !=null)
                             {
-                                <tr class="item-row" onclick="selectItem(@s.SectionID, this)" style="cursor: pointer;">
-                                    <td class="ps-4 text-center">
-                                        <input type="checkbox" name="selectedSection"
-                                               class="form-check-input student-checkbox"
-                                               value="@s.SectionID">
-                                        
+                                @foreach (var s in Model.Sections)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@s.SectionID, this)" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                            <input type="checkbox" name="selectedSection"
+                                            class="form-check-input student-checkbox"
+                                            value="@s.SectionID">
+
+                                        </td>
+                                        <td>
+                                            @s.SectionName
+                                        </td>
+                                        <td>@s.CreatedOn.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (p.CanEdit)
+                                            {
+                                                <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                    <input class="form-check-input section-status-switch" type="checkbox" @(s.IsActive ? "checked" : "") onchange="toggleStatus(@s.SectionID, this.checked)">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">@(s.IsActive ? "Active" : "Inactive")</span>
+                                            }
+                                        </td>
+
+                                    </tr>
+                                }
+                                @if (!Model.Sections.Any())
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">
+                                            <span class="text-muted">No records found.</span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">
+                                        <span class="text-muted">No records found.</span>
                                     </td>
-                                    <td>
-                                        @s.SectionName
-                                    </td>
-                                    <td>@s.CreatedOn.ToString("dd MMM yyyy")</td>
-                                    <td>
-                                        @if (canEdit)
-                                        {
-                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
-                                                <input class="form-check-input section-status-switch" type="checkbox" @(s.IsActive ? "checked" : "") onchange="toggleStatus(@s.SectionID, this.checked)">
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">@(s.IsActive ? "Active" : "Inactive")</span>
-                                        }
-                                    </td>
-                                    
                                 </tr>
                             }
                         </tbody>
@@ -128,253 +155,71 @@
     </div>
 </div>
 
-<!-- Add/Edit Modal -->
-<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+<!-- ── Copy to Session Modal ──────────────────────────────────────── -->
+<div class="modal fade" id="modalCopySession" tabindex="-1"
+     aria-labelledby="modalCopySessionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header p-3">
-                <h5 class="modal-title" id="modalTitle">Add Section</h5>
-                <div class="ms-auto d-flex align-items-center gap-1">                    
-                    <button type="button" class="btn btn-success" id="btnSave" onclick="saveItem()">
-                        <i class="ti ti-cloud me-1"></i>Save
-                    </button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalCopySessionLabel">
+                    <i class="ti ti-copy me-2 text-primary"></i>Copy Sections to Session
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Selected sections preview -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Selected Sections</label>
+                    <div id="copySelectedBadges" class="d-flex flex-wrap gap-1"></div>
                 </div>
-            </div>
-            <div class="modal-body p-3">
-                <form id="itemForm">
-                    <input type="hidden" id="txtItemId" value="0">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Section Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="txtSectionName" placeholder="e.g. Section A" autocomplete="off">
-                        <div class="invalid-feedback" id="errTxtSectionName"></div>
+
+                <!-- Target session dropdown -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Copy To Session <span class="text-danger">*</span>
+                    </label>
+                    <select id="ddlTargetSession" class="form-select select2">
+                        <option value="">-- Select Session --</option>
+                        <!-- populated by JS from layout window.allSessions -->
+                    </select>
+                    <div class="invalid-feedback" id="errTargetSession">
+                        Please select a target session.
                     </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="isActive" checked>
-                        <label class="form-check-label fw-bold" for="isActive">Active</label>                        
-                    </div>
-                </form>
+                </div>
+
+                <!-- Info note -->
+                <div class="alert alert-info py-2 mb-0 small">
+                    <i class="ti ti-info-circle me-1"></i>
+                    Sections that already exist in the selected session will be skipped automatically.
+                </div>
+
             </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-primary"
+                        id="btnConfirmCopy" onclick="confirmCopy()">
+                    <i class="ti ti-copy me-1"></i>Copy
+                </button>
+            </div>
+
         </div>
     </div>
 </div>
+<!-- ── End Copy Modal ─────────────────────────────────────────────── -->
 
 @section Scripts {
     <script>
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
-        const IV = window.InlineFormValidation;
-        const sectionFieldMap = { txtSectionName: 'errTxtSectionName' };
-        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
-        let selectedSectionId = 0;
-
-        function clearSectionModalValidation() {
-            IV.clearMap(sectionFieldMap);
-            IV.clearNotice('sectionModalNotice');
-        }
-
-        IV.bindAutoClear(sectionFieldMap);
-
-        function selectItem(id, row) {
-            IV.clearNotice('sectionPageNotice');
-            selectedSectionId = id;
-            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
-            row.classList.add('bg-light');
-            //row.querySelector('input[type="radio"]').checked = true;
-            const btnEdit = document.getElementById('btnEdit');
-            const btnDelete = document.getElementById('btnDelete');
-            if (btnEdit && permCanEdit) btnEdit.disabled = false;
-            if (btnDelete && permCanDelete) btnDelete.disabled = false;
-             let checkedCount = $('.student-checkbox:checked').length;
-            $('#btnDelete').prop('disabled', checkedCount === 0);
-            // Edit sirf 1 record select hone par
-            $('#btnEdit').prop('disabled', checkedCount !== 1);
-
-        }
-
-        function openAddModal() {
-            if (!permCanAdd) {
-                IV.setNotice('sectionPageNotice', 'You do not have permission to add.');
-                return;
-            }
-            IV.clearNotice('sectionPageNotice');
-            clearSectionModalValidation();
-            document.getElementById('modalTitle').textContent = 'Add Section';
-            document.getElementById('itemForm').reset();
-            document.getElementById('txtItemId').value = "0";
-            document.getElementById('isActive').checked = true;
-            itemModal.show();
-        }
-
-        async function editSelected() {
-            if (!permCanEdit) {
-                IV.setNotice('sectionPageNotice', 'You do not have permission to edit.');
-                return;
-            }
-            if (selectedSectionId === 0) return;
-            IV.clearNotice('sectionPageNotice');
-            clearSectionModalValidation();
-            try {
-                const resp = await fetch(`/Section/GetSection?id=${selectedSectionId}`);
-                const res = await resp.json();
-                if (res.success) {
-                    document.getElementById('modalTitle').textContent = 'Edit Section';
-                    document.getElementById('txtItemId').value = res.data.sectionID;
-                    document.getElementById('txtSectionName').value = res.data.sectionName;
-                    document.getElementById('isActive').checked = res.data.isActive;
-                    itemModal.show();
-                } else {
-                    IV.setNotice('sectionPageNotice', res.message || 'Could not load section.');
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('sectionPageNotice', 'Could not load section details.');
-            }
-        }
-
-        async function deleteSelected() {
-            if (!permCanDelete) {
-                IV.setNotice('sectionPageNotice', 'You do not have permission to delete.');
-                return;
-            }
-            
-
-             let selectedIds = [];
-           $('.student-checkbox:checked').each(function () {
-                    selectedIds.push(parseInt($(this).val()));
-                });
-           if (selectedIds.length === 0) {
-                    alert("Please select at least one section.");
-                    return;
-                }
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You are about to delete this section record. This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger me-2',
-                    cancelButton: 'btn btn-secondary'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                         url: '/Section/Delete',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(selectedIds),
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire('Deleted!', 'section record has been deleted.', 'success')
-                                    .then(() => location.reload());
-                            } else {
-                                Swal.fire('Error!', res.message || 'Failed to delete section.', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                        }
-                    });
-                }
-            });
-        }
-
-        async function saveItem() {
-            const sid = parseInt(document.getElementById('txtItemId').value);
-            if (sid === 0 && !permCanAdd) {
-                IV.setNotice('sectionModalNotice', 'You do not have permission to add.');
-                return;
-            }
-            if (sid > 0 && !permCanEdit) {
-                IV.setNotice('sectionModalNotice', 'You do not have permission to edit.');
-                return;
-            }
-            clearSectionModalValidation();
-            const name = document.getElementById('txtSectionName').value.trim();
-            if (!name) {
-                IV.setFieldError('txtSectionName', 'errTxtSectionName', 'Section name is required.');
-                return;
-            }
-
-            const data = {
-                sectionID: parseInt(document.getElementById('txtItemId').value),
-                sectionName: name,
-                isActive: document.getElementById('isActive').checked
-            };
-
-            try {
-                const resp = await fetch('/Section/Save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const res = await resp.json();
-                if (res.success) location.reload();
-                else IV.setNotice('sectionModalNotice', res.message || 'Save failed.');
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('sectionModalNotice', 'Could not save section.');
-            }
-        }
-
-        async function toggleStatus(id, isActive) {
-            if (!permCanEdit) {
-                IV.setNotice('sectionPageNotice', 'You do not have permission to change status.');
-                if (window.toast) window.toast.error('You do not have permission to change status.');
-                location.reload();
-                return;
-            }
-            IV.clearNotice('sectionPageNotice');
-            try {
-                const resp = await fetch(`/Section/ToggleStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
-                const res = await resp.json();
-                if (res.success) {
-                    if (window.toast) window.toast.success(res.message || 'Status updated.');
-                } else {
-                    IV.setNotice('sectionPageNotice', res.message || 'Could not update status.');
-                    if (window.toast) window.toast.error(res.message || 'Could not update status.');
-                    location.reload();
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('sectionPageNotice', 'Could not update status.');
-                location.reload();
-            }
-        }
-
-        let exportTable;
-        $(document).ready(function () {
-            if ($.fn.DataTable.isDataTable('#sectionsTable')) {
-                $('#sectionsTable').DataTable().destroy();
-            }
-            exportTable = $('#sectionsTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: { columns: [1, 2], rows: ':visible' } },
-                    { extend: 'csv', exportOptions: { columns: [1, 2], rows: ':visible' } },
-                    { extend: 'excel', exportOptions: { columns: [1, 2], rows: ':visible' } },
-                    { extend: 'pdf', exportOptions: { columns: [1, 2], rows: ':visible' } },
-                    { extend: 'print', exportOptions: { columns: [1, 2], rows: ':visible' } }
-                ],
-                searching: false,
-                paging: false,
-                info: false,
-                ordering: false
-            });
-        });
-
-        function triggerExport(type) {
-            if (!exportTable) return;
-            if (type === 'copy') exportTable.button('.buttons-copy').trigger();
-            else if (type === 'csv') exportTable.button('.buttons-csv').trigger();
-            else if (type === 'excel') exportTable.button('.buttons-excel').trigger();
-            else if (type === 'pdf') exportTable.button('.buttons-pdf').trigger();
-            else if (type === 'print') exportTable.button('.buttons-print').trigger();
-        }
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
     </script>
+
+    <script src="~/assets/js/Section.js"></script>
 }

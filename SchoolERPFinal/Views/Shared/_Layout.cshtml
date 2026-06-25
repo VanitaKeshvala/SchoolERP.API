@@ -76,7 +76,7 @@
 </head>
 
 <body>
-
+   
     <!-- Begin Wrapper -->
     <div class="main-wrapper">
 
@@ -486,10 +486,34 @@
         </div>
     </div>
 
-
+    
+   
     <!-- jQuery -->
     <script src="~/assets/js/jquery-3.7.1.min.js"></script>
     <script>
+                // In _Layout.cshtml — inside <script> tag at bottom of body
+        // Make these available globally so Section.js can use them
+       
+        window.fetchSessions = async function () {
+            const resp = await fetch('/Sessions/GetAll?includeDeleted=false', { method: 'GET' });
+            const payload = await resp.json();
+            if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
+                throw new Error(payload?.message || 'Failed to load sessions');
+            }
+            return payload.data;
+        };
+
+        window.fetchUserCurrentSession = async function () {
+            try {
+                const resp = await fetch('/Sessions/GetUserCurrentSession', { method: 'GET' });
+                const payload = await resp.json();
+                return payload.success ? (payload.data || 0) : 0;
+            } catch {
+                return 0;
+            }
+        };
+        
+    
         (function () {
             function getJwtToken() {
                 try {
@@ -538,17 +562,19 @@
                 });
             }
         })();
-
+        
             
         
     </script>
-
+    <script src="~/js/select2.min.js"></script>
     <!-- Bootstrap Core JS -->
     <script src="~/assets/js/bootstrap.bundle.min.js"></script>
 
     <!-- Simplebar JS -->
     <script src="~/assets/plugins/simplebar/simplebar.min.js"></script>
-
+    <!-- Chart JS -->
+    <script src="~/assets/plugins/apexchart/apexcharts.min.js"></script>
+    <script src="~/assets/plugins/apexchart/chart-data.js"></script>
     <!-- Dropzone File Js -->
     <script src="~/assets/plugins/dropzone/dropzone-min.js"></script>
 
@@ -569,7 +595,6 @@
     <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
 
 
-    <script src="~/js/select2.min.js"></script>
 
 
 
@@ -653,62 +678,79 @@
 
             if (!ddl) return;
 
-            async function fetchSessions() {
-                const resp = await fetch('/Sessions/GetAll?includeDeleted=false', { method: 'GET' });
-                const payload = await resp.json();
-                if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
-                    throw new Error(payload?.message || 'Failed to load sessions');
-                }
-                return payload.data;
-            }
+            // async function fetchSessions() {
+            //     const resp = await fetch('/Sessions/GetAll?includeDeleted=false', { method: 'GET' });
+            //     const payload = await resp.json();
+            //     if (!payload || payload.success !== true || !Array.isArray(payload.data)) {
+            //         throw new Error(payload?.message || 'Failed to load sessions');
+            //     }
+            //     return payload.data;
+            // }
 
-            async function fetchUserCurrentSession() {
-                try {
-                    const resp = await fetch('/Sessions/GetUserCurrentSession', { method: 'GET' });
-                    const payload = await resp.json();
-                    return payload.success ? (payload.data || 0) : 0;
-                } catch {
-                    return 0;
-                }
-            }
+            // async function fetchUserCurrentSession() {
+            //     try {
+            //         const resp = await fetch('/Sessions/GetUserCurrentSession', { method: 'GET' });
+            //         const payload = await resp.json();
+            //         return payload.success ? (payload.data || 0) : 0;
+            //     } catch {
+            //         return 0;
+            //     }
+            // }
 
-            function setLoadingState(message) {
-                ddl.innerHTML = '';
+                 // ── Cookie helpers ───────────────────────────────────────────────
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+        }
+
+        function getCookie(name) {
+            const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return match ? decodeURIComponent(match[1]) : null;
+        }
+
+        // ── Global accessor ──────────────────────────────────────────────
+        // Any page: window.getSessionId()  → integer session ID
+        window.getSessionId = function () {
+            return parseInt(getCookie('CurrentSessionId') || ddl.value || '0', 10);
+        };
+
+        function dispatchSessionReady(sessionId) {
+            document.dispatchEvent(new CustomEvent('sessionReady', { detail: { sessionId } }));
+        }
+
+        function setLoadingState(message) {
+            ddl.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = message || 'Loading…';
+            ddl.appendChild(opt);
+            ddl.disabled = true;
+        }
+
+        function populateSessions(sessions) {
+            ddl.innerHTML = '';
+            for (const s of sessions) {
                 const opt = document.createElement('option');
-                opt.value = '';
-                opt.textContent = message || 'Loading…';
+                opt.value = String(s.sessionId);
+                opt.textContent = s.sessionTitle || `Session #${s.sessionId}`;
                 ddl.appendChild(opt);
-                ddl.disabled = true;
-               // btnSave.disabled = true;
             }
+            ddl.disabled = sessions.length === 0;
+        }
 
-            function populateSessions(sessions) {
-                ddl.innerHTML = '';
-                for (const s of sessions) {
-                    const opt = document.createElement('option');
-                    opt.value = String(s.sessionId);
-                    opt.textContent = s.sessionTitle || `Session #${s.sessionId}`;
-                    ddl.appendChild(opt);
-                }
-                ddl.disabled = sessions.length === 0;
-                //btnSave.disabled = sessions.length === 0;
-            }
-
-            function selectDefaultSession(sessions, dbSessionId) {
-                const fromDb = dbSessionId
-                    ? (sessions.find(s => s && s.sessionId === dbSessionId) || null)
-                    : null;
-
-                const active = fromDb || sessions.find(s => s && s.isActive === true) || sessions[0] || null;
-                if (!active) {
-                    //titleEl.textContent = '—';
-                    ddl.value = '';
-                    return null;
-                }
-                //titleEl.textContent = active.sessionTitle || '—';
-                ddl.value = String(active.sessionId);
-                return active;
-            }
+        function selectDefaultSession(sessions, cookieSessionId) {
+            // Priority: cookie → isActive → first
+            const fromCookie = cookieSessionId
+                ? (sessions.find(s => s && String(s.sessionId) === String(cookieSessionId)) || null)
+                : null;
+            const active = fromCookie || sessions.find(s => s && s.isActive === true) || sessions[0] || null;
+            if (!active) { ddl.value = ''; return null; }
+            ddl.value = String(active.sessionId);
+            // Always keep cookie in sync
+            setCookie('CurrentSessionId', active.sessionId, 365);
+            return active;
+        }
 
             async function init() {
                 try {
@@ -717,8 +759,12 @@
                         fetchSessions(),
                         fetchUserCurrentSession()
                     ]);
-                    populateSessions(sessions);
-                    selectDefaultSession(sessions, currentSessionId);
+                    const cookieSessionId = getCookie('CurrentSessionId');
+            // Only call server if no cookie exists yet
+            const sessionss = await fetchSessions();
+            populateSessions(sessionss);
+            const active = selectDefaultSession(sessionss, cookieSessionId);
+            dispatchSessionReady(active ? active.sessionId : 0);
                 } catch (e) {
                     console.error(e);
                     setLoadingState('No sessions');
@@ -733,6 +779,7 @@
                 //btnSave.disabled = true;
                 ddl.disabled = true;
                 try {
+                    setCookie('CurrentSessionId', selectedId, 365);
                     const resp = await fetch('/Sessions/SetCurrent', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -922,6 +969,23 @@
         </div>
     </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                showToast('@TempData["Success"]', 'success');
+            });
+        </script>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                showToast('@TempData["Error"]', 'error');
+            });
+        </script>
+    }
     <script>
         /**
          * Global Toast Helper

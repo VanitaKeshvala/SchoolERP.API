@@ -1,6 +1,4 @@
-@model StudentListPageViewModel
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+﻿@model StudentListPageViewModel
 @{
     ViewData["Title"] = "Students List";
     int currentUserId = 0;
@@ -10,21 +8,28 @@
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
 
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-    var canAdd = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/StudentInformation/Students", "Export");
+    var p = Model.Permissions;
+
     var activeCustomFieldsOnTable = Model.CustomFields?.Where(f => f.IsActive && f.OnTable).OrderBy(f => f.DisplayOrder).ToList() ?? new List<FieldModel>();
+
+    int totalPages = (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize);
+
+    int startPage = Math.Max(1, Model.PageNumber - 2);
+    int endPage = Math.Min(totalPages, startPage + 4);
+
+    if (endPage - startPage < 4)
+    {
+        startPage = Math.Max(1, endPage - 4);
+    }
 }
 
 @section Styles {
-    <style>
-        .dt-buttons {
-            display: none !important;
-        }
-    </style>
+<style>
+    .dt-buttons {
+    display: none !important;
+    }
+
+</style>
 }
 
 <!-- Page Header -->
@@ -33,34 +38,38 @@
         <h6 class="fw-bold mb-0">Student Details</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <a href="/StudentInformation/StudentAdmission" class="btn btn-primary d-inline-flex align-items-center">
+            <a href="/StudentInformation/StudentAdmission" class="btn btn-primary d-inline-flex align-items-center top-btn">
                 <i class="ti ti-plus me-1"></i>New Admission
             </a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info d-inline-flex align-items-center top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
-        }
-        @if (canPrint)
+        }        
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" type="button" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanImport)
+        {
+            <a href="/StudentInformation/ImportStudent" class="btn btn-warning d-inline-flex align-items-center top-btn"><i class="ti ti-upload me-1"></i> Import Student</a>
+        }
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -159,9 +168,9 @@
                     <div class="card shadow-tbl-outer mb-2">
                         <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
                             <div class="me-3 d-flex align-items-center">
-                                
+
                                 <input type="checkbox" name="selectedStudent"
-                                       class="form-check-input student-checkbox me-3 position-absolute"                                       
+                                       class="form-check-input student-checkbox me-3 position-absolute"
                                        value="@student.StudentID">
                                 <div class="doctor-profile-img">
                                     @if (student.StudentPhoto != null)
@@ -235,7 +244,7 @@
                                 <tr class="student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
                                     <td class="ps-3">
                                         <input type="checkbox" name="selectedStudent"
-                                               class="form-check-input student-checkbox"                                               
+                                               class="form-check-input student-checkbox"
                                                value="@student.StudentID">
 
                                     </td>
@@ -258,8 +267,99 @@
                                     }
                                 </tr>
                             }
-                        </tbody>
                     </table>
+                    <div class="d-flex justify-content-between align-items-center mt-3 mb-3 p-1">
+
+                        <div class="text-muted small">
+                            Showing Page @Model.PageNumber of @totalPages
+                            (Total Records : @Model.TotalRecords)
+                        </div>
+
+                        <nav aria-label="Student Pagination">
+                            <ul class="pagination pagination-sm mb-0">
+
+                                <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = Model.ViewType
+                    })">
+                                        First
+                                    </a>
+                                </li>
+
+                                <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = Model.PageNumber - 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = Model.ViewType
+                    })">
+                                        Prev
+                                    </a>
+                                </li>
+
+                                @for (int i = startPage; i <= endPage; i++)
+                                {
+                                    <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                        <a class="page-link"
+                                           href="@Url.Action("Students","StudentInformation",
+                        new {
+                            page = i,
+                            pageSize = Model.PageSize,
+                            classId = Model.SelectedClassId,
+                            sectionId = Model.SelectedSectionId,
+                            search = Model.SearchTerm,
+                            viewType = Model.ViewType
+                        })">
+                                            @i
+                                        </a>
+                                    </li>
+                                }
+
+                                <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = Model.PageNumber + 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = Model.ViewType
+                    })">
+                                        Next
+                                    </a>
+                                </li>
+
+                                <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = totalPages,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = Model.ViewType
+                    })">
+                                        Last
+                                    </a>
+                                </li>
+
+                            </ul>
+                        </nav>
+
+                    </div>
                 </div>
             </div>
         </div>

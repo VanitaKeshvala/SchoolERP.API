@@ -4,8 +4,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Services;
 
 namespace SchoolERP.Net.Controllers.Api
@@ -68,11 +68,11 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpGet("GetAllClassTeachers")]
-        public IActionResult GetAllClassTeachers([FromQuery] List<int> classId, [FromQuery] List<int> sectionId)
+        public IActionResult GetAllClassTeachers([FromQuery] List<int> classId, [FromQuery] List<int> sectionId, [FromQuery] int sessionID)
         {
             try
             {
-                var list = _svc.GetAllClassTeachers(CompanyId, SessionId,classId,sectionId);
+                var list = _svc.GetAllClassTeachers(CompanyId, sessionID, classId,sectionId);
                 return Ok(ApiResponse<List<ClassTeacherViewModel>>.SuccessResponse(list));
             }
             catch (Exception ex) { return Ok(ApiResponse<List<ClassTeacherViewModel>>.ErrorResponse(ex.Message)); }

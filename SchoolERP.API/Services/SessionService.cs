@@ -1,8 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -219,6 +219,7 @@ namespace SchoolERP.API.Services
                     "sp_Users_GetCurrentSession",
                     new { UserID = userId },
                     commandType: CommandType.StoredProcedure);
+
 
                 return result?.SESSIONID;
             }

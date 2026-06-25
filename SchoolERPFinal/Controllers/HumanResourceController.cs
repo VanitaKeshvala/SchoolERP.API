@@ -1,15 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
-using SchoolERP.Net.Services;
-using SchoolERP.Net.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using SchoolERP.Shared.Models;
 using System.Security.Claims;
-using System.Linq;
-using System.IO;
-using System.Text;
-using Microsoft.AspNetCore.Http;
-using System;
 
 
 namespace SchoolERP.Net.Controllers
@@ -17,7 +10,7 @@ namespace SchoolERP.Net.Controllers
     /// <summary>
     /// This controller manages the school's human resources, including staff information, job designations, departments, and leave policies.
     /// </summary>
-    public class HumanResourceController : Controller
+    public class HumanResourceController : BaseController
     {
         private readonly IHumanResourceClientService _hrClient;
         private readonly IRoleClientService _roleClient;
@@ -25,6 +18,7 @@ namespace SchoolERP.Net.Controllers
         private readonly ICompanyClientService _companyClient;
         private readonly ISettingsClientService _settingsClient; 
         private readonly ISessionClientService _sessionService;
+        private readonly IPhotoUploadService _photoService;
 
         private const string DesignationMenuPath = "/HumanResource/Designation";
         private const string DepartmentMenuPath = "/HumanResource/Department";
@@ -37,7 +31,8 @@ namespace SchoolERP.Net.Controllers
             IUserTypeClientService userTypeClient,
             ICompanyClientService companyClient,
             ISettingsClientService settingsClient,
-            ISessionClientService sessionService)
+            ISessionClientService sessionService,
+            IPhotoUploadService photoService, PermissionHelper permHelper) : base(permHelper)
         {
             _hrClient = hrClient;
             _roleClient = roleClient;
@@ -46,6 +41,7 @@ namespace SchoolERP.Net.Controllers
             //_hrService = hrService;
             _settingsClient = settingsClient;
             _sessionService = sessionService;
+            _photoService = photoService;
         }
 
         private int GetUserId() => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId"), out var id) ? id : 0;
@@ -65,18 +61,30 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Designation()
         {
-            // Step 1: Ask the system for all the job titles currently set up.
-            var res = await _hrClient.GetAllDesignationsAsync();
-            
-            // Step 2: Prepare the list to be shown on the screen.
-            var model = new HRDesignationPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<HRDesignationViewModel>()
-            };
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Designation"
+               );
+                // Step 1: Ask the system for all the job titles currently set up.
+                var res = await _hrClient.GetAllDesignationsAsync();
+
+                // Step 2: Prepare the list to be shown on the screen.
+                var model = new HRDesignationPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<HRDesignationViewModel>()
+                };
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                model.Permissions = perms;
+                // Step 3: Open the 'Designation' page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             
-            // Step 3: Open the 'Designation' page.
-            return View(model);
         }
 
         /// <summary>
@@ -84,14 +92,28 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Department()
         {
-            var res = await _hrClient.GetAllDepartmentsAsync();
-            var model = new   HRDepartmentPageViewModel();
-            if (res.Success) 
+            try
             {
-                model.Items = res.Data.Data;
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Department"
+               );
+                var res = await _hrClient.GetAllDepartmentsAsync();
+                var model = new HRDepartmentPageViewModel();
+                if (res.Success)
+                {
+                    model.Items = res.Data.Data;
+                }
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
             }
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         /// <summary>
@@ -99,13 +121,27 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> LeaveType()
         {
-            var res = await _hrClient.GetAllLeaveTypesAsync();
-            var model = new HRLeaveTypePageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<HRLeaveTypeViewModel>()
-            };
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/LeaveType"
+               );
+                var res = await _hrClient.GetAllLeaveTypesAsync();
+                var model = new HRLeaveTypePageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<HRLeaveTypeViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         /// <summary>
@@ -168,97 +204,121 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> Staffs(string? search, string? roleName, string? designationName, string? departmentName, string? viewType)
         {
-            var companyId =await GetCompanyId();
-            var sessionId =await GetSessionId();
-
-            var allStaff = (await _hrClient.GetAllStaffAsync()).Data;
-
-            // Server-side Filtering
-            if (!string.IsNullOrEmpty(search))
+            try
             {
-                search = search.ToLower();
-                allStaff = allStaff.Where(s => 
-                    (s.FirstName + " " + s.LastName).ToLower().Contains(search) || 
-                    s.StaffCode.ToLower().Contains(search)
-                ).ToList();
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Staffs"
+               );
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+
+                var allStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+
+                // Server-side Filtering
+                if (!string.IsNullOrEmpty(search))
+                {
+                    search = search.ToLower();
+                    allStaff = allStaff.Where(s =>
+                        (s.FirstName + " " + s.LastName).ToLower().Contains(search) ||
+                        s.StaffCode.ToLower().Contains(search)
+                    ).ToList();
+                }
+
+                if (!string.IsNullOrEmpty(roleName))
+                {
+                    allStaff = allStaff.Where(s => s.RoleName == roleName).ToList();
+                }
+
+                if (!string.IsNullOrEmpty(designationName))
+                {
+                    allStaff = allStaff.Where(s => s.DesignationName == designationName).ToList();
+                }
+
+                if (!string.IsNullOrEmpty(departmentName))
+                {
+                    allStaff = allStaff.Where(s => s.DepartmentName == departmentName).ToList();
+                }
+
+                var fieldRes = await _settingsClient.GetAllFieldsAsync(isSystemField: null, belongsTo: "Staff");
+                var allFields = fieldRes.Success ? fieldRes.Data : new List<FieldModel>();
+                //this code used if any time data null code working not any error get null
+                var depmodel = new List<HRDepartmentViewModel>();
+                var depart = await _hrClient.GetAllDepartmentsAsync();
+                if (depart.Success)
+                {
+                    depmodel = depart.Data.Data;
+                }
+
+                //this code used if any time data null code working not any error get null
+                var desimodel = new List<HRDesignationViewModel>();
+                var desi = await _hrClient.GetAllDesignationsAsync();
+                if (desi.Success)
+                {
+                    desimodel = desi.Data;
+                }
+
+                //this code used if any time data null code working not any error get null
+                var rolesmodel = new List<MstRoleViewModel>();
+                var roles = await _roleClient.GetAllRolesAsync();
+                if (roles.Success)
+                {
+                    rolesmodel = roles.Data;
+                }
+                var model = new HRStaffPageViewModel
+                {
+                    Roles = rolesmodel,
+                    Departments = depmodel,
+                    Designations = desimodel,
+                    StaffList = allStaff,
+                    ViewType = viewType ?? "list",
+                    SearchTerm = search,
+                    SelectedRole = roleName,
+                    SelectedDesignation = designationName,
+                    SelectedDepartment = departmentName,
+                    SystemFields = allFields.Where(f => f.IsSystemField).ToList(),
+                    CustomFields = allFields.Where(f => !f.IsSystemField).ToList()
+                };
+                model.Permissions = perms;
+                return View(model);
             }
-
-            if (!string.IsNullOrEmpty(roleName))
+            catch (Exception ex)
             {
-                allStaff = allStaff.Where(s => s.RoleName == roleName).ToList();
+                throw;
             }
-
-            if (!string.IsNullOrEmpty(designationName))
-            {
-                allStaff = allStaff.Where(s => s.DesignationName == designationName).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(departmentName))
-            {
-                allStaff = allStaff.Where(s => s.DepartmentName == departmentName).ToList();
-            }
-
-            var fieldRes = await _settingsClient.GetAllFieldsAsync(isSystemField: null, belongsTo: "Staff");
-            var allFields = fieldRes.Success ? fieldRes.Data : new List<FieldModel>();
-            //this code used if any time data null code working not any error get null
-            var depmodel = new List<HRDepartmentViewModel>();
-            var depart = await _hrClient.GetAllDepartmentsAsync();
-            if (depart.Success) 
-            {
-                depmodel = depart.Data.Data;
-            }
-
-            //this code used if any time data null code working not any error get null
-            var desimodel = new List<HRDesignationViewModel>();
-            var desi = await _hrClient.GetAllDesignationsAsync();
-            if (desi.Success)
-            {
-                desimodel = desi.Data;
-            }
-
-            //this code used if any time data null code working not any error get null
-            var rolesmodel = new List<MstRoleViewModel>();
-            var roles = await _roleClient.GetAllRolesAsync();
-            if (roles.Success)
-            {
-                rolesmodel = roles.Data;
-            }
-            var model = new HRStaffPageViewModel
-            {
-                Roles = rolesmodel,
-                Departments = depmodel,
-                Designations = desimodel,
-                StaffList = allStaff,
-                ViewType = viewType ?? "list",
-                SearchTerm = search,
-                SelectedRole = roleName,
-                SelectedDesignation = designationName,
-                SelectedDepartment = departmentName,
-                SystemFields = allFields.Where(f => f.IsSystemField).ToList(),
-                CustomFields = allFields.Where(f => !f.IsSystemField).ToList()
-            };
-
-            return View(model);
         }
 
         public async Task<IActionResult> DisableStaffs()
         {
-            var model = new HRStaffPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/DisableStaffs"
+               );
+                var model = new HRStaffPageViewModel();
+                var sessionId = await GetSessionId();
+                var desigRes = await _hrClient.GetAllDesignationsAsync();
+                model.Designations = desigRes.Success ? desigRes.Data : new List<HRDesignationViewModel>();
+
+                var deptRes = await _hrClient.GetAllDepartmentsAsync();
+                model.Departments = deptRes.Success ? deptRes.Data.Data : new List<HRDepartmentViewModel>();
+
+                var rolesRes = await _roleClient.GetAllRolesAsync();
+                model.Roles = rolesRes.Success ? rolesRes.Data : new List<MstRoleViewModel>();
+
+                var staffRes = await _hrClient.GetAllStaffAsync(sessionId);
+                // Filter DISABLED ONLY
+                model.StaffList = staffRes.Success ? staffRes.Data.Where(s => !s.IsActive).ToList() : new List<HRStaffViewModel>();
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
             
-            var desigRes = await _hrClient.GetAllDesignationsAsync();
-            model.Designations = desigRes.Success ? desigRes.Data : new List<HRDesignationViewModel>();
-
-            var deptRes = await _hrClient.GetAllDepartmentsAsync();
-            model.Departments = deptRes.Success ? deptRes.Data.Data : new List<HRDepartmentViewModel>();
-
-            var rolesRes = await _roleClient.GetAllRolesAsync();
-            model.Roles = rolesRes.Success ? rolesRes.Data : new List<MstRoleViewModel>();
-
-            var staffRes = await _hrClient.GetAllStaffAsync();
-            // Filter DISABLED ONLY
-            model.StaffList = staffRes.Success ? staffRes.Data.Where(s => !s.IsActive).ToList() : new List<HRStaffViewModel>();
-
-            return View(model);
         }
 
         public async Task<IActionResult> StaffDetails(int id)
@@ -291,45 +351,58 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> ApplyLeave()
         {
-            int userId = GetUserId();
-            int companyId =await GetCompanyId();
-            int sessionId =await GetSessionId();
-
-            var allStaff =(await _hrClient.GetAllStaffAsync()).Data;
-            var currentStaff = allStaff.FirstOrDefault(s => s.UserID == userId);
-
-            // Fallback: If not found in current company (often 0 on fresh login), search globally
-            if (currentStaff == null)
+            try
             {
-                var globalStaff =(await _hrClient.GetAllStaffAsync()).Data;
-                currentStaff = globalStaff.FirstOrDefault(s => s.UserID == userId);
-            }
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/ApplyLeave"
+               );
+                int userId = GetUserId();
+                int companyId = await GetCompanyId();
+                int sessionId = await GetSessionId();
 
-            var model = new HRApplyLeavePageViewModel();
+                var allStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+                var currentStaff = allStaff.FirstOrDefault(s => s.UserID == userId);
+
+                // Fallback: If not found in current company (often 0 on fresh login), search globally
+                if (currentStaff == null)
+                {
+                    var globalStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+                    currentStaff = globalStaff.FirstOrDefault(s => s.UserID == userId);
+                }
+
+                var model = new HRApplyLeavePageViewModel();
+
+                if (currentStaff != null)
+                {
+                    // Use staff's own company/session if current ones are invalid
+                    if (companyId <= 0) companyId = currentStaff.CompanyID;
+                    if (sessionId <= 0) sessionId = currentStaff.SessionID;
+
+                    // Only show leaves for this staff member
+                    model.Leaves = (await _hrClient.GetAllApplyLeaveAsync()).Data
+                        .Where(l => l.StaffID == currentStaff.StaffID).ToList();
+
+                    // Set the current staff as the only option
+                    model.StaffList = new List<HRStaffViewModel> { currentStaff };
+                }
+                else
+                {
+                    model.Leaves = new List<HRApplyLeaveViewModel>();
+                    model.StaffList = new List<HRStaffViewModel>();
+                }
+
+                // Ensure we fetch leave types for the correct company
+                model.LeaveTypes = (await _hrClient.GetAllLeaveTypesAsync()).Data;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
             
-            if (currentStaff != null)
-            {
-                // Use staff's own company/session if current ones are invalid
-                if (companyId <= 0) companyId = currentStaff.CompanyID;
-                if (sessionId <= 0) sessionId = currentStaff.SessionID;
-
-                // Only show leaves for this staff member
-                model.Leaves =(await _hrClient.GetAllApplyLeaveAsync()).Data
-                    .Where(l => l.StaffID == currentStaff.StaffID).ToList();
-                
-                // Set the current staff as the only option
-                model.StaffList = new List<HRStaffViewModel> { currentStaff };
-            }
-            else
-            {
-                model.Leaves = new List<HRApplyLeaveViewModel>();
-                model.StaffList = new List<HRStaffViewModel>();
-            }
-
-            // Ensure we fetch leave types for the correct company
-            model.LeaveTypes =(await _hrClient.GetAllLeaveTypesAsync()).Data;
-            
-            return View(model);
         }
 
         /// <summary>
@@ -337,16 +410,30 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> ApproveLeave()
         {
-            int companyId = await GetCompanyId();
-            int sessionId = await GetSessionId();
-
-            var model = new HRApplyLeavePageViewModel
+            try
             {
-                Leaves =(await _hrClient.GetAllApplyLeaveAsync()).Data,
-                StaffList =(await _hrClient.GetAllStaffAsync()).Data,
-                LeaveTypes = (await _hrClient.GetAllLeaveTypesAsync()).Data
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/ApproveLeave"
+               );
+                int companyId = await GetCompanyId();
+                int sessionId = await GetSessionId();
+
+                var model = new HRApplyLeavePageViewModel
+                {
+                    Leaves = (await _hrClient.GetAllApplyLeaveAsync()).Data,
+                    StaffList = (await _hrClient.GetAllStaffAsync(sessionId)).Data,
+                    LeaveTypes = (await _hrClient.GetAllLeaveTypesAsync()).Data
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         public async Task<IActionResult> GetAllPayroll(int month,int year,int rollId)
@@ -408,14 +495,28 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Payroll()
         {
-            var rolesRes = await _roleClient.GetAllRolesAsync();
-            var model = new HRPayrollPageViewModel
+            try
             {
-                Roles = rolesRes.Success ? rolesRes.Data : new List<MstRoleViewModel>(),
-                SelectedMonth = DateTime.Now.Month,
-                SelectedYear = DateTime.Now.Year
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Payroll"
+               );
+                var rolesRes = await _roleClient.GetAllRolesAsync();
+                var model = new HRPayrollPageViewModel
+                {
+                    Roles = rolesRes.Success ? rolesRes.Data : new List<MstRoleViewModel>(),
+                    SelectedMonth = DateTime.Now.Month,
+                    SelectedYear = DateTime.Now.Year
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         public async Task<IActionResult> GeneratePayroll(int id, int month, int year)
@@ -599,9 +700,111 @@ namespace SchoolERP.Net.Controllers
         [HttpPost("UpsertStaff")]
         public async Task<IActionResult> UpsertStaff([FromBody] HRStaffUpsertRequest req)
         {
-            var isCreate = req.StaffID <= 0;
-            var res =await _hrClient.UpsertStaffAsync(req);
-            return Ok(new { success = res.Success, message = res.Message });
+            try
+            {
+                var isCreate = req.StaffID <= 0;
+                var res = await _hrClient.UpsertStaffAsync(req);
+                if(res.Success)
+                {
+                    int staffid = res.Data.Result;
+                    IFormFile photo;
+                    var photoResult = await SaveBase64PhotoAsync(
+                        req.PhotoBase64,
+                        req.PhotoDocName ?? "photo.jpg",
+                        PhotoModule.Staff,
+                        req.StaffID
+                    );
+                    if (photoResult.Success) 
+                    {
+                        var staffmodel = new HRStaffProfileRequest();
+                        staffmodel.StaffId = req.StaffID;
+                        staffmodel.PhotoDoc = photoResult.PhotoUrl;
+                        await _hrClient.UpdateProfileAsync(staffmodel);
+                    }
+                     
+
+
+                }
+                    return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+
+        // ─────────────────────────────────────────────────────────
+        // POST  /UploadProfilePhoto
+        // ─────────────────────────────────────────────────────────
+        // Called from JS AFTER the main record is saved.
+        // JS already sends: photo (file), recordId (int), module (string)
+        // No JS or HTML changes needed — just wire this endpoint.
+        //
+        // Example JS call (already in your pages via fileToBase64 pattern):
+        //   formData.append('photo',    photoFile);
+        //   formData.append('recordId', savedId);
+        //   formData.append('module',   'Staff');   // Staff/Student/Employee/User
+        //   fetch('/UploadProfilePhoto', { method: 'POST', body: formData })
+        // ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Converts base64 photo string (sent from JS) → IFormFile → saves to disk.
+        /// No JS or HTML changes needed — reuses existing base64 from request.
+        /// </summary>
+        protected async Task<PhotoUploadResult> SaveBase64PhotoAsync(
+            string base64String,
+            string originalFileName,
+            PhotoModule module,
+            int recordId)
+        {
+            try
+            {
+                // Strip data URL prefix if present
+                // e.g. "data:image/png;base64,iVBORw0..." → "iVBORw0..."
+                var base64Data = base64String.Contains(",")
+                    ? base64String.Split(',')[1]
+                    : base64String;
+
+                var bytes = Convert.FromBase64String(base64Data);
+
+                // Detect content type from file extension
+                var ext = Path.GetExtension(originalFileName).ToLower();
+                var contentType = ext switch
+                {
+                    ".jpg" => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".gif" => "image/gif",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg"
+                };
+
+                // Convert byte array → IFormFile
+                var stream = new MemoryStream(bytes);
+                IFormFile file = new FormFile(stream, 0, bytes.Length, "photo", originalFileName)
+                {
+                    Headers = new HeaderDictionary(),
+                    ContentType = contentType
+                };
+
+                // Use the common PhotoUploadService
+                return await _photoService.UploadAsync(file, module, recordId);
+            }
+            catch (Exception ex)
+            {
+                return new PhotoUploadResult
+                {
+                    Success = false,
+                    Message = $"Base64 photo conversion failed: {ex.Message}"
+                };
+            }
         }
     }
 }

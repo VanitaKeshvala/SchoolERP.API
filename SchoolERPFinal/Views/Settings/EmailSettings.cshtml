@@ -4,10 +4,8 @@
     PURPOSE: User interface rendering for the Settings module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstEmailConfigViewModel
+@model EmailConfigPageViewModel
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     int currentUserId = 0;
@@ -16,9 +14,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+    var p = Model.Permissions;
 }
 
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
@@ -27,9 +23,9 @@
         @* <p class="text-muted mb-0">Configure your SMTP settings for system emails.</p> *@
     </div>
     <div class="d-flex align-items-center flex-wrap gap-2">
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button type="button" class="btn btn-success" id="btnSaveEmail">
+            <button type="button" class="btn btn-success top-btn" id="btnSaveEmail">
                 <i class="ti ti-cloud me-1"></i>Save
             </button>
         }
@@ -45,15 +41,15 @@
             <div class="card-body">
                 @* Local alert div removed in favor of global toast system *@
                 <form id="emailSettingsForm">
-                    <input type="hidden" id="hdnEmailId" value="@(Model?.EmailId ?? 0)" />
+                    <input type="hidden" id="hdnEmailId" value="@(Model.mstEmail?.EmailId ?? 0)" />
                     
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-4">
                                 <label class="form-label">Email Engine</label>
                                 <select class="form-select form-control" id="ddlEmailType">
-                                    <option value="smtp" selected="@(Model?.EmailType == "smtp")">SMTP (Recommended)</option>
-                                    <option value="sendmail" selected="@(Model?.EmailType == "sendmail")">SendMail</option>
+                                    <option value="smtp" selected="@(Model.mstEmail?.EmailType == "smtp")">SMTP (Recommended)</option>
+                                    <option value="sendmail" selected="@(Model.mstEmail?.EmailType == "sendmail")">SendMail</option>
                                 </select>
                                 @* <small class="text-muted">Choose how emails are sent from the system.</small> *@
                             </div>
@@ -62,33 +58,33 @@
                             <div class="mb-4">
                                 <label class="form-label">Service Status</label>
                                 <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model?.IsActive == true ? "checked" : "")>
+                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model.mstEmail?.IsActive == true ? "checked" : "")>
                                     <label class="form-check-label" for="chkIsActive">Enable Email Service</label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div id="smtpFields" style="@(Model?.EmailType == "smtp" || string.IsNullOrEmpty(Model?.EmailType) ? "" : "display:none;")">
+                    <div id="smtpFields" style="@(Model.mstEmail?.EmailType == "smtp" || string.IsNullOrEmpty(Model.mstEmail?.EmailType) ? "" : "display:none;")">
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="mb-4">
                                     <label class="form-label">SMTP Host <span class="text-danger">*</span></label>
-                                    <input type="text" id="txtSmtpServer" class="form-control" placeholder="e.g. smtp.gmail.com" value="@Model?.SMTPServer">
+                                    <input type="text" id="txtSmtpServer" class="form-control" placeholder="e.g. smtp.gmail.com" value="@Model.mstEmail?.SMTPServer">
                                     <div class="invalid-feedback" id="errSmtpServer"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-4">
                                     <label class="form-label">SMTP Port <span class="text-danger">*</span></label>
-                                    <input type="text" id="txtSmtpPort" class="form-control" placeholder="e.g. 587" value="@Model?.SMTPPort">
+                                    <input type="text" id="txtSmtpPort" class="form-control" placeholder="e.g. 587" value="@Model.mstEmail?.SMTPPort">
                                     <div class="invalid-feedback" id="errSmtpPort"></div>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-4">
                                     <label class="form-label">SMTP Username <span class="text-danger">*</span></label>
-                                    <input type="text" id="txtSmtpUsername" class="form-control" placeholder="Email address" value="@Model?.SMTPUsername">
+                                    <input type="text" id="txtSmtpUsername" class="form-control" placeholder="Email address" value="@Model.mstEmail?.SMTPUsername">
                                     <div class="invalid-feedback" id="errSmtpUsername"></div>
                                 </div>
                             </div>
@@ -96,7 +92,7 @@
                                 <div class="mb-4">
                                     <label class="form-label">SMTP Password <span class="text-danger">*</span></label>
                                     <div class="d-flex position-relative align-items-center">
-                                    <input type="password" id="txtSmtpPassword" class="form-control" placeholder="Password" value="@Model?.SMTPPassword">
+                                        <input type="password" id="txtSmtpPassword" class="form-control" placeholder="Password" value="@Model.mstEmail?.SMTPPassword">
                                     <div class="invalid-feedback" id="errSmtpPassword"></div>
                                     <button class="btn position-absolute end-0" type="button" id="btnTogglePassword">
                                         <i class="ti ti-eye"></i>
@@ -108,9 +104,9 @@
                                 <div class="mb-4">
                                     <label class="form-label">Encryption</label>
                                     <select class="form-select form-control" id="ddlSslTls">
-                                        <option value="none" selected="@(Model?.SslTls == "none")">None</option>
-                                        <option value="ssl" selected="@(Model?.SslTls == "ssl")">SSL</option>
-                                        <option value="tls" selected="@(Model?.SslTls == "tls" || string.IsNullOrEmpty(Model?.SslTls))">TLS</option>
+                                        <option value="none" selected="@(Model.mstEmail?.SslTls == "none")">None</option>
+                                        <option value="ssl" selected="@(Model.mstEmail?.SslTls == "ssl")">SSL</option>
+                                        <option value="tls" selected="@(Model.mstEmail?.SslTls == "tls" || string.IsNullOrEmpty(Model.mstEmail?.SslTls))">TLS</option>
                                     </select>
                                 </div>
                             </div>
@@ -118,10 +114,10 @@
                                 <div class="mb-4">
                                     <label class="form-label">SMTP Authentication</label>
                                     <select class="form-select form-control" id="ddlSmtpAuth">
-                                        <option value="yes" selected="@(Model?.SMTPAuth == "yes" || string.IsNullOrEmpty(Model?.SMTPAuth))">
+                                        <option value="yes" selected="@(Model.mstEmail?.SMTPAuth == "yes" || string.IsNullOrEmpty(Model.mstEmail?.SMTPAuth))">
                                             Yes (Recommended)
                                         </option>
-                                        <option value="no" selected="@(Model?.SMTPAuth == "no")">
+                                        <option value="no" selected="@(Model.mstEmail?.SMTPAuth == "no")">
                                             No
                                         </option>
                                     </select>
@@ -179,7 +175,7 @@
         });
 
         // Save Settings
-        @if (canEdit)
+        @if (p.CanEdit)
         {
             <text>
         $('#btnSaveEmail').on('click', function () {

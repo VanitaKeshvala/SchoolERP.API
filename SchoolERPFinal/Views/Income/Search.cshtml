@@ -1,8 +1,7 @@
-@model SchoolERP.Net.Models.AccountEntrySearchViewModel
+@model SchoolERP.Shared.Models.AccountEntrySearchViewModel
 @{
     ViewData["Title"] = "Search " + Model.EntryType;
 }
-@inject PermissionHelper PermHelper
 @{
     
     int currentUserId = 0;
@@ -11,13 +10,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/Income/Search", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Income/Search", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Income/Search", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Income/Search", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Income/Search", "Export");
+    var p = Model.Permissions;
 
 }
 <style>
@@ -32,16 +25,16 @@
         <h6 class="fw-bold mb-0">Search @Model.EntryType</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-         @if (canPrint)
+         @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">

@@ -1,8 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 
@@ -84,6 +84,37 @@ namespace SchoolERP.Net.Helpers
                 .Replace("_", string.Empty)
                 .Trim();
             return string.Equals(normalized, "SuperAdmin", System.StringComparison.OrdinalIgnoreCase);
+        }
+
+
+        
+
+        public  static class PagePermissionHelper
+        {
+            public static async Task<PagePermissions> Load(
+                PermissionHelper permHelper,
+                int userId,
+                string pageUrl,
+                string importUrl = null)
+            {
+                // If not logged in → return all false
+                if (userId <= 0)
+                    return PagePermissions.Denied;
+
+                // Load once
+                 await permHelper.LoadPermissions(userId);
+
+                return new PagePermissions
+                {
+                    CanView = permHelper.HasPermissionByUrl(pageUrl, "View"),
+                    CanAdd = permHelper.HasPermissionByUrl(pageUrl, "Add"),
+                    CanEdit = permHelper.HasPermissionByUrl(pageUrl, "Edit"),
+                    CanDelete = permHelper.HasPermissionByUrl(pageUrl, "Delete"),
+                    CanPrint = permHelper.HasPermissionByUrl(pageUrl, "Print"),
+                    CanExport = permHelper.HasPermissionByUrl(pageUrl, "Export"),
+                    CanImport = importUrl != null && permHelper.HasPermissionByUrl(importUrl, "Import"),
+                };
+            }
         }
     }
 }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -27,7 +27,7 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<List<ClassTeacherViewModel>>> GetAllClassTeachersAsync(
             List<int>? classIds = null,
-            List<int>? sectionIds = null)
+            List<int>? sectionIds = null, int? sessionID=null)
         {
             var query = new List<string>();
 
@@ -36,6 +36,9 @@ namespace SchoolERP.Net.Services.Clients
 
             if (sectionIds?.Any() == true)
                 query.AddRange(sectionIds.Select(x => $"sectionId={x}"));
+            
+            if (sessionID.HasValue)
+                query.Add($"sessionID={sessionID.Value}");
 
             var url = "api/AcademicsApi/GetAllClassTeachers";
 

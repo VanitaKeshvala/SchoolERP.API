@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 
 namespace SchoolERP.Net.Controllers;
 

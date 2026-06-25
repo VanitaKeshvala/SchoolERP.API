@@ -4,7 +4,7 @@
     PURPOSE: User interface rendering for the Settings module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.UsersPageViewModel
+@model SchoolERP.Shared.Models.UsersPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
 @using SchoolERP.Net.Helpers
@@ -37,19 +37,19 @@
     <div>
         @if (canAdd)
         {
-            <button type="button" class="btn btn-primary" onclick="openAddModal()">
+            <button type="button" class="btn btn-primary top-btn" onclick="openAddModal()">
                 <i class="ti ti-plus me-1"></i> Add User
             </button>
         }
         @if (canEdit)
         {
-            <button type="button" class="btn btn-info" id="topEditBtn" onclick="editSelectedUser()" disabled>
+            <button type="button" class="btn btn-info top-btn" id="topEditBtn" onclick="editSelectedUser()" disabled>
                 <i class="ti ti-pencil me-1"></i> Edit User
             </button>
         }
         @if (canDelete)
         {
-            <button type="button" class="btn btn-danger" id="topDeleteBtn" onclick="deleteSelectedUsers()" disabled>
+            <button type="button" class="btn btn-danger top-btn" id="topDeleteBtn" onclick="deleteSelectedUsers()" disabled>
                 <i class="ti ti-trash me-1"></i> Delete
             </button>
         }

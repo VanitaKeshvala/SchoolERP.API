@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.API.Services;
 
 namespace SchoolERP.API.Filters

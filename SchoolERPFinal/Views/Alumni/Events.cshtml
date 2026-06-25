@@ -1,6 +1,5 @@
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.PagePermissions
 @{
     ViewData["Title"] = "Alumni Events";
     int currentUserId = 0;
@@ -9,15 +8,8 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/Alumni/Events", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Alumni/Events", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Alumni/Events", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Alumni/Events", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Alumni/Events", "Export");
-}
-
+    var p = Model;
+    }
 @section Styles {
     <link rel="stylesheet" href="~/calender/fullcalendar.min.css">
     <link rel="stylesheet" href="~/calender/fullcalendar.print.css" media="print">
@@ -59,34 +51,37 @@
         <h6 class="fw-bold mb-0">Alumni Events</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary d-inline-flex align-items-center" data-bs-toggle="modal" data-bs-target="#eventModal" onclick="resetForm()">
+            <button class="btn btn-primary d-inline-flex align-items-center top-btn" data-bs-toggle="modal" data-bs-target="#eventModal" onclick="resetForm()">
                 <i class="ti ti-plus me-1"></i> Add
             </button>
         }
-        @if (canEdit)
+            @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="handleEditAction()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="handleEditAction()">
                 <i class="ti ti-pencil me-1"></i> Edit
             </button>
         }
-        @if (canDelete)
+            @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="handleDeleteAction()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="handleDeleteAction()">
                 <i class="ti ti-trash me-1"></i> Delete
             </button>
         }
-        @if (canPrint)
+            @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        <button id="btnView" class="btn btn-teal top-btn" disabled onclick="handleViewAction()">
+            <i class="ti ti-eye me-1"></i> View
+        </button>
+            @if (p.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -98,9 +93,7 @@
             </div>
         }
        
-        <button id="btnView" class="btn btn-teal" disabled onclick="handleViewAction()">
-            <i class="ti ti-eye me-1"></i> View
-        </button>
+        
     </div>
 </div>
 
@@ -290,8 +283,8 @@
     <script>
         let selectedId = 0;
         let calendar;
-        const canEdit = @canEdit.ToString().ToLower();
-        const canDelete = @canDelete.ToString().ToLower();
+        const canEdit = @p.CanEdit.ToString().ToLower();
+        const canDelete = @p.CanDelete.ToString().ToLower();
 
         $(document).ready(function () {
             initCalendar();

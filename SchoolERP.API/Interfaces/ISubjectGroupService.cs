@@ -1,4 +1,5 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -30,6 +31,6 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a subject group's active status on or off.
         /// </summary>
-        (bool success, string message) ToggleStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleStatus(StatusUpdateRequest request);
     }
 }

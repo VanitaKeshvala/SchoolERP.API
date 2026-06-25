@@ -2,8 +2,8 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -34,14 +34,22 @@ namespace SchoolERP.API.Services
         /// </returns>
         public async Task<List<UserPermissionViewModel>> GetUserPermissionsAsync(int userId)
         {
-            using var conn = new SqlConnection(
-                _configuration.GetConnectionString("DefaultConnection"));
+            try
+            {
+                using var conn = new SqlConnection(
+               _configuration.GetConnectionString("DefaultConnection"));
 
-            var list = await conn.QueryAsync<UserPermissionViewModel>(
-                "sp_User_GetPermissions",
-                new { UserID = userId },
-                commandType: CommandType.StoredProcedure);
-            return list.ToList();
+                var list = await conn.QueryAsync<UserPermissionViewModel>(
+                    "sp_User_GetPermissions",
+                    new { UserID = userId },
+                    commandType: CommandType.StoredProcedure);
+                return list.ToList();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+           
         }
         /// <summary>
         /// Retrieves user permissions with optional filtering by
@@ -491,19 +499,29 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Updates whether a permission is currently usable.
         /// </summary>
-        public (bool success, string message) TogglePermissionStatus(int permissionID, bool isActive, int userId, string ipAddress)
+        public (bool success, string message) TogglePermissionStatus(StatusUpdateRequest request)
         {
             try
             {
-                var parameters = new[]
-                {
-                    new SqlParameter("@PermissionID", permissionID),
-                    new SqlParameter("@IsActive", isActive),
-                    new SqlParameter("@UserID", userId),
-                    new SqlParameter("@IPAddress", ipAddress)
-                };
-                var dt = _sqlHelper.ExecuteQuery("sp_Permissions_ToggleStatus", parameters);
-                return (Convert.ToInt32(dt.Rows[0]["Result"]) == 1, dt.Rows[0]["Message"].ToString() ?? "");
+                
+
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+                parameters.Add("@PermissionID", request.Ids);
+                parameters.Add("@IsActive", request.IsActive);
+                parameters.Add("@UserID", request.DoneBy);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "sp_Permissions_ToggleStatus",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
+
             }
             catch (Exception ex) { return (false, ex.Message); }
         }

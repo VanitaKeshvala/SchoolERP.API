@@ -2,8 +2,9 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 using System.Data;
 using System.Globalization;
 using System.Net;
@@ -191,11 +192,11 @@ namespace SchoolERP.API.Services
                 ).ToList();
 
                 // No records found
-                if (data.Count == 1 && data[0].RESULT == false)
+                if (data.Count == 1 && data[0].Success == false)
                 {
                     return new DepartmentListResponse
                     {
-                        Success = data[0].RESULT,
+                        Success = data[0].Success,
                         Message = data[0].Message,
                         Data = null
                     };
@@ -676,7 +677,18 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                return conn.Query<HRStaffViewModel>(
+                //return conn.Query<HRStaffViewModel>(
+                //    "SP_HR_STAFF_GETALL",
+                //    new
+                //    {
+                //        CompanyID = companyId,
+                //        SessionID = sessionId,
+                //        IncludeDeleted = false
+                //    },
+                //    commandType: CommandType.StoredProcedure
+                //).ToList();
+
+                var data = conn.Query<HRStaffViewModel>(
                     "SP_HR_STAFF_GETALL",
                     new
                     {
@@ -686,6 +698,9 @@ namespace SchoolERP.API.Services
                     },
                     commandType: CommandType.StoredProcedure
                 ).ToList();
+
+                return data;
+
             }
             catch
             {
@@ -833,7 +848,7 @@ namespace SchoolERP.API.Services
         /// <returns>
         /// Returns Success status and response message from the stored procedure.
         /// </returns>
-        public (bool Success, string Message) UpsertStaff(
+        public StaffUpsertDTO UpsertStaff(
             HRStaffUpsertRequest req,
             int companyId,
             int sessionId,
@@ -885,7 +900,7 @@ namespace SchoolERP.API.Services
                 param.Add("@EmergencyMobileNo", req.EmergencyMobileNo);
                 param.Add("@MaritalStatus", req.MaritalStatus);
 
-                param.Add("@PhotoDoc", photoBytes, DbType.Binary);
+                param.Add("@PhotoDoc", null);
                 param.Add("@PhotoDocType", req.PhotoDocType);
                 param.Add("@PhotoDocName", req.PhotoDocName);
 
@@ -943,26 +958,24 @@ namespace SchoolERP.API.Services
                 param.Add("@RoleIDs", string.Join(",", req.RoleIDs));
                 param.Add("@CompanyIDs", string.Join(",", req.CompanyIDs));
 
-                var result = conn.QueryFirstOrDefault(
+                param.Add("@DefaultRoleID", string.Join(",", req.DefaultRoleID));
+                param.Add("@DashboardID", string.Join(",", req.DashboardID));
+                var result = conn.QueryFirstOrDefault<StaffUpsertDTO>(
                     "sp_HR_Staff_Upsert",
                     param,
                     commandType: CommandType.StoredProcedure);
 
-                bool success = Convert.ToInt32(result.Result) == 1;
-                string msg = Convert.ToString(result.Message) ?? "";
+               
 
-                if (success)
-                {
-                    int staffId = result.StaffID ?? 0;
-
-                    // Existing LeaveQuota and CustomField code remains unchanged
-                }
-
-                return (success, msg);
+                return result;
             }
             catch (Exception ex)
             {
-                return (false, ex.Message);
+                var staffres = new StaffUpsertDTO();
+                staffres.Result = 0;
+                staffres.Message = ex.Message;
+                staffres.StaffID = 0;
+                return staffres;
             }
         }
 
@@ -2101,5 +2114,37 @@ namespace SchoolERP.API.Services
                 .ToList();
         }
 
+
+        public (bool Success, string Message) UpdateProfile(
+           int staffId,
+           string PhotoDoc,
+           int userId)
+        {
+            try
+            {
+
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@STAFFID", staffId);
+                parameters.Add("@PHOTODOC", PhotoDoc);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "SP_HR_Staff_UpdateProfile",
+                   parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
     }
 }

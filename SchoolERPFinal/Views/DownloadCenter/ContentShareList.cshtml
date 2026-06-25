@@ -1,6 +1,7 @@
-
+@model SchoolERP.Shared.Models.PagePermissions
 @{
     ViewData["Title"] = "Content Share List";
+    var p = Model;
 }
 <style>
     .dt-buttons { display: none !important; }
@@ -12,23 +13,35 @@
         <h6 class="fw-bold mb-0">Content Share List</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
-            <i class="ti ti-trash me-1"></i>Delete
-        </button>
-        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerBtn(4)">
-            <i class="ti ti-printer me-1"></i>Print
-        </button>
-        <div class="dropdown d-inline-flex">
-            <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="ti ti-download me-1"></i>Export
+        @if(p.CanDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center top-btn" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
             </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
-            </ul>
-        </div>
+        }
+        @if(p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" type="button" onclick="triggerBtn(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if(p.CanExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center top-btn" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownExport">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerBtn(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+        
+        
+        
     </div>
 </div>
 

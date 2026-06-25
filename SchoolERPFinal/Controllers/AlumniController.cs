@@ -3,20 +3,21 @@ using System.IO;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.Net.Services;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services.Clients;
 using Microsoft.Extensions.Logging;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class AlumniController : Controller
+    public class AlumniController : BaseController
     {
         private readonly IAlumniEventClientService _eventService;
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
         private readonly IClassClientService _classService;
 
-        public AlumniController(IAlumniEventClientService eventService, ICompanyClientService companyService, ISessionClientService sessionService, IClassClientService classService)
+        public AlumniController(IAlumniEventClientService eventService, ICompanyClientService companyService, ISessionClientService sessionService, IClassClientService classService, PermissionHelper permHelper) : base(permHelper)
         {
             _eventService = eventService;
             _companyService = companyService;
@@ -37,9 +38,13 @@ namespace SchoolERP.Net.Controllers
         }
         public async Task<IActionResult> Events()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Alumni/Events"
+           );
             ViewBag.SessionList = (await _sessionService.GetAllAsync()).Data;
             ViewBag.ClassList =(await _classService.GetAllAsync()).Data;
-            return View();
+            return View(perms);
         }
 
         [HttpGet]

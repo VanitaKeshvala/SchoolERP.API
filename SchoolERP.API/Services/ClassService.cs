@@ -1,8 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Collections.Generic;
 using System.Data;
 using static System.Collections.Specialized.BitVector32;
@@ -42,11 +42,19 @@ namespace SchoolERP.API.Services
             parameters.Add("@SessionID", sessionId);
             parameters.Add("@IncludeDeleted", includeDeleted);
 
-            return conn.Query<MstClassViewModel>(
+            var result= conn.Query<MstClassViewModel>(
                 "sp_Class_GetAll",
                 parameters,
                 commandType: CommandType.StoredProcedure
             ).ToList();
+
+            // If SP returned no rows at all
+            if (!result.Any()) return null;
+
+            // If SP returned rows but RESULT != 1 (failure case)
+            if (result.First().Result != 1) return null;
+
+            return result;
         }
 
         /// <summary>
@@ -163,10 +171,7 @@ namespace SchoolERP.API.Services
         /// <param name="isActive">Status to set.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) ToggleClassStatus(
-            int classId,
-            bool isActive,
-            int userId)
+        public (bool success, string message) ToggleClassStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -174,9 +179,9 @@ namespace SchoolERP.API.Services
                     _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@ClassID", classId);
-                parameters.Add("@IsActive", isActive);
-                parameters.Add("@UserId", userId);
+                parameters.Add("@ClassID", request.Ids);
+                parameters.Add("@IsActive", request.IsActive);
+                parameters.Add("@UserId", request.DoneBy);
 
                 var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Class_ToggleStatus",

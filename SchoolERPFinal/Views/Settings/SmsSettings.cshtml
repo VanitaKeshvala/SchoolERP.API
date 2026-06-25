@@ -4,10 +4,8 @@
     PURPOSE: User interface rendering for the Settings module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstSmsConfigViewModel
+@model MstSmsConfigPageViewModel
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     int currentUserId = 0;
@@ -16,9 +14,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
+    var p = Model.Permissions;
 }
 
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
@@ -27,9 +23,9 @@
         @* <p class="text-muted mb-0">Configure your SMS gateway settings for system alerts.</p> *@
     </div>
     <div class="d-flex align-items-center flex-wrap gap-2">
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button type="button" class="btn btn-success" id="btnSaveSms">
+            <button type="button" class="btn btn-success top-btn" id="btnSaveSms">
                 <i class="ti ti-cloud me-1"></i>Save
             </button>
         }
@@ -45,13 +41,13 @@
             <div class="card-body">
                 @* Local alert div removed in favor of global toast system *@
                 <form id="smsSettingsForm">
-                    <input type="hidden" id="hdnSmsId" value="@(Model?.SmsId ?? 0)" />
+                    <input type="hidden" id="hdnSmsId" value="@(Model.mstSms?.SmsId ?? 0)" />
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">SMS Gateway <span class="text-danger">*</span></label>
-                                <input type="text" id="txtSmsGateway" class="form-control" placeholder="e.g. Twilio, MSG91, Clickatell" value="@Model?.SmsGateway">
+                                <input type="text" id="txtSmsGateway" class="form-control" placeholder="e.g. Twilio, MSG91, Clickatell" value="@Model.mstSms?.SmsGateway">
                                 <div class="invalid-feedback" id="errSmsGateway"></div>
                             </div>
                         </div>
@@ -59,8 +55,8 @@
                             <div class="mb-3">
                                 <label class="form-label">Status</label>
                                 <div class="form-check form-switch mt-2" style="font-size: 1.1rem;">
-                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model?.IsActive == true || Model == null ? "checked" : "")>
-                                    <label class="form-check-label ms-2" for="chkIsActive" id="lblStatus">@(Model?.IsActive == true || Model == null ? "Active" : "Inactive")</label>
+                                    <input class="form-check-input" type="checkbox" id="chkIsActive" @(Model.mstSms?.IsActive == true || Model == null ? "checked" : "")>
+                                    <label class="form-check-label ms-2" for="chkIsActive" id="lblStatus">@(Model.mstSms?.IsActive == true || Model == null ? "Active" : "Inactive")</label>
                                 </div>
                                 <small class="text-muted">Enable or disable this SMS gateway.</small>
                             </div>
@@ -71,7 +67,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">API URL <span class="text-danger">*</span></label>
-                                <input type="text" id="txtSmsApiUrl" class="form-control" placeholder="https://api.gateway.com/send" value="@Model?.SmsApiUrl">
+                                <input type="text" id="txtSmsApiUrl" class="form-control" placeholder="https://api.gateway.com/send" value="@Model.mstSms?.SmsApiUrl">
                                 <div class="invalid-feedback" id="errSmsApiUrl"></div>
                             </div>
                         </div>
@@ -79,7 +75,7 @@
                             <div class="mb-3">
                                 <label class="form-label">API Key / Auth Token <span class="text-danger">*</span></label>
                                 <div class="d-flex position-relative align-items-center">                                    
-                                    <input type="password" id="txtSmsApiKey" class="form-control" placeholder="Your API Key" value="@Model?.SmsApiKey">
+                                    <input type="password" id="txtSmsApiKey" class="form-control" placeholder="Your API Key" value="@Model.mstSms?.SmsApiKey">
                                     <div class="invalid-feedback" id="errSmsApiKey"></div>
                                     <button class="btn position-absolute end-0" type="button" id="btnToggleSmsKey">
                                         <i class="ti ti-eye"></i>
@@ -137,7 +133,7 @@
         });
 
         // Save Settings
-        @if (canEdit)
+        @if (p.CanEdit)
         {
             <text>
         $('#btnSaveSms').on('click', function () {

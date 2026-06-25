@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the languages available in the system, letting you add new ones or change existing ones.
     /// </summary>
-    public class LanguageController : Controller
+    public class LanguageController : BaseController
     {
         private readonly ILanguageClientService _languageClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/Language";
 
-        public LanguageController(ILanguageClientService languageClient, IUserMenuPermissionClientService menuPerm)
+        public LanguageController(ILanguageClientService languageClient, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _languageClient = languageClient;
             _menuPerm = menuPerm;
@@ -27,17 +28,29 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            // Step 1: Ask the system for a list of all supported languages.
-            var response = await _languageClient.GetAllAsync();
-            
-            // Step 2: Prepare the data to be shown on the language management page.
-            var model = new MstLanguagePageViewModel
+            try
             {
-                Languages = response.Success ? response.Data : new List<MstLanguageViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Language"
+               );
+                // Step 1: Ask the system for a list of all supported languages.
+                var response = await _languageClient.GetAllAsync();
+
+                // Step 2: Prepare the data to be shown on the language management page.
+                var model = new MstLanguagePageViewModel
+                {
+                    Languages = response.Success ? response.Data : new List<MstLanguageViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Open the 'Language' settings page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             
-            // Step 3: Open the 'Language' settings page.
-            return View(model);
         }
 
         /// <summary>

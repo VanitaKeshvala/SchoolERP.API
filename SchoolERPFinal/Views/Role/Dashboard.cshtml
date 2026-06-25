@@ -1,0 +1,330 @@
+﻿@model SchoolERP.Shared.Models.DashboardPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Dashboard Management";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0)
+        PermHelper.LoadPermissions(currentUserId);
+    var canAdd = PermHelper.HasPermissionByUrl("/Role", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/Role", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/Role", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/Role", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/Role", "Export");
+
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Dashboard Management</h6>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-1">
+        @if (canAdd)
+        {
+            <a asp-action="AddDashboard" class="btn btn-primary top-btn">
+                <i class="ti ti-plus me-1"></i>Add
+            </a>
+        }
+        @if (canEdit)
+        {
+            <button type="button" id="btnTopEdit" class="btn btn-info top-btn" onclick="handleEdit()" disabled>
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if (canDelete)
+        {
+            <button type="button" id="btnTopDelete" class="btn btn-danger top-btn" onclick="handleDelete()" disabled>
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        @if(canEdit)
+        {
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (canPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
+            </button>
+        }
+        @if (canExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
+                               placeholder="Search Roles..." style="min-width: 220px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body">
+
+                <div class="table-responsive">
+                    <table class="table" id="rolesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Select</th>
+                                <th>Dashboard Name</th>
+                                <th>Role Name</th>
+                                <th>Status</th>
+                                <th>Created On</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                            @if (Model.Dashboard.Any())
+                            {
+                                @foreach (var role in Model.Dashboard)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@role.DashboardID, this)" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                            <input type="checkbox" name="selectedRole"
+                                                   class="form-check-input student-checkbox"
+                                                   value="@role.DashboardID" onclick="selectDashboard(@role.DashboardID)">
+
+                                        </td>
+                                        <td>@role.DashboardTital</td>
+                                        <td>@role.RoleName</td>
+                                        <td onclick="event.stopPropagation()">
+                                            @if (canEdit)
+                                            {
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" @(role.IsActive ? "checked" : "") onchange="toggleStatus(@role.RoleId, this.checked)">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge @(role.IsActive ? "bg-success" : "bg-secondary")">@(role.IsActive ? "Active" : "Inactive")</span>
+                                            }
+                                        </td>
+                                        <td>@role.CreatedOn.ToString("dd MMM yyyy")</td>
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+                                <tr><td colspan="5" class="text-center py-4 text-muted">No dashboard  records found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+
+    <script>
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
+                const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        let selectedDashboardID = null;
+        function selectDashboard(id) {
+            selectedDashboardID = id;
+        }
+        function handleEdit() 
+        {
+            if (selectedDashboardID) {
+              location.href = `/Role/AddDashboard/${selectedDashboardID}`;
+            }
+        }
+        function selectItem(roleId, row) {
+            selectedRoleId = roleId;
+            document.querySelectorAll('#rolesTable tbody .item-row').forEach(r => r.classList.remove('bg-light'));
+            row.classList.add('bg-light');
+            //row.querySelector('input[type="radio"]').checked = true;
+            const btnEdit = document.getElementById('btnTopEdit');
+            if (btnEdit && permCanEdit) btnEdit.disabled = false;
+            const btnDelete = document.getElementById('btnTopDelete');
+            if (btnDelete && permCanDelete) btnDelete.disabled = false;
+            let checkedCount = $('.student-checkbox:checked').length;
+            $('#btnTopDelete').prop('disabled', checkedCount === 0);
+            // Edit sirf 1 record select hone par
+             $('#btnTopEdit').prop('disabled', checkedCount !== 1);
+                        $('#btnActive').prop('disabled', checkedCount === 0);
+                    $('#btnInactive').prop('disabled', checkedCount === 0);
+        }
+
+        function handleDelete(id) {
+            let selectedIds = [];
+            $('.student-checkbox:checked').each(function () {
+                     selectedIds.push(parseInt($(this).val()));
+                 });
+            if (selectedIds.length === 0) {
+                     alert("Please select at least one student.");
+                     return;
+                 }
+             Swal.fire({
+                 title: 'Are you sure?',
+                 text: "You are about to delete this dashboard record. This action cannot be undone!",
+                 icon: 'warning',
+                 showCancelButton: true,
+                 confirmButtonColor: '#d33',
+                 cancelButtonColor: '#3085d6',
+                 confirmButtonText: 'Yes, delete it!',
+                 customClass: {
+                     confirmButton: 'btn btn-danger me-2',
+                     cancelButton: 'btn btn-secondary'
+                 },
+                 buttonsStyling: false
+             }).then((result) => {
+                 if (result.isConfirmed) {
+                     $.ajax({
+                          url: '/Role/DeleteDashboard',
+                         type: 'POST',
+                         contentType: 'application/json',
+                         data: JSON.stringify(selectedIds),
+                         success: function (res) {
+                             if (res.success) {
+                                 Swal.fire('Deleted!', 'Dashboard record has been deleted.', 'success')
+                                     .then(() => location.reload());
+                             } else {
+                                 Swal.fire('Error!', res.message || 'Failed to delete dashboard.', 'error');
+                             }
+                         },
+                         error: function () {
+                             Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                         }
+                     });
+                 }
+             });
+        }
+
+              async function toggleStatus(id, isActive) {
+            if (!permCanEdit) {
+                showToast('You do not have permission to change status.', 'warning');
+                location.reload();
+                return;
+            }
+                let sectionIds = [];
+                         $('.student-checkbox:checked').each(function () {
+                            sectionIds.push(parseInt($(this).val()));
+                        });
+
+                        if (sectionIds.length === 0)
+                        {
+                            if(id !=0)
+                            {
+                                sectionIds.push(parseInt(id));
+                            }
+                            else
+                            {
+                                showToast('Please select at least one user', false);
+                                return;
+                            }
+
+                        }
+
+                        const request = {
+                            ids: sectionIds.join(','),
+                            isActive: isActive
+                        };
+                        try
+                        {
+                                const config = isActive
+                                ? {
+                                    icon            : 'question',
+                                    title           : 'Activate Record(s)?',
+                                    text            : 'Activating this record will make it visible and available for use across the system. Do you want to continue?',
+                                    confirmText     : 'Yes, Activate',
+                                    confirmBtnClass : 'btn btn-success me-2',
+                                    successTitle    : 'Activated Successfully!',
+                                    successText     : 'The selected record(s) have been activated and are now available for use.'
+                                }
+                                : {
+                                    icon            : 'warning',
+                                    title           : 'Deactivate Record(s)?',
+                                    text            : 'Deactivating this record will hide it from the system and prevent it from being used. Do you want to continue?',
+                                    confirmText     : 'Yes, Deactivate',
+                                    confirmBtnClass : 'btn btn-danger me-2',
+                                    successTitle    : 'Deactivated Successfully!',
+                                    successText     : 'The selected record(s) have been deactivated and are no longer available for use.'
+                                };
+
+
+                            Swal.fire({
+                            icon    : config.icon,
+                            title   : config.title,
+                            text    : config.text,
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Yes, proceed!',
+                            customClass: {
+                                confirmButton: 'btn btn-danger me-2',
+                                cancelButton: 'btn btn-secondary'
+                            },
+                            buttonsStyling: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                $.ajax({
+                                    // ✅ fixed typo bluk → bulk
+                                        url: '/Role/ToggleDashboardStatus',
+                                    type: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify(request),
+                                    success: function (res) {
+                                        if (res.success) {
+                                            Swal.fire('Updated!', res.message || 'Status updated successfully.', 'success')
+                                                .then(() => location.reload());
+                                        } else {
+                                            Swal.fire('Error!', res.message || 'Failed to update status.', 'error');
+                                        }
+                                    },
+                                    error: function (xhr) {
+                                        // ✅ log xhr for debugging
+                                        console.error('Status update error:', xhr.status, xhr.responseText);
+                                        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    catch (err) {
+                        console.error(err);
+                        IV.setNotice('sectionPageNotice', 'Could not update status.');
+                        location.reload();
+                    }
+
+
+        }
+
+    </script>
+}

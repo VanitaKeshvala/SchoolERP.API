@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -38,7 +38,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <summary>
         /// Tells the main system to turn a company's active status on or off.
         /// </summary>
-        Task<ApiResponse<dynamic>> ToggleStatusAsync(int id, bool isActive);
+        Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
 
         /// <summary>
         /// Tells the main system which school company the current user wants to work in right now.

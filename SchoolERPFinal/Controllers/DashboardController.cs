@@ -31,5 +31,8 @@ namespace SchoolERP.Net.Controllers
             // Step 3: Open the dashboard page for the user to see.
             return View();
         }
+
+
+
     }
 }

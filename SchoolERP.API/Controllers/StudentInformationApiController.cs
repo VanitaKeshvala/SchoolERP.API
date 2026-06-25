@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.API.Services;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -36,7 +38,7 @@ namespace SchoolERP.API.Controllers
         private int GetUserId() => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
         private int GetCompanyId() => _companyService.GetUserCurrentCompany(GetUserId()) ?? 0;
         private int GetSessionId() => _sessionService.GetUserCurrentSession(GetUserId()) ?? 0;
-
+        
         [HttpGet("GetStudentAttendanceHistory/{studentId}/{year}")]
         /// <summary>
         /// Provides the attendance record for a student (how many days present/absent).
@@ -58,9 +60,9 @@ namespace SchoolERP.API.Controllers
         /// <summary>
         /// Provides the list of all reasons why students are disabled.
         /// </summary>
-        public IActionResult GetAllDisableReasons()
+        public IActionResult GetAllDisableReasons(int sessionID)
         {
-            var data = _studentService.GetAllDisableReasons(GetCompanyId(), GetSessionId());
+            var data = _studentService.GetAllDisableReasons(GetCompanyId(), sessionID);
             return Ok(new { success = true, data });
         }
 
@@ -82,9 +84,9 @@ namespace SchoolERP.API.Controllers
         /// <summary>
         /// Provides the list of all student houses.
         /// </summary>
-        public IActionResult GetAllStudentHouses()
+        public IActionResult GetAllStudentHouses(int sessionID)
         {
-            var data = _studentService.GetAllStudentHouses(GetCompanyId(), GetSessionId());
+            var data = _studentService.GetAllStudentHouses(GetCompanyId(), sessionID);
             return Ok(new { success = true, data });
         }
 
@@ -106,16 +108,20 @@ namespace SchoolERP.API.Controllers
         /// <summary>
         /// Provides the list of all student categories.
         /// </summary>
-        public IActionResult GetAllStudentCategories()
+        public IActionResult GetAllStudentCategories(int sessionId)
         {
-            var data = _studentService.GetAllStudentCategories(GetCompanyId(), GetSessionId());
+            var data = _studentService.GetAllStudentCategories(GetCompanyId(), sessionId);
             return Ok(new { success = true, data });
         }
 
         [HttpPost("UpsertStudentCategory")]
         public IActionResult UpsertStudentCategory([FromBody] StudentCategoryUpsertRequest req)
         {
-            var res = _studentService.UpsertStudentCategory(req, GetCompanyId(), GetSessionId(), GetUserId());
+            if (req.SessionID == null) 
+            {
+                req.SessionID = GetSessionId();
+            }
+            var res = _studentService.UpsertStudentCategory(req, GetCompanyId(), req.SessionID, GetUserId());
             return Ok(new { success = res.Success, message = res.Message });
         }
 
@@ -207,9 +213,9 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpGet("GetStudentList")]
-        public IActionResult GetStudentList(int? classId, int? sectionId, string? searchTerm)
+        public async Task<IActionResult> GetStudentList(int? sessionId, int? classId, int? sectionId, string? searchTerm, int PageNumber, int PageSize)
         {
-            var data = _studentService.GetStudentList(GetCompanyId(), GetSessionId(), classId, sectionId, searchTerm);
+            var data =await _studentService.GetStudentList(GetCompanyId(), sessionId.Value, classId, sectionId, searchTerm, PageNumber, PageSize);
             return Ok(new { success = true, data });
         }
 
@@ -235,13 +241,13 @@ namespace SchoolERP.API.Controllers
         /// <param name="dynamicValues">Optional dynamic field values.</param>
         /// <returns>Generated student roll number.</returns>
         [HttpPost("GetNewStudentRollNo")]
-        public IActionResult GetNewStudentRollNo(Dictionary<string, string>? dynamicValues = null)
+        public IActionResult GetNewStudentRollNo([FromBody] StudentRollNoRequest request)
         {
             try
             {
                 var rollNo = _studentService.GetNewStudentRollNo(
-                    GetCompanyId(), GetSessionId(),
-                    dynamicValues);
+                    GetCompanyId(), request.SessionId,
+                    request.DynamicValues);
 
                 return Ok(new ApiResponse<string>
                 {
@@ -305,7 +311,7 @@ namespace SchoolERP.API.Controllers
                 var result = _studentService.UpsertStudentAdmission(
                     request,
                     GetCompanyId(),
-                    GetSessionId(),
+                    request.SessionId,
                     GetUserId());
 
                 return Ok(new ApiResponse<int>
@@ -369,13 +375,13 @@ namespace SchoolERP.API.Controllers
         public IActionResult GetDisabledStudentList(
             int? classId = null,
             int? sectionId = null,
-            string? searchTerm = null)
+            string? searchTerm = null, int? sessionId = null)
         {
             try
             {
                 var data = _studentService.GetDisabledStudentList(
                     GetCompanyId(),
-                    GetSessionId(),
+                    sessionId.Value,
                     classId,
                     sectionId,
                     searchTerm);
@@ -399,7 +405,91 @@ namespace SchoolERP.API.Controllers
         }
 
 
+        // ----------------------------------------------------------------
+        // GET  /StudentCategory/GetById/{id}
+        // Returns JSON  { success, message, data }
+        // ----------------------------------------------------------------
+        [HttpGet("GetStudentCategoryById/{id}")]
+        public IActionResult GetStudentCategoryById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid ID." });
+                var sessionId = GetSessionId();
+
+                var result = _studentService.GetStudentCategoryById(
+                    studentCategoryId: id,
+                    companyId: GetCompanyId(),
+                    sessionId: sessionId,
+                    userId: GetUserId() > 0 ? GetUserId() : null);
+
+                if (result == null)
+                    return Ok(new { success = false, message = "Record not found." });
+
+                return Ok(new { success = true, message = result.Message, data = result });
+            }
+            catch (Exception)
+            {
+                throw;
+            }            
+        }
 
 
+        // ----------------------------------------------------------------
+        // GET  /StudentCategory/GetById/{id}
+        // Returns JSON  { success, message, data }
+        // ----------------------------------------------------------------
+        [HttpGet("GetStudentHouseById/{id}")]
+        public IActionResult GetStudentHouseById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid ID." });
+                var sessionId = GetSessionId();
+
+                var result = _studentService.GetStudentHouseById(
+                    studentHouseId: id,
+                    companyId: GetCompanyId(),
+                    sessionId: sessionId,
+                    userId: GetUserId() > 0 ? GetUserId() : null);
+
+                if (result == null)
+                    return Ok(new { success = false, message = "Record not found." });
+
+                return Ok(new { success = true, message = result.Message, data = result });
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        [HttpGet("GetDisableReasonsByID/{id}")]
+        public IActionResult GetDisableReasonsByID(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid ID." });
+                var sessionId = GetSessionId();
+
+                var result = _studentService.GetDisableReasonsByID(
+                    disableReasonID: id,
+                    companyId: GetCompanyId(),
+                    sessionId: sessionId,
+                    userID: GetUserId() > 0 ? GetUserId() : null);
+
+                if (result == null)
+                    return Ok(new { success = false, message = "Record not found." });
+
+                return Ok(new { success = true, message = result.Message, data = result });
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
     }
 }

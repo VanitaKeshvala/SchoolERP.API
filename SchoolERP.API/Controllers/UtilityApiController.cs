@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Services;
 using System.Threading.Tasks;
 

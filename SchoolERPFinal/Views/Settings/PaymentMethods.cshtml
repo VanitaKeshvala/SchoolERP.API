@@ -4,12 +4,9 @@
     PURPOSE: Single payment method configuration for Razorpay.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.PaymentMethodsPageViewModel
+@model SchoolERP.Shared.Models.PaymentMethodsPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@using SchoolERP.Net.Services
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Payment Methods";
@@ -19,12 +16,8 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    
-    var canAdd = PermHelper.HasPermissionByUrl("/Settings", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
-    var hasPermission = canAdd || canEdit;
+    var p = Model.Permissions;
+    var hasPermission = p.CanAdd || p.CanEdit;
 }
 
 <!-- Page Header -->
@@ -35,7 +28,7 @@
     <div class="d-flex align-items-center flex-wrap gap-2">
         @if (hasPermission)
         {
-            <button class="btn btn-success" id="btnSave" onclick="savePaymentMethod()">
+            <button class="btn btn-success top-btn" id="btnSave" onclick="savePaymentMethod()">
                 <i class="ti ti-cloud me-1"></i>Save
             </button>
         }

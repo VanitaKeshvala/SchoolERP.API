@@ -1,0 +1,378 @@
+using System;
+using System.Collections.Generic;
+
+namespace SchoolERP.Shared.Models
+{
+    public class StudentDisableReasonViewModel
+    {
+        public int Result { get; set; }
+        public string? Message { get; set; }
+
+        public int DisableReasonID { get; set; }
+        public int SessionID { get; set; }
+        public int CompanyID { get; set; }
+        public string DisableReasonTitle { get; set; } = "";
+        public bool IsActive { get; set; }
+        public DateTime CreatedOn { get; set; }
+        public int CreatedBY { get; set; }
+    }
+
+    public class StudentDisableReasonUpsertRequest
+    {
+        public int DisableReasonID { get; set; }
+        public string DisableReasonTitle { get; set; } = "";
+    }
+
+    public class StudentDisableReasonPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<StudentDisableReasonViewModel> Items { get; set; } = new();
+    }
+
+    public class StudentHouseViewModel
+    {
+        public int Result { get; set; }
+        public string? Message { get; set; }
+
+        public int StudentHouseID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public int CreateBy { get; set; }
+        public string StudentHouseName { get; set; } = "";
+        public string? StudentHouseDescription { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedOn { get; set; }
+    }
+
+    public class StudentHouseUpsertRequest
+    {
+        public int StudentHouseID { get; set; }
+        public string StudentHouseName { get; set; } = "";
+        public string? StudentHouseDescription { get; set; }
+    }
+
+    public class StudentHousePageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<StudentHouseViewModel> Items { get; set; } = new();
+    }
+
+    public class StudentCategoryViewModel
+    {
+        public int Result { get; set; }
+        public string? Message { get; set; }
+
+        public int StudentCategoryID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public int CreatedBY { get; set; }
+        public string StudentCategoryName { get; set; } = "";
+        public bool IsActive { get; set; }
+        public DateTime CreatedOn { get; set; }
+
+        
+    }
+
+    public class StudentCategoryUpsertRequest
+    {
+        public int StudentCategoryID { get; set; }
+        public string StudentCategoryName { get; set; } = "";
+        public int SessionID { get; set; }
+    }
+
+    public class StudentCategoryPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<StudentCategoryViewModel> Items { get; set; } = new();
+    }
+
+    public class StudentAdmissionUpsertRequest
+    {
+        public int StudentID { get; set; }
+        public string RollNo { get; set; } = "";
+        public int SessionId { get; set; }
+        public Dictionary<string, string> FieldValues { get; set; } = new();
+    }
+
+    public class StudentDetailsViewModel
+    {
+        public StudentBasicInfoViewModel BasicInfo { get; set; } = new();
+        public List<StudentAddressViewModel> Addresses { get; set; } = new();
+        public StudentTransportDetailsViewModel? Transport { get; set; }
+        public StudentHostelDetailsViewModel? Hostel { get; set; }
+        public List<StudentCustomFieldValueViewModel> CustomFields { get; set; } = new();
+        public List<StudentDocumentViewModel> Documents { get; set; } = new();
+        public List<SiblingViewModel> Siblings { get; set; } = new();
+    }
+
+    public class StudentBasicInfoViewModel
+    {
+        public int StudentID { get; set; }
+        public string? RollNo { get; set; }
+        public string? AdmissionNo { get; set; }
+        public DateTime? AdmissionDate { get; set; }
+        public string? FirstName { get; set; }
+        public string? MiddleName { get; set; }
+        public string? LastName { get; set; }
+        public string FullName => $"{FirstName} {MiddleName} {LastName}".Trim().Replace("  ", " ");
+        public string? Gender { get; set; }
+        public DateTime? DOB { get; set; }
+        public string? CategoryName { get; set; }
+        public string? Religion { get; set; }
+        public string? Caste { get; set; }
+        public string? MobileNo { get; set; }
+        public string? Email { get; set; }
+        public string? BloodGroup { get; set; }
+        public string? HouseName { get; set; }
+        public string? Height { get; set; }
+        public string? Weight { get; set; }
+        public string? ClassName { get; set; }
+        public int ClassID { get; set; }
+        public string? SectionName { get; set; }
+        public int SectionID { get; set; }
+        public int StudentCategoryID { get; set; }
+        public int? StudentHouseID { get; set; }
+        public byte[]? StudentPhoto { get; set; }
+        public string? StudentPhotoType { get; set; }
+        
+        // Parent Details
+        public string? FatherName { get; set; }
+        public string? FatherPhone { get; set; }
+        public string? FatherOccupation { get; set; }
+        public byte[]? FatherPhoto { get; set; }
+        public string? FatherPhotoType { get; set; }
+        public string? MotherName { get; set; }
+        public string? MotherPhone { get; set; }
+        public string? MotherOccupation { get; set; }
+        public byte[]? MotherPhoto { get; set; }
+        public string? MotherPhotoType { get; set; }
+        public string? IfGuardianIs { get; set; }
+        public string? GuardianName { get; set; }
+        public string? GuardianPhone { get; set; }
+        public string? GuardianOccupation { get; set; }
+        public string? GuardianRelation { get; set; }
+        public string? GuardianEmail { get; set; }
+        public byte[]? GuardianPhoto { get; set; }
+        public string? GuardianPhotoType { get; set; }
+
+        // Auth
+        public string? StudentUsername { get; set; }
+        public string? ParentUsername { get; set; }
+        public string? StudentPassword { get; set; }
+        public string? ParentPassword { get; set; }
+        public int? ParentUserID { get; set; }
+        public bool IsActive { get; set; } = true;
+        public int? DisableReasonID { get; set; }
+        public string? DisableReasonName { get; set; }
+        public DateTime? DisableDate { get; set; }
+        public string? DisableNote { get; set; }
+    }
+
+    public class SiblingViewModel
+    {
+        public int StudentID { get; set; }
+        public string? FullName { get; set; }
+        public string? AdmissionNo { get; set; }
+        public string? ClassName { get; set; }
+        public string? SectionName { get; set; }
+        public string? RollNo { get; set; }
+    }
+
+    public class StudentAddressViewModel
+    {
+        public string? AddressType { get; set; }
+        public string? AddressDetails { get; set; }
+    }
+
+    public class StudentTransportDetailsViewModel
+    {
+        public string? RouteName { get; set; }
+        public int? RouteID { get; set; }
+        public int? VehicleID { get; set; }
+        public string? PickupPointName { get; set; }
+        public int? PickupPointID { get; set; }
+        public string? StartMonth { get; set; }
+    }
+
+    public class StudentHostelDetailsViewModel
+    {
+        public string? HostelName { get; set; }
+        public int? HostelID { get; set; }
+        public string? RoomTitle { get; set; }
+        public int? RoomID { get; set; }
+    }
+
+    public class StudentCustomFieldValueViewModel
+    {
+        public int FieldID { get; set; }
+        public string? FieldName { get; set; }
+        public string? FieldValue { get; set; }
+    }
+
+    public class StudentDocumentViewModel
+    {
+        public int DocID { get; set; }
+        public string? DocumentTitle { get; set; }
+        public string? DocumentPath { get; set; }
+        public byte[]? DocumentContent { get; set; }
+    }
+
+    public class StudentListViewModel
+    {
+        public int StudentID { get; set; }
+        public string? AdmissionNo { get; set; }
+        public string? RollNo { get; set; }
+        public string? FullName { get; set; }
+        public string? ClassName { get; set; }
+        public string? SectionName { get; set; }
+        public string? FatherName { get; set; }
+        public string? FatherPhone { get; set; }
+        public string? Gender { get; set; }
+        public DateTime? DOB { get; set; }
+        public string? CategoryName { get; set; }
+        public string? MobileNo { get; set; }
+        public byte[]? StudentPhoto { get; set; }
+        public string? StudentPhotoType { get; set; }
+        public bool IsActive { get; set; }
+        public string? DisableReasonName { get; set; }
+        public DateTime? DisableDate { get; set; }
+        public string? DisableNote { get; set; }
+        public List<StudentCustomFieldValueViewModel> CustomFieldValues { get; set; } = new();
+    }
+
+    public class StudentListPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+
+
+        public List<StudentListViewModel> Students { get; set; } = new();
+        public int? SelectedClassId { get; set; }
+        public int? SelectedSectionId { get; set; }
+        public string? SearchTerm { get; set; }
+        public string ViewType { get; set; } = "list";
+        public List<FieldModel> SystemFields { get; set; } = new();
+        public List<FieldModel> CustomFields { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+    }
+
+    public class StudentTimelineViewModel
+    {
+        public int TimelineID { get; set; }
+        public int StudentID { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public DateTime TimelineDate { get; set; }
+        public string? Description { get; set; }
+        public string? DocumentName { get; set; }
+        public string? DocumentType { get; set; }
+        public bool IsVisibleToStudent { get; set; }
+        public bool HasDocument { get; set; }
+    }
+
+    public class StudentTimelineUpsertRequest
+    {
+        public int TimelineID { get; set; }
+        public int StudentID { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public DateTime TimelineDate { get; set; }
+        public string? Description { get; set; }
+        public string? DocumentBase64 { get; set; }
+        public string? DocumentName { get; set; }
+        public string? DocumentType { get; set; }
+        public bool IsVisibleToStudent { get; set; } = true;
+    }
+
+    public class StudentStatusToggleRequest
+    {
+        public int StudentID { get; set; }
+        public bool IsActive { get; set; }
+        public int? DisableReasonID { get; set; }
+        public DateTime? DisableDate { get; set; }
+        public string? DisableNote { get; set; }
+    }
+
+    public class StudentMultiClassViewModel
+    {
+        public int MultiClassID { get; set; }
+        public int StudentID { get; set; }
+        public int ClassID { get; set; }
+        public string? ClassName { get; set; }
+        public int SectionID { get; set; }
+        public string? SectionName { get; set; }
+    }
+
+    public class MultiClassStudentCardViewModel
+    {
+        public int StudentID { get; set; }
+        public string? RollNo { get; set; }
+        public string? FullName { get; set; }
+        public int PrimaryClassID { get; set; }
+        public string? PrimaryClassName { get; set; }
+        public int PrimarySectionID { get; set; }
+        public string? PrimarySectionName { get; set; }
+        public List<StudentMultiClassViewModel> AdditionalClasses { get; set; } = new();
+    }
+
+    public class StudentMultiClassUpsertRequest
+    {
+        public int MultiClassID { get; set; }
+        public int StudentID { get; set; }
+        public int ClassID { get; set; }
+        public int SectionID { get; set; }
+    }
+
+    public class StudentAttendanceHistoryViewModel
+    {
+        public List<StudentAttendanceSummary> Summaries { get; set; } = new();
+        public List<StudentAttendanceDayStatus> Days { get; set; } = new();
+    }
+
+    public class StudentAttendanceSummary
+    {
+        public int Month { get; set; }
+        public string MonthName { get; set; } = string.Empty;
+        public int Year { get; set; }
+        public int Present { get; set; }
+        public int Late { get; set; }
+        public int Absent { get; set; }
+        public int HalfDay { get; set; }
+        public int Holiday { get; set; }
+        public int Leave { get; set; }
+    }
+
+    public class StudentAttendanceDayStatus
+    {
+        public int Day { get; set; }
+        public int Month { get; set; }
+        public string Status { get; set; } = string.Empty; // P, L, A, F, H
+    }
+
+    public class StudentRollNoRequest
+    {
+        public Dictionary<string, string>? DynamicValues { get; set; }
+        public int SessionId { get; set; }
+    }
+
+    public class StudentCategoryAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public StudentCategoryViewModel Items { get; set; } = new();
+        public StudentCategoryViewModel? EditStudentCategory { get; set; }
+    }
+
+    public class StudentHouseAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public StudentHouseViewModel Items { get; set; } = new();
+        public StudentHouseViewModel? EditStudentHouse { get; set; }
+    }
+
+    public class StudentDisableReasonAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public StudentDisableReasonViewModel Items { get; set; } = new();
+        public StudentDisableReasonViewModel? EditStudentDisableReason { get; set; }
+    }
+}

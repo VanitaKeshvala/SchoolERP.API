@@ -1,20 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the different types of actions users are allowed to perform (like 'Add', 'Edit', or 'Delete') across the system.
     /// </summary>
-    public class PermissionController : Controller
+    public class PermissionController : BaseController
     {
         private readonly IUserManagementClientService _userMgmtService;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/Permission";
 
-        public PermissionController(IUserManagementClientService userMgmtService, IUserMenuPermissionClientService menuPerm)
+        public PermissionController(IUserManagementClientService userMgmtService, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _userMgmtService = userMgmtService;
             _menuPerm = menuPerm;
@@ -25,13 +27,26 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            var permissionsResponse = await _userMgmtService.GetAllPermissionsAsync();
-
-            var model = new MstUserManagementPageViewModel
+            try
             {
-                Permissions = permissionsResponse?.Data ?? new List<MstPermissionViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Permission"
+               );
+                var permissionsResponse = await _userMgmtService.GetAllPermissionsAsync();
+
+                var model = new MstUserManagementPageViewModel
+                {
+                    Permissions = permissionsResponse?.Data ?? new List<MstPermissionViewModel>()
+                };
+                model.PermissionsButton = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         /// <summary>
@@ -72,17 +87,25 @@ namespace SchoolERP.Net.Controllers
         /// Turns a specific permission type on or off, determining if it can be assigned to roles.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> ToggleStatus(int permissionId, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "You do not have permission to change permission status." });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to change permission status." });
 
-            var userId =(await _menuPerm.GetCurrentUserIdAsync()).Data;
-            if (userId <= 0)
-                return Json(new { success = false, message = "You must be signed in." });
+                var userId = (await _menuPerm.GetCurrentUserIdAsync()).Data;
+                if (userId <= 0)
+                    return Json(new { success = false, message = "You must be signed in." });
 
-            var result =(await _userMgmtService.TogglePermissionStatusAsync(permissionId, isActive)).Data;
-            return Json(new { success = result.success, message = result.message });
+                var result = await _userMgmtService.TogglePermissionStatusAsync(request);
+                return Json(new { success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
         /// <summary>

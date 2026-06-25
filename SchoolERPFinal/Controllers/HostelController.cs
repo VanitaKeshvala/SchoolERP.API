@@ -1,33 +1,69 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class HostelController : Controller
+    public class HostelController : BaseController
     {
         private readonly IHostelClientService _client;
-        public HostelController(IHostelClientService client) => _client = client;
-
+        private readonly ICompanyClientService _companyService;
+        private readonly ISessionClientService _sessionService;
+        public HostelController(IHostelClientService client,
+            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper) : base(permHelper)
+        {
+            _client = client;
+            _companyService = companyService;
+            _sessionService = sessionService;
+        }
+        private async Task<int> GetCompanyId()
+        {
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
+        }
+        private async Task<int> GetSessionId()
+        {
+            if (CurrentSessionId == null)
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
+        }
 
         /// <summary>
         /// Displays a list of all available room types so you can see the different options for housing.
         /// </summary>
         public async Task<IActionResult> RoomType()
         {
-            // Step 1: Ask the system to fetch the full list of room types.
-            var res = await _client.GetAllRoomTypesAsync();
-            
-            // Step 2: Organize the data found or provide an empty list if nothing was retrieved.
-            var model = new RoomTypePageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<RoomTypeViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Hostel/RoomType"
+               );
+                var sessionID = await GetSessionId();
+                // Step 1: Ask the system to fetch the full list of room types.
+                var res = await _client.GetAllRoomTypesAsync(false,sessionID);
+
+                // Step 2: Organize the data found or provide an empty list if nothing was retrieved.
+                var model = new RoomTypePageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<RoomTypeViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Send the room type information to the display page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
             
-            // Step 3: Send the room type information to the display page.
-            return View(model);
         }
 
         /// <summary>
@@ -35,19 +71,32 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            // Step 1: Gather information about all hostels and room types from the system.
-            var resHostel = await _client.GetAllHostelsAsync();
-            var resRoomType = await _client.GetAllRoomTypesAsync();
-            
-            // Step 2: Prepare the data for the screen, handling cases where data might be missing.
-            var model = new HostelPageViewModel
+            try
             {
-                Items = resHostel.Success ? resHostel.Data : new List<HostelViewModel>(),
-                RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomTypeViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Hostel/Index"
+               );
+                var sessionID = await GetSessionId();
+                // Step 1: Gather information about all hostels and room types from the system.
+                var resHostel = await _client.GetAllHostelsAsync(false, sessionID);
+                var resRoomType = await _client.GetAllRoomTypesAsync(false, sessionID);
+
+                // Step 2: Prepare the data for the screen, handling cases where data might be missing.
+                var model = new HostelPageViewModel
+                {
+                    Items = resHostel.Success ? resHostel.Data : new List<HostelViewModel>(),
+                    RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomTypeViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Present the dashboard to the user.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             
-            // Step 3: Present the dashboard to the user.
-            return View(model);
         }
 
         /// <summary>
@@ -55,18 +104,33 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> HostelRoom()
         {
-            // Step 1: Retrieve all room records, hostel names, and category types.
-            var resRoom = await _client.GetAllHostelRoomsAsync();
-            var resHostel = await _client.GetAllHostelsAsync();
-            var resRoomType = await _client.GetAllRoomTypesAsync();
-
-            var model = new HostelRoomPageViewModel
+            try
             {
-                Items = resRoom.Success ? resRoom.Data : new List<HostelRoomViewModel>(),
-                Hostels = resHostel.Success ? resHostel.Data : new List<HostelViewModel>(),
-                RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomTypeViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Hostel/HostelRoom"
+               );
+                var sessionID = await GetSessionId();
+                // Step 1: Retrieve all room records, hostel names, and category types.
+                var resRoom = await _client.GetAllHostelRoomsAsync(false, sessionID);
+                var resHostel = await _client.GetAllHostelsAsync(false,sessionID);
+                var resRoomType = await _client.GetAllRoomTypesAsync(false,sessionID);
+
+                var model = new HostelRoomPageViewModel
+                {
+                    Items = resRoom.Success ? resRoom.Data : new List<HostelRoomViewModel>(),
+                    Hostels = resHostel.Success ? resHostel.Data : new List<HostelViewModel>(),
+                    RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomTypeViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         #region Room Type API Endpoints
@@ -80,8 +144,16 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> UpsertRoomType([FromBody] RoomTypeUpsertRequest req)
         {
-            var res = await _client.UpsertRoomTypeAsync(req);
-            return Json(res);
+            try
+            {                
+                var res = await _client.UpsertRoomTypeAsync(req);
+                return Json(res);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+          
         }
 
         [HttpPost]

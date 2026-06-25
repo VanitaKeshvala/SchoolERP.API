@@ -1,20 +1,22 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class SectionController : Controller
+    public class SectionController : BaseController
     {
         private readonly ISectionClientService _sectionClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         
         private const string MenuPath = "/Section";
 
-        public SectionController(ISectionClientService sectionClient, IUserMenuPermissionClientService menuPerm)
+        public SectionController(ISectionClientService sectionClient, IUserMenuPermissionClientService menuPerm , PermissionHelper permHelper) : base(permHelper)
         {
             _sectionClient = sectionClient;
             _menuPerm = menuPerm;
@@ -23,12 +25,44 @@ namespace SchoolERP.Net.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var response = await _sectionClient.GetAllAsync();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Section"
+           );
+            var sessionId = CurrentSessionId;
+            var response = await _sectionClient.GetAllAsync(false, sessionId);
+            if(response.Data != null) 
+            {
+                
+            }
             var model = new MstSectionPageViewModel
             {
                 Sections = response.Success ? response.Data : new List<MstSectionViewModel>()
             };
+            model.Permissions = perms;
             return View(model);
+        }
+
+        public async Task<IActionResult> Add(int? id)
+        {
+            // Step 1: Initialize a new blank page model.
+            var model = new MstSectionViewModel();
+           
+            // Step 2: If we are editing an existing person (ID is provided), fetch their details.
+
+            if (id.HasValue && id.Value > 0)
+            {
+                var sectionRes = await _sectionClient.GetByIDAsync(id.Value);
+                if (sectionRes.Success)
+                {
+                    model.EditSections = sectionRes.Data;
+                }
+            }
+            else 
+            {
+                model.EditSections = null;
+            }
+                return View(model);
         }
 
         [HttpGet]
@@ -56,13 +90,21 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "You do not have permission to change section status." });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to change section status." });
 
-            var response = await _sectionClient.ToggleStatusAsync(id, isActive);
-            return Json(new { success = response.Success, message = response.Message });
+                var response = await _sectionClient.ToggleStatusAsync(request);
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost]
@@ -73,6 +115,24 @@ namespace SchoolERP.Net.Controllers
 
             var response = await _sectionClient.DeleteAsync(ids);
             return Json(new { success = response.Success, message = response.Message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CopyToSession([FromBody] SectionCopyRequest request)
+        {
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to delete sections." });
+
+                var response = await _sectionClient.CopyToSessionAsync(request);
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
     }
 }

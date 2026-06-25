@@ -1,14 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services.Clients;
 using System.Threading.Tasks;
 
 using SchoolERP.Net.Services;
 using System.Collections.Generic;
+using SchoolERP.Net.Helpers;
+using System.Security.Claims;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class CertificateController : Controller
+    public class CertificateController : BaseController
     {
         private readonly IStudentCertificateClientService _certificateClient;
         private readonly IStudentIDCardClientService _idCardClient;
@@ -18,7 +20,8 @@ namespace SchoolERP.Net.Controllers
         private readonly IStudentInformationClientService _studentInfoClient;
         private readonly IHumanResourceClientService _hrClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
-
+        private readonly ICompanyClientService _companyService;
+        private readonly ISessionClientService _sessionService;
         public CertificateController(
             IStudentCertificateClientService certificateClient, 
             IStudentIDCardClientService idCardClient,
@@ -27,7 +30,10 @@ namespace SchoolERP.Net.Controllers
             ISectionClientService sectionClient,
             IStudentInformationClientService studentInfoClient,
             IHumanResourceClientService hrClient,
-            IUserMenuPermissionClientService menuPerm)
+            IUserMenuPermissionClientService menuPerm,
+            ICompanyClientService companyService,
+            ISessionClientService sessionService,
+            PermissionHelper permHelper) : base(permHelper)
         {
             _certificateClient = certificateClient;
             _idCardClient = idCardClient;
@@ -37,54 +43,98 @@ namespace SchoolERP.Net.Controllers
             _studentInfoClient = studentInfoClient;
             _hrClient = hrClient;
             _menuPerm = menuPerm;
+            _companyService = companyService;
+            _sessionService = sessionService;
         }
-
+        private int GetUserId() => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
+        private async Task<int> GetCompanyId()
+        {
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
+        }
+        private async Task<int> GetSessionId()
+        {
+            if (CurrentSessionId == null)
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
+        }
         public async Task<IActionResult> StudentCertificate()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Certificate/StudentCertificate"
+           );
             var model = new StudentCertificatePageViewModel();
             var resp = await _certificateClient.GetAll();
             if (resp.Success)
             {
                 model.Certificates = resp.Data;
             }
+            model.Permissions = perms;
             return View(model);
         }
 
-        public IActionResult GenerateCertificate()
+        public async Task<IActionResult> GenerateCertificate()
         {
-            return View();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/HumanResource/Staffs"
+           );
+
+            return View(perms);
         }
 
         public async Task<IActionResult> StudentIdCard()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Certificate/StudentIdCard"
+           );
             var model = new StudentIDCardPageViewModel();
             var resp = await _idCardClient.GetAll();
             if (resp.Success)
             {
                 model.IDCards = resp.Data;
             }
+            model.Permissions = perms;
             return View(model);
         }
 
-        public IActionResult GenerateStudentIdCard()
+        public async Task<IActionResult> GenerateStudentIdCard()
         {
-            return View();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Certificate/GenerateStudentIdCard"
+           );
+            return View(perms);
         }
 
         public async Task<IActionResult> StaffIdCard()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Certificate/StaffIdCard"
+           );
             var model = new StaffIDCardPageViewModel();
             var resp = await _staffIdCardClient.GetAll();
             if (resp.Success)
             {
                 model.IDCards = resp.Data;
             }
+            model.Permissions = perms;
             return View(model);
         }
 
-        public IActionResult GenerateStaffIdCard()
+        public async Task<IActionResult> GenerateStaffIdCard()
         {
-            return View();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Certificate/GenerateStaffIdCard"
+           );
+            return View(perms);
         }
 
         #region Certificate Module API Proxy Endpoints
@@ -108,7 +158,8 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStudentList(int? classId = null, int? sectionId = null, string? searchTerm = null)
         {
-            var res = await _studentInfoClient.GetStudentListAsync(classId, sectionId, searchTerm);
+            var sessionId = await GetSessionId();
+            var res = await _studentInfoClient.GetStudentListAsync(sessionId, classId, sectionId, searchTerm);
             return Json(res);
         }
 
@@ -137,7 +188,8 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStaff()
         {
-            var res = await _hrClient.GetAllStaffAsync();
+            var sessionId = await GetSessionId();
+            var res = await _hrClient.GetAllStaffAsync(sessionId);
             return Json(res);
         }
 

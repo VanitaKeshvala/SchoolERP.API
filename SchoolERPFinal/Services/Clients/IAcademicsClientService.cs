@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -14,7 +14,7 @@ namespace SchoolERP.Net.Services.Clients
 
         Task<ApiResponse<List<ClassTeacherViewModel>>> GetAllClassTeachersAsync(
             List<int>? classIds = null,
-            List<int>? sectionIds = null);
+            List<int>? sectionIds = null, int? sessionID = null);
         Task<ApiResponse<dynamic>> UpsertClassTeacherAsync(ClassTeacherUpsertRequest req);
         Task<ApiResponse<dynamic>> DeleteClassTeacherAsync(List<int> ids);
 

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -25,9 +25,9 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> DeleteLeaveTypeAsync(List<int> id);
         Task<ApiResponse<dynamic>> ToggleLeaveTypeStatusAsync(int id, bool isActive);
 
-        Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync();
+        Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int sessionID);
         Task<ApiResponse<HRStaffViewModel>> GetStaffByIDAsync(int id);
-        Task<ApiResponse<dynamic>> UpsertStaffAsync(HRStaffUpsertRequest req);
+        Task<ApiResponse<SpResult>> UpsertStaffAsync(HRStaffUpsertRequest req);
         Task<ApiResponse<dynamic>> DeleteStaffAsync(List<int> id);
         Task<ApiResponse<string>> GetNewStaffCodeAsync();
         
@@ -53,5 +53,7 @@ namespace SchoolERP.Net.Services.Clients
             int staffId,
             int month,
             int year);
+
+        Task<ApiResponse<dynamic>> UpdateProfileAsync(HRStaffProfileRequest req);
     }
 }

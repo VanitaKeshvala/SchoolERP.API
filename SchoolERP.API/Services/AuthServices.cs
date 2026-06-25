@@ -2,8 +2,8 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.DTOs;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using Common = SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Utilities;
 using System.Data;
 
@@ -21,7 +21,7 @@ namespace SchoolERP.API.Services
         }
 
         // This function is used to authenticate a user, retrieve session details, and generate a JWT token.
-        public async Task<ApiResponse<UserSessionModel?>> LoginAsync(string username,string password)
+        public async Task<Common.ApiResponse<UserSessionModel?>> LoginAsync(string username,string password)
         {
             try
             {
@@ -43,13 +43,13 @@ namespace SchoolERP.API.Services
 
                 if (loginResult == null)
                 {
-                    return ApiResponse<UserSessionModel?>
+                    return Common.ApiResponse<UserSessionModel?>
                         .ErrorResponse("User not found");
                 }
 
                 if (loginResult.Result == 0)
                 {
-                    return ApiResponse<UserSessionModel?>
+                    return Common.ApiResponse<UserSessionModel?>
                         .ErrorResponse(loginResult.Message);
                 }
 
@@ -70,14 +70,26 @@ namespace SchoolERP.API.Services
                     user.DefaultRoleID,
                     userTypeName);
 
-                return ApiResponse<UserSessionModel?>
+                return Common.ApiResponse<UserSessionModel?>
                     .SuccessResponse(user, loginResult.Message);
             }
             catch (Exception ex)
             {
-                return ApiResponse<UserSessionModel?>
+                return Common.ApiResponse<UserSessionModel?>
             .ErrorResponse(ex.Message);
             }            
+        }
+
+        public async Task<DashboardModel?> GetDashboardByIdAsync(int dashboardId)
+        {
+            using var conn = new SqlConnection(
+               _configuration.GetConnectionString("DefaultConnection"));
+
+            return await conn.QueryFirstOrDefaultAsync<DashboardModel>(
+                "SP_Dashboard_GetById",
+                new { DASHBOARDID = dashboardId },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

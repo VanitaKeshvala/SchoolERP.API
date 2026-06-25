@@ -1,6 +1,4 @@
-@model SchoolERP.Net.Models.HRApplyLeavePageViewModel
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.HRApplyLeavePageViewModel
 @{
     ViewData["Title"] = "Approve Leave";
     Layout = "_Layout";
@@ -14,12 +12,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/Income/Search", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Income/Search", "Edit");
-    var canPrint = PermHelper.HasPermissionByUrl("/Income/Search", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Income/Search", "Export");
+    var p = Model.Permissions;
 
 }
 
@@ -51,28 +44,28 @@
         <h6 class="fw-bold mb-0">Leave Approval Dashboard</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button type="button" class="btn btn-primary" onclick="openApplyModal()">
+            <button type="button" class="btn btn-primary top-btn" onclick="openApplyModal()">
                 <i class="ti ti-plus me-1"></i> Apply Leave
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button type="button" id="btnTopEdit" class="btn btn-info" onclick="handleTopEdit()" disabled>
+            <button type="button" id="btnTopEdit" class="btn btn-info top-btn" onclick="handleTopEdit()" disabled>
                 <i class="ti ti-pencil me-1"></i> Edit
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
             <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">

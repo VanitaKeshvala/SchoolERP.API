@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -35,9 +35,10 @@ namespace SchoolERP.Net.Services.Clients
 
             if (form.DriverPhoto != null)
             {
-                var fileContent = new StreamContent(form.DriverPhoto.OpenReadStream());
-                fileContent.Headers.ContentType = new MediaTypeHeaderValue(form.DriverPhoto.ContentType);
-                content.Add(fileContent, "DriverPhoto", form.DriverPhoto.FileName);
+                //vanita commit temporyr code 
+                //var fileContent = new StreamContent(form.DriverPhoto.OpenReadStream());
+                //fileContent.Headers.ContentType = new MediaTypeHeaderValue(form.DriverPhoto.ContentType);
+                //content.Add(fileContent, "DriverPhoto", form.DriverPhoto.FileName);
             }
 
             return await PostAsync<dynamic>("api/VehiclesApi/UpsertVehicle", content);

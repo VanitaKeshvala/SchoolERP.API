@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.API.Services;
 
 namespace SchoolERP.API.Helpers

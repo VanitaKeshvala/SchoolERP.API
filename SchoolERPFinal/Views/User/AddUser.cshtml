@@ -1,4 +1,4 @@
-﻿@model SchoolERP.Net.Models.UsersPageViewModel
+﻿@model SchoolERP.Shared.Models.UsersPageViewModel
 @using System.Security.Claims
 @using SchoolERP.Net.Helpers
 @inject PermissionHelper PermHelper
@@ -69,6 +69,9 @@
             display: block;
         }
 
+    .tree-grid-container {
+        border: 1px solid #e0e0e0 !important;
+    }
     .top-6 {
         top: 6px;
     }
@@ -115,13 +118,17 @@
     <div class="d-flex align-items-center gap-2">
         <div class="ms-auto d-flex gap-2">
 
-            <button type="button" class="btn btn-sm btn-primary shadow-sm" id="btnWizardNext" onclick="moveWizard(1)">
+            <button type="button" class="btn btn-sm btn-primary shadow-sm top-btn" id="btnWizardNext" onclick="moveWizard(1)">
                 Next <i class="ti ti-arrow-narrow-right ms-1"></i>
             </button>
-            <button type="button" class="btn btn-sm btn-success shadow-sm d-none" id="btnWizardFinish" onclick="finishWizard()">
+           
+            <button type="button" class="btn btn-sm btn-success shadow-sm d-none top-btn" id="btnWizardFinish" onclick="finishWizard()">
                 <i class="ti ti-cloud me-1"></i> Save
             </button>
-            <button type="button" class="btn btn-sm btn-info d-none" id="btnWizardPrev" onclick="moveWizard(-1)">
+            <a href="/User/Index" id="btnBack" class="btn btn-sm btn-info d-inline-flex align-items-center top-btn">
+                <i class="ti ti-arrow-narrow-left me-1"></i>Back
+            </a>
+            <button type="button" class="btn btn-sm btn-info d-none top-btn" id="btnWizardPrev" onclick="moveWizard(-1)">
                 <i class="ti ti-arrow-narrow-left me-1"></i> Back
             </button>
             @* <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button> *@
@@ -137,15 +144,14 @@
         <div class="col-xl-12">
             <div class="card shadow-tbl-outer">
                 <div class="card-header">
-                   @*  <ul class="nav nav-pills gap-2">
-                        <li class="nav-item"><a href="#Identity" data-step="1" onclick="goToWizardStep(1)" data-bs-toggle="pill" class="wizard-step nav-link active">Identity</a></li>
-                        <li class="nav-item"><a href="#Companies" data-step="2" onclick="goToWizardStep(2)" data-bs-toggle="pill" class="wizard-step nav-link">Companies</a></li>
-                        <li class="nav-item"><a href="#Permissions" data-step="3" onclick="goToWizardStep(3)" data-bs-toggle="pill" class="wizard-step nav-link">Permissions</a></li>
-                    </ul> *@
-                    <div class="d-flex flex-column">
-                        <h5 class="modal-title" id="wizardModalTitle">
-                            User Wizard
-                        </h5>
+                  
+                    <ul class="nav nav-pills gap-2">
+                        <li class="nav-item"><a data-step="1" onclick="goToWizardStep(1)" class="nav-link active">Identity</a></li>
+                        <li class="nav-item"><a data-step="2" onclick="goToWizardStep(2)" class="nav-link">Companies</a></li>
+                        <li class="nav-item"><a data-step="3" onclick="goToWizardStep(3)" class="nav-link">Permissions</a></li>
+                    </ul>
+
+                    @* <div class="d-flex flex-column">                       
                         <div class="wizard-steps-indicator d-flex align-items-center mt-3 gap-4">
                             <div class="wizard-step active" data-step="1" onclick="goToWizardStep(1)" style="cursor: pointer;">
                                 <span class="step-num">1</span>
@@ -161,12 +167,11 @@
                                 <span class="step-num">3</span>
                                 <span class="step-label d-none d-sm-inline">Permissions</span>
                             </div>
-                            @* <button type="button" class="btn btn-sm btn-light px-3" data-bs-dismiss="modal">Cancel</button> *@
                             
                         </div>
 
                         
-                    </div>
+                    </div> *@
                 </div>
 
                 <div class="card-body">
@@ -174,9 +179,9 @@
                         <!-- STEP 1: IDENTITY -->
                         <div class="wizard-pane active" id="step1">
                             <div class="row">
-                                <h6 class="text-uppercase text-muted text-xxs font-weight-bolder mb-3">
+                               @*  <h6 class="text-uppercase text-muted text-xxs font-weight-bolder mb-3">
                                     <i class="fas fa-user-circle me-1"></i> Core Identity & Roles
-                                </h6>
+                                </h6> *@
                                 <div class="row">
                                     <div class="col-md-4">
                                         <label class="form-label">User Name <span class="text-danger">*</span></label>
@@ -965,10 +970,12 @@
                 btnNext.disabled = false;
                 btnNext.innerHTML = originalHtml;
 
+               
                 if (!isUnique) {
                     setFieldError('txtUsername', 'Username is already taken.');
                     return;
                 }
+                
             }
 
             // 2. Capture state if leaving Step 2
@@ -976,24 +983,26 @@
                 wizardData.selectedCompanyIDs = Array.from(
                     document.querySelectorAll('.company-checkbox:checked')
                 ).map(cb => parseInt(cb.value));
+               
             }
 
             // 3. Sync UI Indicators
             document.querySelector(`.wizard-pane[id="step${currentStep}"]`).classList.remove('active');
-            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.remove('active');
+            document.querySelector(`.nav-link[data-step="${currentStep}"]`).classList.remove('active');
 
             if (nextStep > currentStep) {
-                document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('completed');
+                document.querySelector(`.nav-link[data-step="${currentStep}"]`).classList.add('completed');
             }
 
             currentStep = nextStep;
 
             document.querySelector(`.wizard-pane[id="step${currentStep}"]`).classList.add('active');
-            document.querySelector(`.wizard-step[data-step="${currentStep}"]`).classList.add('active');
+            document.querySelector(`.nav-link[data-step="${currentStep}"]`).classList.add('active');
 
             // 4. Button visibility
             document.getElementById('btnWizardPrev').classList.toggle('d-none', currentStep === 1);
             document.getElementById('btnWizardNext').classList.toggle('d-none', currentStep === 3);
+            document.getElementById('btnBack').classList.toggle('d-none', currentStep != 1);
 
             // SHOW SAVE BUTTON ALWAYS ON ALL STEPS IN EDIT MODE
             const btnFinish = document.getElementById('btnWizardFinish');
@@ -1004,7 +1013,7 @@
                 btnFinish.classList.toggle('d-none', currentStep !== 3);
                 btnFinish.innerHTML = '<i class="ti ti-cloud me-1"></i> Save';
             }
-
+            
             // 5. Contextual loading for Step 2/3
             // If we are moving to Step 2 or 3, we should ensure data is fresh
             if (currentStep === 2 || currentStep === 3) {
@@ -1842,7 +1851,7 @@
 
             document.querySelectorAll('.wizard-pane').forEach(p => p.classList.remove('active'));
             document.getElementById('step1').classList.add('active');
-            document.querySelectorAll('.wizard-step').forEach(s => {
+            document.querySelectorAll('.nav-link').forEach(s => {
                 s.classList.remove('active', 'completed');
                 if (s.dataset.step == "1") s.classList.add('active');
             });

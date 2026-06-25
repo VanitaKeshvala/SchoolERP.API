@@ -1,18 +1,16 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Permission / Index.cshtml
     PURPOSE: User interface rendering for the Permission module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstUserManagementPageViewModel
+@model SchoolERP.Shared.Models.MstUserManagementPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Permission Management";
-    
+
 
     int currentUserId = 0;
     if (User.Identity != null && User.Identity.IsAuthenticated)
@@ -20,16 +18,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-    {
-        PermHelper.LoadPermissions(currentUserId);
-    }
-
-    var canAdd = PermHelper.HasPermissionByUrl("/Permission", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Permission", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Permission", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Permission", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Permission", "Export");
+    var pb = Model.PermissionsButton;
 }
 
 @* Local alert div removed in favor of global toast system *@
@@ -44,25 +33,43 @@
     </div>
 
     <div class="d-flex flex-wrap align-items-center gap-1">
-        <button class="btn btn-primary shadow-sm" id="btnAddPermission" onclick="openAddModal()" asp-permission="Add" asp-permission-url="/Permission">
-            <i class="ti ti-plus me-1"></i>Add
-        </button>
-        <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()" asp-permission="Edit" asp-permission-url="/Permission">
-            <i class="ti ti-pencil me-1"></i>Edit
-        </button>
-        <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()" asp-permission="Delete" asp-permission-url="/Permission">
-            <i class="ti ti-trash me-1"></i>Delete
-        </button>
-        @if (canPrint)
+        @if(pb.CanAdd)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-primary shadow-sm top-btn" id="btnAddPermission" onclick="openAddModal()">
+                <i class="ti ti-plus me-1"></i>Add
+            </button>
+        }   
+        @if(pb.CanEdit)
+        {
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        @if(pb.CanDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }        
+        @if (pb.CanEdit)
+        {
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (pb.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (pb.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -216,9 +223,9 @@
     <script>
         const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
         let selectedPermissionId = 0;
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(pb.CanEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(pb.CanDelete));
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(pb.CanAdd));
         const IV = window.InlineFormValidation;
         const permFieldMap = {
             txtPermissionName: 'errTxtPermissionName',
@@ -245,6 +252,8 @@
         $('#btnDelete').prop('disabled', checkedCount === 0);
         // Edit sirf 1 record select hone par
         $('#btnEdit').prop('disabled', checkedCount !== 1);
+        $('#btnActive').prop('disabled', checkedCount === 0);
+        $('#btnInactive').prop('disabled', checkedCount === 0);
         }
 
         IV.bindAutoClear(permFieldMap);
@@ -408,13 +417,96 @@
                 IV.setNotice('permPageNotice', 'You do not have permission to change status.');
                 return;
             }
-            IV.clearNotice('permPageNotice');
-            const resp = await fetch(`/Permission/ToggleStatus?permissionId=${id}&isActive=${isActive}`, { method: 'POST' });
-            const res = await resp.json();
-            if (!res.success) {
-                IV.setNotice('permPageNotice', res.message || 'Could not update status.');
-                location.reload();
+
+            let sectionIds = [];
+                 $('.student-checkbox:checked').each(function () {
+                    sectionIds.push(parseInt($(this).val()));
+                });
+
+                if (sectionIds.length === 0)
+                {
+                    if(id !=0)
+                    {
+                        sectionIds.push(parseInt(id));
+                    }
+                    else
+                    {
+                        showToast('Please select at least one user', false);
+                        return;
+                    }
+
+                }
+
+                const request = {
+                    ids: sectionIds.join(','),
+                    isActive: isActive
+                };
+                try
+                {
+                        const config = isActive
+                        ? {
+                            icon            : 'question',
+                            title           : 'Activate Record(s)?',
+                            text            : 'Activating this record will make it visible and available for use across the system. Do you want to continue?',
+                            confirmText     : 'Yes, Activate',
+                            confirmBtnClass : 'btn btn-success me-2',
+                            successTitle    : 'Activated Successfully!',
+                            successText     : 'The selected record(s) have been activated and are now available for use.'
+                        }
+                        : {
+                            icon            : 'warning',
+                            title           : 'Deactivate Record(s)?',
+                            text            : 'Deactivating this record will hide it from the system and prevent it from being used. Do you want to continue?',
+                            confirmText     : 'Yes, Deactivate',
+                            confirmBtnClass : 'btn btn-danger me-2',
+                            successTitle    : 'Deactivated Successfully!',
+                            successText     : 'The selected record(s) have been deactivated and are no longer available for use.'
+                        };
+
+
+                    Swal.fire({
+                    icon    : config.icon,
+                    title   : config.title,
+                    text    : config.text,
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, proceed!',
+                    customClass: {
+                        confirmButton: 'btn btn-danger me-2',
+                        cancelButton: 'btn btn-secondary'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            // ✅ fixed typo bluk → bulk
+                            url: '/Permission/ToggleStatus',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(request),
+                            success: function (res) {
+                                if (res.success) {
+                                    Swal.fire('Updated!', res.message || 'Status updated successfully.', 'success')
+                                        .then(() => location.reload());
+                                } else {
+                                    Swal.fire('Error!', res.message || 'Failed to update status.', 'error');
+                                }
+                            },
+                            error: function (xhr) {
+                                // ✅ log xhr for debugging
+                                console.error('Status update error:', xhr.status, xhr.responseText);
+                                Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                            }
+                        });
+                    }
+                });
             }
+            catch (err) {
+                console.error(err);
+                IV.setNotice('sectionPageNotice', 'Could not update status.');
+                location.reload();
+            }            
         }
 
         let exportTable;

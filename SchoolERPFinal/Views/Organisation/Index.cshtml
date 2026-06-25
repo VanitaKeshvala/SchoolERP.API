@@ -4,7 +4,7 @@
     PURPOSE: User interface rendering for the Organisation module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.OrganisationPageViewModel
+@model SchoolERP.Shared.Models.OrganisationPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
 @using SchoolERP.Net.Helpers
@@ -32,7 +32,7 @@
     <div class="d-flex flex-wrap align-items-center gap-2">
         @if (canAdd)
         {
-            <button type="button" class="btn btn-primary shadow-sm" onclick="openModal(0)">
+            <button type="button" class="btn btn-primary shadow-sm top-btn" onclick="openModal(0)">
                 <i class="fas fa-plus me-2"></i>Add Organisation
             </button>
         }

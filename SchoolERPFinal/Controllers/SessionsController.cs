@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the academic sessions (like '2023-24' or '2024-25'), allowing you to define the school years used in the system.
     /// </summary>
-    public class SessionsController : Controller
+    public class SessionsController : BaseController
     {
         private readonly ISessionClientService _sessionClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/Sessions";
 
-        public SessionsController(ISessionClientService sessionClient, IUserMenuPermissionClientService menuPerm)
+        public SessionsController(ISessionClientService sessionClient, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _sessionClient = sessionClient;
             _menuPerm = menuPerm;
@@ -27,12 +28,27 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            var response = await _sessionClient.GetAllAsync();
-            var model = new MstSessionPageViewModel
+            try
             {
-                Sessions = response.Success ? response.Data : new List<MstSessionViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Sessions"
+               );
+
+                var sessionId = CurrentSessionId;
+                var response = await _sessionClient.GetAllAsync();
+                var model = new MstSessionPageViewModel
+                {
+                    Sessions = response.Success ? response.Data : new List<MstSessionViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
         }
 
         /// <summary>

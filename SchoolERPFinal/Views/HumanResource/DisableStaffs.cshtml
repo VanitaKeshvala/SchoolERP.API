@@ -1,7 +1,5 @@
-@model SchoolERP.Net.Models.HRStaffPageViewModel
+@model SchoolERP.Shared.Models.HRStaffPageViewModel
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     ViewData["Title"] = "Disabled Staff Directory";
     int currentUserId = 0;
@@ -10,13 +8,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Export");
+    var p = Model.Permissions;
 }
 <style>
     .dt-buttons {
@@ -29,16 +21,16 @@
         <h6 class="fw-bold mb-0">Disabled Staff Directory</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">

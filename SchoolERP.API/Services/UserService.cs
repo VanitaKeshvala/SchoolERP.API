@@ -2,10 +2,12 @@
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Utilities;
+using System.ComponentModel.Design;
 using System.Data;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SchoolERP.API.Services
 {
@@ -28,15 +30,53 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Retrieves all users from the database.
         /// </summary>
-        public List<UserViewModel> GetAllUsers()
+        public async Task<PagedResult<UserViewModel>> GetAllUsers(UserSearchRequest request)
         {
-            using var conn = new SqlConnection(
-                _configuration.GetConnectionString("DefaultConnection"));
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
 
-            return conn.Query<UserViewModel>(
-                "sp_Users_GetAll",
-                commandType: CommandType.StoredProcedure)
-                .ToList();
+
+                var param = new DynamicParameters();
+                if(request.pageIndex ==0 && request.pageSize == 0) 
+                {
+                    request.pageIndex = 1;
+                    request.pageSize = 10;
+                }
+
+                param.Add("@PAGEINDEX", request.pageIndex);
+                param.Add("@PAGESIZE", request.pageSize);
+                param.Add("@SEARCHTERM", request.search);
+                param.Add("@COMPANYID", request.companyId);
+                param.Add("@ISACTIVE", request.isActive);
+                param.Add("@USERTYPEID", request.userTypeId);
+
+                var multi = (await conn.QueryAsync<UserViewModel>(
+            "sp_Users_GetAll",
+            param,
+            commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int totalRecords = multi.FirstOrDefault()?.TotalCount ?? 0;
+                int pageIndex = multi.FirstOrDefault()?.PageIndex ?? 0;
+                int pageSize = multi.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<UserViewModel>
+                {
+                    Data = multi,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
         }
 
         /// <summary>
@@ -56,8 +96,12 @@ namespace SchoolERP.API.Services
                 return null;
 
             // Ensure company and role IDs are explicitly loaded if not returned by the SP
-            if (user.CompanyIDs == null || user.CompanyIDs.Count == 0)
-                user.CompanyIDs.AddRange(GetUserCompanyIds(userId));
+            if (user.CompanyIDs == null || user.CompanyIDs.Count == 0) 
+            {
+                List<int> comId = GetUserCompanyIds(userId);
+                user.CompanyIDsCsv = string.Join(",", user.CompanyIDs.Concat(comId));
+            }
+                
 
             if (user.RoleIDs == null || user.RoleIDs.Count == 0)
                 user.RoleIDs = GetUserRoleIds(userId);
@@ -93,22 +137,32 @@ namespace SchoolERP.API.Services
         /// </summary>
         public List<int> GetUserCompanyIds(int userId)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            var result = conn.Query(
-       "sp_UserRoles_GetByUser",
-       new { UserID = userId },
-       commandType: CommandType.StoredProcedure);
+                var result = conn.Query(
+                   "sp_UserCompanies_GetByUser",
+                   new { UserID = userId },
+                   commandType: CommandType.StoredProcedure);
+               
+                var companyIds = new List<int>();
+                foreach (var row in result)
+                {
+                    if (row.COMPANYID != null)
+                    {
+                        companyIds.Add(Convert.ToInt32(row.COMPANYID));
+                    }
+                }
 
-            List<int> roleIds = new List<int>();
-
-            foreach (var row in result)
-            {
-                roleIds.Add((int)row.ROLEID);
+                return companyIds;
             }
-
-            return roleIds;
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
         }
 
         /// <summary>
@@ -614,7 +668,7 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Marks multiple users as deleted in the database.
         /// </summary>
-        public (int Result, string Message) DeleteBulkUser(string userId, int doneBy)
+        public (bool Result, string Message) DeleteBulkUser(string userId, int doneBy)
         {
             try
             {
@@ -623,23 +677,22 @@ namespace SchoolERP.API.Services
 
                 conn.Open();
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
-                    "SP_USERS_DELETE_BULK",
-                    new
-                    {
-                        USERIDS = userId,
-                        DONEBY = doneBy
-                    },
-                    commandType: CommandType.StoredProcedure);
-
-                if (result != null)
-                    return ((int)result.Result, (string)result.Message);
-
-                return (-99, "Unknown error");
+                var parameters = new DynamicParameters();
+                parameters.Add("@USERIDS", userId);
+                parameters.Add("@DONEBY", doneBy);
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                   "SP_USERS_DELETE_BULK",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
+                return (
+                     result?.Result == 1,
+                     result?.Message ?? "Operation completed."
+                 );
+                
             }
             catch (Exception ex)
             {
-                return (-99, ex.Message);
+                return (false, ex.Message);
             }
         }
     }

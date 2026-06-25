@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Services;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -32,11 +32,11 @@ namespace SchoolERP.API.Controllers.Api
         /// <summary>
         /// Gets the full list of all users registered in the system.
         /// </summary>
-        [HttpGet]
-        public IActionResult GetAllUsers()
+        [HttpPost]
+        public async Task<IActionResult> GetAllUsers([FromBody] UserSearchRequest request)
         {
-            var users = _userService.GetAllUsers();
-            return Ok(ApiResponse<List<UserViewModel>>.SuccessResponse(users));
+            var users =await _userService.GetAllUsers(request);
+            return Ok(ApiResponse<PagedResult<UserViewModel>>.SuccessResponse(users));
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace SchoolERP.API.Controllers.Api
         /// <summary>
         /// Turns a user account on or off.
         /// </summary>
-        [HttpPost("bluk-toggle-status")]
+        [HttpPost("bulk-toggle-status")]
         public async Task<IActionResult> BulkToggleStatus([FromBody] UserStatusUpdateRequest request)
         {
             int actingUser = GetCurrentUserId();
@@ -246,7 +246,7 @@ namespace SchoolERP.API.Controllers.Api
                 return Ok(new { success = false, message = "You do not have permission to delete users." });
 
             var response = _userService.DeleteBulkUser(ids, actingUser);
-            if (response.Result > 0)
+            if (response.Result !=false)
                 return Ok(ApiResponse<bool>.SuccessResponse(true, response.Message));
 
             return BadRequest(ApiResponse<bool>.ErrorResponse(response.Message));

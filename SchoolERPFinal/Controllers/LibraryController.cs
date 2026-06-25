@@ -1,15 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using System.Security.Claims;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
 using SchoolERP.Net.Services.Clients;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class LibraryController : Controller
+    public class LibraryController : BaseController
     {
         private readonly ILibraryClientService _service;
         private readonly ICompanyClientService _companyService;
@@ -24,7 +25,7 @@ namespace SchoolERP.Net.Controllers
             IClassClientService classService,
             ISectionClientService sectionService,
             ISessionClientService sessionService,
-            IHumanResourceClientService hrService)
+            IHumanResourceClientService hrService, PermissionHelper permHelper) : base(permHelper)
         {
             _service = service;
             _companyService = companyService;
@@ -47,9 +48,17 @@ namespace SchoolERP.Net.Controllers
         }
 
         #region Books
-        public IActionResult Books()
+        public async Task<IActionResult> Books()
         {
-            return View();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Library/Books"
+           );
+            var model = new HRDepartmentPageViewModel
+            {
+            };
+            model.Permissions = perms;
+            return View(model);
         }
 
         [HttpGet]
@@ -94,10 +103,17 @@ namespace SchoolERP.Net.Controllers
         #region Membership
         public async Task<IActionResult> AddStudents()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Library/AddStudents"
+           );
+
+            var model = new HRDepartmentPageViewModel { };
+            model.Permissions = perms;
             var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
             ViewBag.Classes =(await _classService.GetAllAsync()).Data;
-            return View();
+            return View(model);
         }
 
         public async Task<IActionResult> AddStaff()
@@ -155,9 +171,13 @@ namespace SchoolERP.Net.Controllers
             return Json(sections);
         }
 
-        public IActionResult Member()
+        public async Task<IActionResult> Member()
         {
-            return View();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/HumanResource/Staffs"
+           );
+            return View(perms);
         }
 
         public IActionResult Issue(int id)

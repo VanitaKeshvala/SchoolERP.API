@@ -1,7 +1,4 @@
-@model SchoolERP.Net.Models.TeacherTimeTablePageViewModel
-@using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.TeacherTimeTablePageViewModel
 @{
     ViewData["Title"] = "Teacher Time Table";
     var days = new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
@@ -12,10 +9,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canPrint = PermHelper.HasPermissionByUrl("/Academics/TeacherTimeTable", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Academics/TeacherTimeTable", "Export");
+    var p = Model.Permissions;
 }
 
 @section Styles {
@@ -30,9 +24,9 @@
         <h6 class="fw-bold mb-0">Teacher Timetable</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }

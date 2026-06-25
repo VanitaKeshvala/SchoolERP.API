@@ -1,18 +1,11 @@
-@model SchoolERP.Net.Models.AssignClassTeacherPageViewModel
+@model SchoolERP.Shared.Models.AssignClassTeacherPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     ViewData["Title"] = "Class Teachers";
     var currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
 
-    var canAdd = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Academics/AssignClassTeacher", "Export");
+    var p = Model.Permissions;
 
     var groupedAssignments = Model.Assignments
         .GroupBy(a => new { a.ClassID, a.ClassName, a.SectionID, a.SectionName })
@@ -32,28 +25,28 @@
         <h6 class="fw-bold mb-0">Class Teachers</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <a href="javascript:void(0);" class="btn btn-primary" onclick="openAddModal()"><i class="ti ti-plus me-1"></i> Assign Teacher</a>
+            <a href="javascript:void(0);" class="btn btn-primary top-btn" onclick="openAddModal()"><i class="ti ti-plus me-1"></i> Assign Teacher</a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()"><i class="ti ti-pencil me-1"></i>Edit</button>
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()"><i class="ti ti-pencil me-1"></i>Edit</button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()"><i class="ti ti-trash me-1"></i>Delete</button>
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()"><i class="ti ti-trash me-1"></i>Delete</button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -104,15 +97,15 @@
                                 foreach (var item in groupedAssignments)
                                 {
                                     <tr class="item-row" style="cursor: pointer;" onclick="selectItem(this)" 
-                                        data-class-id="@item.ClassID" 
-                                        data-section-id="@item.SectionID" 
-                                        data-staff-ids='@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(item.StaffIDs))'>
+                                    data-class-id="@item.ClassID" 
+                                    data-section-id="@item.SectionID" 
+                                    data-staff-ids='@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(item.StaffIDs))'>
                                         <td>
                                             <input type="checkbox"
-                                                   class="form-check-input student-checkbox"
-                                                   data-class-id="@item.ClassID"
-                                                   data-section-id="@item.SectionID">
-                                            
+                                            class="form-check-input student-checkbox"
+                                            data-class-id="@item.ClassID"
+                                            data-section-id="@item.SectionID">
+
                                         </td>
                                         <td>@item.ClassName</td>
                                         <td>@item.SectionName</td>
@@ -153,10 +146,14 @@
                         <label class="form-label">Class <span class="text-danger">*</span></label>
                         <select id="modalClassID" class="form-select form-control" onchange="onClassChange()">
                             <option value="">Select</option>
-                            @foreach (var item in Model.Classes)
+                            @if(Model.Classes !=null)
                             {
-                                <option value="@item.ClassID">@item.ClassName</option>
+                                @foreach (var item in Model.Classes)
+                                {
+                                    <option value="@item.ClassID">@item.ClassName</option>
+                                }
                             }
+
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -168,10 +165,14 @@
                     <div class="col-md-12">
                         <label class="form-label">Class Teacher <span class="text-danger">*</span></label>
                         <select class="form-control" id="choices-multiple-remove-button" multiple>
-                            @foreach (var s in Model.Staff)
+                            @if (Model.Staff != null)
                             {
-                                <option value="@s.StaffID">@s.FirstName @s.LastName (@s.StaffCode)</option>
+                                @foreach (var s in Model.Staff)
+                                {
+                                    <option value="@s.StaffID">@s.FirstName @s.LastName (@s.StaffCode)</option>
+                                }
                             }
+                            
                         </select>
                     </div>
                 </div>

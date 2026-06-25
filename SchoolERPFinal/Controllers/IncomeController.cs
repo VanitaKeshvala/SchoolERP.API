@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,12 +10,12 @@ namespace SchoolERP.Net.Controllers
     /// <summary>
     /// This controller manages the school's income, such as student fees or other payments received.
     /// </summary>
-    public class IncomeController : Controller
+    public class IncomeController : BaseController
     {
         private readonly IAccountHeadClientService _headClient;
         private readonly IAccountEntryClientService _entryClient;
 
-        public IncomeController(IAccountHeadClientService headClient, IAccountEntryClientService entryClient)
+        public IncomeController(IAccountHeadClientService headClient, IAccountEntryClientService entryClient, PermissionHelper permHelper) : base(permHelper)
         {
             _headClient = headClient;
             _entryClient = entryClient;
@@ -25,20 +26,34 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            // Fetch income entries and heads from the respective services
-            var resEntries = await _entryClient.GetAllAccountEntriesAsync("Income");
-            var resHeads = await _headClient.GetAllAccountHeadsAsync("Income");
-
-            if (!resEntries.Success) ViewBag.ErrorMessage = resEntries.Message;
-
-            // Prepare the view model for the income index page
-            var model = new AccountEntryPageViewModel
+            try
             {
-                Items = resEntries.Success ? resEntries.Data : new List<AccountEntryViewModel>(),
-                Heads = resHeads.Success ? resHeads.Data : new List<AccountHeadViewModel>(),
-                EntryType = "Income"
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Income/Index"
+               );
+                // Fetch income entries and heads from the respective services
+                var resEntries = await _entryClient.GetAllAccountEntriesAsync("Income");
+                var resHeads = await _headClient.GetAllAccountHeadsAsync("Income");
+
+                if (!resEntries.Success) ViewBag.ErrorMessage = resEntries.Message;
+
+                // Prepare the view model for the income index page
+                var model = new AccountEntryPageViewModel
+                {
+                    Items = resEntries.Success ? resEntries.Data : new List<AccountEntryViewModel>(),
+                    Heads = resHeads.Success ? resHeads.Data : new List<AccountHeadViewModel>(),
+                    EntryType = "Income"
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
 
@@ -47,20 +62,47 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> IncomeHead()
         {
-            // Retrieve all income-related heads
-            var res = await _headClient.GetAllAccountHeadsAsync("Income");
-            var model = new AccountHeadPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<AccountHeadViewModel>(),
-                HeadType = "Income"
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Income/IncomeHead"
+               );
+                // Retrieve all income-related heads
+                var res = await _headClient.GetAllAccountHeadsAsync("Income");
+                var model = new AccountHeadPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<AccountHeadViewModel>(),
+                    HeadType = "Income"
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+          
         }
 
-        public IActionResult Search()
+        public async Task<IActionResult> Search()
         {
-            var model = new AccountEntrySearchViewModel { EntryType = "Income" };
-            return View(model);
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/StudentInformation/DisabledStudents"
+               );
+                var model = new AccountEntrySearchViewModel { EntryType = "Income" };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpPost]

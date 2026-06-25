@@ -1,8 +1,6 @@
-@model SchoolERP.Net.Models.HomeworkPageViewModel
+@model SchoolERP.Shared.Models.HomeworkPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 
 @{
     Layout = "_Layout";
@@ -15,14 +13,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-    
-    // Permission variables for JS and buttons
-    var canAdd = PermHelper.HasPermissionByUrl("/Homework/Add", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Homework/Add", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Homework/Add", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Homework/Add", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Homework/Add", "Export");
+    var p = Model.Permissions;
 }
 
 <!-- Page Header -->
@@ -32,32 +23,32 @@
     </div>
 
     <div class="d-flex gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary" onclick="openAddModal()"><i class="ti ti-plus"></i> Add</button>
+            <button class="btn btn-primary top-btn" onclick="openAddModal()"><i class="ti ti-plus"></i> Add</button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning d-inline-flex align-items-center dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning d-inline-flex align-items-center dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -166,7 +157,7 @@
             <div class="modal-header justify-content-between">
                 <h5 class="modal-title" id="homeworkModalLabel">Add Homework</h5>
                 <div class="d-flex gap-1">
-                    @if (canAdd || canEdit)
+                    @if (p.CanAdd || p.CanEdit)
                     {
                         <button id="btnSaveHomework" class="btn btn-success" onclick="saveHomework()">
                             <i class="ti ti-cloud me-1"></i> Save
@@ -275,9 +266,9 @@
 @section Scripts {
     <script src="https://cdn.ckeditor.com/ckeditor5/41.1.0/classic/ckeditor.js"></script>
     <script>
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(p.CanAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(p.CanEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(p.CanDelete));
 
         const homeworkModal = new bootstrap.Modal(document.getElementById('homeworkModal'));
         let selectedId = 0;

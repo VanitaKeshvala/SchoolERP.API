@@ -65,6 +65,7 @@ builder.Services.AddScoped<IStudentLeaveService, StudentLeaveService>();
 builder.Services.AddScoped<ISubjectGroupService, SubjectGroupService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IDashboardApiService, DashboardApiService>();
 
 // Configure API Clients
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7237/"; // Default fallback

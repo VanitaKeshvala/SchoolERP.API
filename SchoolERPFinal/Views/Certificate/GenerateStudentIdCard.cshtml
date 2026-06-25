@@ -1,6 +1,5 @@
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.PagePermissions
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Generate Student ID Card";
@@ -10,13 +9,11 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-    
-    var canExport = PermHelper.HasPermissionByUrl("/Certificate/GenerateStudentIdCard", "Export");
+    var p = Model;
 }
 
 <style>
-.dt-buttons { display: none !important; }
+    .dt-buttons { display: none !important; }
 </style>
 
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
@@ -24,13 +21,17 @@
         <h6 class="fw-bold mb-0">Generate Student ID Card</h6>
     </div>
     <div>
-        <button type="button" class="btn btn-secondary" onclick="generateSelectedIDCards()">
-            <i class="ti ti-printer me-1"></i> Generate & Print
-        </button>
-        @if (canExport)
+        @if (p.CanPrint)
+        {
+            <button type="button" class="btn btn-secondary top-btn" onclick="generateSelectedIDCards()">
+                <i class="ti ti-printer me-1"></i> Generate & Print
+            </button>
+        }
+        
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">

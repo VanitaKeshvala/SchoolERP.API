@@ -17,4 +17,8 @@
     <Folder Include="Dapper\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SchoolERP.Shared\SchoolERP.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

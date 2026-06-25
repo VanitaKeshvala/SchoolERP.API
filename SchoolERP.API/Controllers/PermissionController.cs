@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Services;
 using System.Security.Claims;
 
@@ -182,22 +182,16 @@ namespace SchoolERP.API.Controllers
         /// <returns>Operation result.</returns>
         [HttpPost]
         [Route("TogglePermissionStatus")]
-        public IActionResult TogglePermissionStatus(
-            int permissionID,
-            bool isActive)
+        public IActionResult TogglePermissionStatus([FromBody] StatusUpdateRequest request)
         {
             try
             {
                 int userId = GetUserId();
                 string ipAddress = string.Empty;
+                request.DoneBy = userId;
+                var result = _userManagemenService.TogglePermissionStatus(request);
 
-                var result = _userManagemenService.TogglePermissionStatus(
-                    permissionID,
-                    isActive,
-                    userId,
-                    ipAddress);
-
-                return Ok(new ApiResponse<object>
+                return Ok(new ApiResponse<SpResult>
                 {
                     Success = result.success,
                     Message = result.message
@@ -205,7 +199,7 @@ namespace SchoolERP.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>
+                return BadRequest(new ApiResponse<SpResult>
                 {
                     Success = false,
                     Message = ex.Message

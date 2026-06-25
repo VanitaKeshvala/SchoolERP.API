@@ -1,7 +1,4 @@
-@model SchoolERP.Net.Models.StudentDisableReasonPageViewModel
-@using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.StudentDisableReasonPageViewModel
 @{
     ViewData["Title"] = "Disable Reason Management";
     int currentUserId = 0;
@@ -10,13 +7,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/StudentInformation/DisableReason", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/StudentInformation/DisableReason", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/StudentInformation/DisableReason", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/StudentInformation/DisableReason", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/StudentInformation/DisableReason", "Export");
+    var p = Model.Permissions;
 }
 
 <!-- Page Header -->
@@ -29,34 +20,34 @@
         <h6 class="fw-bold mb-0">Disable Reason List</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <a href="javascript:void(0)" class="btn btn-primary" onclick="openAddModal()">
+            <a href="/StudentInformation/AddDisableReason" class="btn btn-primary top-btn">
                 <i class="ti ti-plus me-1"></i> Add
             </a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i> Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i> Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i> Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-block">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown">
                     <i class="ti ti-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
@@ -109,7 +100,7 @@
                                 <tr class="item-row" onclick="selectItem(@item.DisableReasonID, this)" style="cursor: pointer;">
                                     <td class="ps-3">
                                         <input type="checkbox" name="selectedItem"
-                                               class="form-check-input student-checkbox me-3 position-absolute"
+                                               class="form-check-input student-checkbox"
                                                value="@item.DisableReasonID">                                        
                                     </td>
                                     <td>@item.DisableReasonTitle</td>
@@ -132,40 +123,13 @@
     </div>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="entryModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title fw-bold" id="modalTitle">Add Disable Reason</h5>
-                <div>
-                    <button class="btn btn-success btn-sm" onclick="saveRecord()">
-                        <i class="ti ti-device-floppy me-1"></i> Save
-                    </button>
-                    <button class="btn btn-danger btn-sm" data-bs-dismiss="modal">
-                        <i class="ti ti-x me-1"></i> Close
-                    </button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <form id="entryForm" class="needs-validation" novalidate>
-                    <input type="hidden" id="hdnDisableReasonID" value="0">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Reason Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="txtTitle" required maxlength="200" placeholder="Enter disable reason title">
-                        <div class="invalid-feedback">Please enter a reason title.</div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 @section Scripts {
 <script>
     let selectedId = 0;
-    const canEdit = @canEdit.ToString().ToLower();
-    const canDelete = @canDelete.ToString().ToLower();
+    const canEdit = @p.CanEdit.ToString().ToLower();
+    const canDelete = @p.CanDelete.ToString().ToLower();
 
     function selectItem(id, row) {
         selectedId = id;
@@ -209,47 +173,20 @@
 
     function editSelected() {
         if (!selectedId) return;
-        // In this simple case, we can get the title from the table or fetch it
-        // To be consistent with other pages, let's just find the row
-        const row = document.querySelector(`.item-row input[value="${selectedId}"]`).closest('tr');
-        const title = row.cells[1].textContent.trim();
-        
-        document.getElementById('modalTitle').textContent = 'Edit Disable Reason';
-        document.getElementById('hdnDisableReasonID').value = selectedId;
-        document.getElementById('txtTitle').value = title;
-        document.getElementById('entryForm').classList.remove('was-validated');
-        new bootstrap.Modal(document.getElementById('entryModal')).show();
+       
+            if (selectedId === 0) return;
+                try {
+
+                    if (selectedId) {
+                            location.href = `/StudentInformation/AddDisableReason/${selectedId}`;
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                }
     }
 
-    async function saveRecord() {
-        const form = document.getElementById('entryForm');
-        form.classList.add('was-validated');
-        if (!form.checkValidity()) return;
-
-        const data = {
-            disableReasonID: parseInt(document.getElementById('hdnDisableReasonID').value) || 0,
-            disableReasonTitle: document.getElementById('txtTitle').value.trim()
-        };
-
-        fetch('/StudentInformation/UpsertDisableReason', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(r => r.json())
-        .then(res => {
-            if (res.success) {
-                bootstrap.Modal.getInstance(document.getElementById('entryModal')).hide();
-                location.reload();
-            } else {
-                alert(res.message);
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('An error occurred while saving.');
-        });
-    }
+    
 
     function deleteSelected() {      
 

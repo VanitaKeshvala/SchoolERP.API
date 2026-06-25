@@ -1,36 +1,27 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Academics / Subject.cshtml
     PURPOSE: User interface for managing Subjects.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstSubjectPageViewModel
+@model SchoolERP.Shared.Models.MstSubjectPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Subject Management";
-    
+
     var currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-    
-    // Permission variables for JS
-    var canAdd = PermHelper.HasPermissionByUrl("/Academics/Subject", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Academics/Subject", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Academics/Subject", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Academics/Subject", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Academics/Subject", "Export");
+    var p = Model.Permissions;
 }
 
 <style>
     .dt-buttons { display: none !important; }
     .is-invalid + .select2-container .select2-selection {
-        border-color: #dc3545 !important;
+    border-color: #dc3545 !important;
     }
     .is-invalid ~ .invalid-feedback {
-        display: block !important;
+    display: block !important;
     }
 </style>
 
@@ -39,25 +30,45 @@
         <h6 class="fw-bold mb-0">Subject Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        <button class="btn btn-primary shadow-sm" id="btnAddSubject" onclick="openAddModal()" asp-permission="Add" asp-permission-url="/Academics/Subject">
-            <i class="ti ti-plus me-1"></i>Add
-        </button>
-        <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()" asp-permission="Edit" asp-permission-url="/Academics/Subject">
-            <i class="ti ti-pencil me-1"></i>Edit
-        </button>
-        <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()" asp-permission="Delete" asp-permission-url="/Academics/Subject">
-            <i class="ti ti-trash me-1"></i>Delete
-        </button>
-        @if (canPrint)
+        @if(p.CanAdd)
         {
-            <button class="btn btn-secondary shadow-sm d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <a href="/Academics/AddSubject" class="btn btn-primary shadow-sm top-btn" id="btnAddSubject">
+                <i class="ti ti-plus me-1"></i>Add
+            </a>
+        }
+        @if (p.CanEdit)
+        {
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
+                <i class="ti ti-pencil me-1"></i>Edit
+            </button>
+        }
+        
+        @if (p.CanDelete)
+        {
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
+                <i class="ti ti-trash me-1"></i>Delete
+            </button>
+        }
+        
+        @if(p.CanEdit)
+        {
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanPrint)
+        {
+            <button class="btn btn-secondary shadow-sm d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle shadow-sm top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -105,7 +116,7 @@
                                         <td>@s.SubjectType</td>
                                         <td>@s.CreatedOn.ToString("dd MMM yyyy")</td>
                                         <td>
-                                            @if (canEdit)
+                                            @if (p.CanEdit)
                                             {
                                                 <div class="form-check form-switch" onclick="event.stopPropagation()">
                                                     <input class="form-check-input status-switch" type="checkbox" @(s.IsActive ? "checked" : "") onchange="toggleStatus(@s.SubjectID, this.checked)">
@@ -134,301 +145,14 @@
     </div>
 </div>
 
-<!-- Add/Edit Modal -->
-<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header p-3 bg-white border-bottom">
-                <h5 class="modal-title fw-bold" id="modalTitle">Add Subject</h5>
-                <div class="ms-auto d-flex align-items-center gap-1">                    
-                    <button type="button" class="btn btn-success" id="btnSave" onclick="saveItem()">
-                        <i class="ti ti-cloud me-1"></i>Save
-                    </button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
-                </div>
-            </div>
-            <div class="modal-body p-4">
-                <div id="modalNotice"></div>
-                <form id="itemForm">
-                    <input type="hidden" id="txtItemId" value="0">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Subject Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="txtSubjectName" placeholder="e.g. Mathematics" autocomplete="off">
-                        <div class="invalid-feedback" id="errTxtSubjectName"></div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Subject Code</label>
-                            <input type="text" class="form-control" id="txtSubjectCode" placeholder="e.g. MATH101" autocomplete="off">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Subject Type <span class="text-danger">*</span></label>
-                            <select class="form-select select2" id="ddlSubjectType">
-                                <option value="">Select Type</option>
-                                <option value="Theory">Theory</option>
-                                <option value="Practical">Practical</option>
-                                
-                            </select>
-                            <div class="invalid-feedback" id="errDdlSubjectType"></div>
-                        </div>
-                    </div>
-                    <div class="form-check form-switch mt-2">
-                        <input class="form-check-input" type="checkbox" id="isActive" checked>
-                        <label class="form-check-label fw-semibold" for="isActive">Active Status</label>                        
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 
 @section Scripts {
     <script>
-        function triggerExport(index) {
-            if ($.fn.DataTable.isDataTable('#subjectsTable')) {
-                const table = $('#subjectsTable').DataTable();
-                table.button(index).trigger();
-            }
-        }
-
-        $(document).ready(function () {
-            $('#subjectsTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4] } },
-                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4] } },
-                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4] } },
-                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4] } },
-                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4] } }
-                ],
-                searching: false,
-                paging: false,
-                info: false
-            });
-
-            $('.select2').select2({
-                dropdownParent: $('#itemModal'),
-                width: '100%'
-            });
-            
-            $('#ddlSubjectType').on('change', function () {
-                $(this).removeClass('is-invalid');
-                $('#errDdlSubjectType').text('');
-            });
-        });
-
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
-
-        const IV = {
-            clearMap: (map) => Object.keys(map).forEach(k => { 
-                document.getElementById(k)?.classList.remove('is-invalid');
-                const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }),
-            setFieldError: (id, errId, msg) => {
-                document.getElementById(id)?.classList.add('is-invalid');
-                const err = document.getElementById(errId); if(err) err.textContent = msg;
-            },
-            setNotice: (id, msg, type = 'danger') => {
-                const el = document.getElementById(id);
-                if(el) el.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
-            },
-            clearNotice: (id) => { const el = document.getElementById(id); if(el) el.innerHTML = ''; },
-            bindAutoClear: (map) => Object.keys(map).forEach(k => document.getElementById(k)?.addEventListener('input', () => {
-                document.getElementById(k)?.classList.remove('is-invalid');
-                const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }))
-        };
-
-        const fieldMap = { txtSubjectName: 'errTxtSubjectName', ddlSubjectType: 'errDdlSubjectType' };
-        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
-        let selectedId = 0;
-
-        IV.bindAutoClear(fieldMap);
-
-        function selectItem(id, row) {
-            IV.clearNotice('pageNotice');
-            selectedId = id;
-            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light-primary'));
-            row.classList.add('bg-light-primary');
-            
-            
-            if (permCanEdit) document.getElementById('btnEdit').disabled = false;
-            if (permCanDelete) document.getElementById('btnDelete').disabled = false;
-             let checkedCount = $('.student-checkbox:checked').length;
-            $('#btnDelete').prop('disabled', checkedCount === 0);
-            // Edit sirf 1 record select hone par
-            $('#btnEdit').prop('disabled', checkedCount !== 1);
-        }
-
-        function openAddModal() {
-            if (!permCanAdd) {
-                IV.setNotice('pageNotice', 'You do not have permission to add.');
-                return;
-            }
-            IV.clearNotice('pageNotice');
-            IV.clearMap(fieldMap);
-            IV.clearNotice('modalNotice');
-            
-            document.getElementById('modalTitle').textContent = 'Add Subject';
-            document.getElementById('itemForm').reset();
-            document.getElementById('txtItemId').value = "0";
-            document.getElementById('isActive').checked = true;
-            
-            itemModal.show();
-        }
-
-        async function editSelected() {
-            if (!permCanEdit) {
-                IV.setNotice('pageNotice', 'You do not have permission to edit.');
-                return;
-            }
-            if (selectedId === 0) return;
-            IV.clearNotice('pageNotice');
-            IV.clearMap(fieldMap);
-            IV.clearNotice('modalNotice');
-            
-            try {
-                const resp = await fetch(`/Academics/GetSubject?id=${selectedId}`);
-                const res = await resp.json();
-                if (res.success) {
-                    document.getElementById('modalTitle').textContent = 'Edit Subject';
-                    document.getElementById('txtItemId').value = res.data.subjectID;
-                    document.getElementById('txtSubjectName').value = res.data.subjectName;
-                    document.getElementById('txtSubjectCode').value = res.data.subjectCode || '';
-                    document.getElementById('ddlSubjectType').value = res.data.subjectType || '';
-                    $('#ddlSubjectType').trigger('change');
-                    document.getElementById('isActive').checked = res.data.isActive;
-                    
-                    itemModal.show();
-                } else {
-                    IV.setNotice('pageNotice', res.message || 'Could not load subject.');
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('pageNotice', 'An error occurred while loading details.');
-            }
-        }
-
-        async function deleteSelected() {
-            if (!permCanDelete) {
-                IV.setNotice('pageNotice', 'You do not have permission to delete.');
-                return;
-            }
-
-            let selectedIds = [];
-           $('.student-checkbox:checked').each(function () {
-                    selectedIds.push(parseInt($(this).val()));
-                });
-           if (selectedIds.length === 0) {
-                    alert("Please select at least one subject.");
-                    return;
-                }
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You are about to delete this subject record. This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger me-2',
-                    cancelButton: 'btn btn-secondary'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                         url: '/Academics/DeleteSubject',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(selectedIds),
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire('Deleted!', 'Subject record has been deleted.', 'success')
-                                    .then(() => location.reload());
-                            } else {
-                                Swal.fire('Error!', res.message || 'Failed to delete subject.', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                        }
-                    });
-                }
-            });
-        }
-
-        async function saveItem() {
-            const sid = parseInt(document.getElementById('txtItemId').value);
-            if (sid === 0 && !permCanAdd) {
-                IV.setNotice('modalNotice', 'You do not have permission to add.');
-                return;
-            }
-            if (sid > 0 && !permCanEdit) {
-                IV.setNotice('modalNotice', 'You do not have permission to edit.');
-                return;
-            }
-            
-            const name = document.getElementById('txtSubjectName').value.trim();
-            if (!name) {
-                IV.setFieldError('txtSubjectName', 'errTxtSubjectName', 'Subject name is required.');
-                return;
-            }
-
-            const type = document.getElementById('ddlSubjectType').value;
-            if (!type) {
-                IV.setFieldError('ddlSubjectType', 'errDdlSubjectType', 'Subject type is required.');
-                return;
-            }
-
-            const data = {
-                subjectID: sid,
-                subjectName: name,
-                subjectCode: document.getElementById('txtSubjectCode').value.trim(),
-                subjectType: type,
-                isActive: document.getElementById('isActive').checked
-            };
-
-            try {
-                const resp = await fetch('/Academics/SaveSubject', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const res = await resp.json();
-                if (res.success) location.reload();
-                else IV.setNotice('modalNotice', res.message || 'Save failed.');
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('modalNotice', 'An error occurred while saving.');
-            }
-        }
-
-        async function toggleStatus(id, isActive) {
-            if (!permCanEdit) {
-                IV.setNotice('pageNotice', 'You do not have permission to change status.');
-                location.reload();
-                return;
-            }
-            IV.clearNotice('pageNotice');
-            try {
-                const resp = await fetch(`/Academics/ToggleSubjectStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
-                const res = await resp.json();
-                if (res.success) {
-                    if (window.toast) window.toast.success(res.message || 'Status updated.');
-                } else {
-                    IV.setNotice('pageNotice', res.message || 'Could not update status.');
-                    location.reload();
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('pageNotice', 'An error occurred while updating status.');
-                location.reload();
-            }
-        }
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
     </script>
+
+    <script src="~/assets/js/Subject.js"></script>
 }

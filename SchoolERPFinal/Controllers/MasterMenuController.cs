@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Linq;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the system's navigation menus, allowing you to organize the sidebar and set up menu items.
     /// </summary>
-    public class MasterMenuController : Controller
+    public class MasterMenuController : BaseController
     {
         private readonly IMenuClientService _menuClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/MasterMenu";
 
-        public MasterMenuController(IMenuClientService menuClient, IUserMenuPermissionClientService menuPerm)
+        public MasterMenuController(IMenuClientService menuClient, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _menuClient = menuClient;
             _menuPerm = menuPerm;
@@ -27,15 +28,29 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            var response = await _menuClient.GetAllMenusAsync();
-            var menus = response.Success ? response.Data : new System.Collections.Generic.List<MenuViewModel>();
 
-            var model = new MenusPageViewModel
+            try
             {
-                Menus = menus,
-                ParentMenus = menus // Provide all menus to support multi-level selection
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/MasterMenu"
+               );
+                var response = await _menuClient.GetAllMenusAsync();
+                var menus = response.Success ? response.Data : new System.Collections.Generic.List<MenuViewModel>();
+
+                var model = new MenusPageViewModel
+                {
+                    Menus = menus,
+                    ParentMenus = menus // Provide all menus to support multi-level selection
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         /// <summary>

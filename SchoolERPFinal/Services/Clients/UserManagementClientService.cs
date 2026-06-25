@@ -1,5 +1,5 @@
-﻿using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -53,13 +53,10 @@ namespace SchoolERP.Net.Services.Clients
         /// <param name="permissionID">Permission identifier.</param>
         /// <param name="isActive">Active status.</param>
         /// <returns>Operation result.</returns>
-        public Task<ApiResponse<dynamic>> TogglePermissionStatusAsync(
-            int permissionID,
-            bool isActive)
+        public Task<ApiResponse<SpResult>> TogglePermissionStatusAsync(StatusUpdateRequest request)
         {
-            return PostAsync<dynamic>(
-                $"api/UserManagementApi/TogglePermissionStatus?permissionID={permissionID}&isActive={isActive}",
-                null);
+            return PostAsync<SpResult>(
+                $"api/Permission/TogglePermissionStatus",request);
         }
 
         /// <summary>

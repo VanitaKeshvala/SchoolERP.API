@@ -25,7 +25,11 @@ builder.Services.AddHttpClient<IAuthClientService, AuthClientService>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
 });
-
+// Add AuthClient
+builder.Services.AddHttpClient<IPhotoUploadService, PhotoUploadService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
 // Add UserClient
 builder.Services.AddHttpClient<IUserClientService, UserClientService>(client =>
 {
@@ -234,6 +238,10 @@ builder.Services.AddHttpClient<IFieldClientService, FieldClientService>(client =
     client.BaseAddress = new Uri(apiBaseUrl);
 });
 builder.Services.AddHttpClient<IDownloadCenterClientService, DownloadCenterClientService>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
+builder.Services.AddHttpClient<IDashboardClientService, DashboardClientService>(client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
 });

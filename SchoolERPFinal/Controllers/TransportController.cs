@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,7 +10,7 @@ namespace SchoolERP.Net.Controllers
     /// <summary>
     /// This controller manages the school's transport system, including bus routes, pickup points, and assigning vehicles to those routes.
     /// </summary>
-    public class TransportController : Controller
+    public class TransportController : BaseController
     {
         private readonly IPickupPointClientService _pickupPointClient;
         private readonly IRouteClientService _routeClient;
@@ -22,7 +23,7 @@ namespace SchoolERP.Net.Controllers
             IRouteClientService routeClient,
             IVehicleClientService vehicleClient,
             IVehicleAssignClientService vehicleAssignClient,
-            IRoutePickupPointClientService rppClient)
+            IRoutePickupPointClientService rppClient, PermissionHelper permHelper) : base(permHelper)
         {
             _pickupPointClient = pickupPointClient;
             _routeClient = routeClient;
@@ -34,13 +35,27 @@ namespace SchoolERP.Net.Controllers
         #region Pickup Point Endpoints
         public async Task<IActionResult> PickupPoint()
         {
-            var res = await _pickupPointClient.GetAllPickupPointsAsync();
-            var model = new PickupPointPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<PickupPointViewModel>()
-            };
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Transport/PickupPoint"
+               );
+
+                var res = await _pickupPointClient.GetAllPickupPointsAsync();
+                var model = new PickupPointPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<PickupPointViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -75,13 +90,27 @@ namespace SchoolERP.Net.Controllers
         #region Routes Endpoints
         public async Task<IActionResult> Routes()
         {
-            var res = await _routeClient.GetAllRoutesAsync();
-            var model = new RoutePageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<RouteViewModel>()
-            };
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Transport/Routes"
+               );
+                var res = await _routeClient.GetAllRoutesAsync();
+                var model = new RoutePageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<RouteViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         [HttpGet]
@@ -116,13 +145,27 @@ namespace SchoolERP.Net.Controllers
         #region Vehicles Endpoints
         public async Task<IActionResult> Vehicles()
         {
-            var res = await _vehicleClient.GetAllVehiclesAsync();
-            var model = new VehiclePageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<VehicleViewModel>()
-            };
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Transport/Vehicles"
+               );
+                var res = await _vehicleClient.GetAllVehiclesAsync();
+                var model = new VehiclePageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<VehicleViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -157,19 +200,32 @@ namespace SchoolERP.Net.Controllers
         #region Vehicle Assign Endpoints
         public async Task<IActionResult> VehicleAssign()
         {
-            var res = await _vehicleAssignClient.GetAllAssignmentsAsync();
-            var routesRes = await _routeClient.GetAllRoutesAsync();
-            var vehiclesRes = await _vehicleClient.GetAllVehiclesAsync();
- 
-            var model = new VehicleAssignPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<VehicleAssignViewModel>(),
-                Routes = routesRes.Success ? routesRes.Data : new List<RouteViewModel>(),
-                Vehicles = vehiclesRes.Success ? vehiclesRes.Data : new List<VehicleViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Transport/VehicleAssign"
+               );
+                var res = await _vehicleAssignClient.GetAllAssignmentsAsync();
+                var routesRes = await _routeClient.GetAllRoutesAsync();
+                var vehiclesRes = await _vehicleClient.GetAllVehiclesAsync();
+
+                var model = new VehicleAssignPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<VehicleAssignViewModel>(),
+                    Routes = routesRes.Success ? routesRes.Data : new List<RouteViewModel>(),
+                    Vehicles = vehiclesRes.Success ? vehiclesRes.Data : new List<VehicleViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
             
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
         }
 
         [HttpPost]
@@ -197,19 +253,32 @@ namespace SchoolERP.Net.Controllers
         #region Route Pickup Points Endpoints
         public async Task<IActionResult> RoutePickupPoints()
         {
-            var res = await _rppClient.GetAllRoutePickupPointsAsync();
-            var routesRes = await _routeClient.GetAllRoutesAsync();
-            var pointsRes = await _pickupPointClient.GetAllPickupPointsAsync();
-
-            var model = new RoutePickupPointPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<RoutePickupPointViewModel>(),
-                Routes = routesRes.Success ? routesRes.Data : new List<RouteViewModel>(),
-                PickupPoints = pointsRes.Success ? pointsRes.Data : new List<PickupPointViewModel>()
-            };
-            
-            if (!res.Success) ViewBag.ErrorMessage = res.Message;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Transport/RoutePickupPoints"
+               );
+                var res = await _rppClient.GetAllRoutePickupPointsAsync();
+                var routesRes = await _routeClient.GetAllRoutesAsync();
+                var pointsRes = await _pickupPointClient.GetAllPickupPointsAsync();
+
+                var model = new RoutePickupPointPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<RoutePickupPointViewModel>(),
+                    Routes = routesRes.Success ? routesRes.Data : new List<RouteViewModel>(),
+                    PickupPoints = pointsRes.Success ? pointsRes.Data : new List<PickupPointViewModel>()
+                };
+                model.Permissions = perms;
+                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         [HttpGet]

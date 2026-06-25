@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -34,11 +34,15 @@ namespace SchoolERP.API.Controllers
         private int SessionId => _sessionSvc.GetUserCurrentSession(UserId) ?? 0;
 
         [HttpGet("GetAllRoomTypes")]
-        public IActionResult GetAllRoomTypes(bool includeDeleted = false)
+        public IActionResult GetAllRoomTypes(bool includeDeleted = false, int? sessionId = null)
         {
             try
             {
-                var data = _hostelService.GetAllRoomTypes(CompanyId, SessionId, includeDeleted);
+                if (sessionId == null) 
+                {
+                    sessionId = SessionId;
+                }
+                var data = _hostelService.GetAllRoomTypes(CompanyId, sessionId.Value, includeDeleted);
                 return Ok(ApiResponse<List<RoomTypeViewModel>>.SuccessResponse(data));
             }
             catch (System.Exception ex)
@@ -119,11 +123,15 @@ namespace SchoolERP.API.Controllers
 
         // ─── HOSTEL ─────────────────────────────────────────────
         [HttpGet("GetAllHostels")]
-        public IActionResult GetAllHostels(bool includeDeleted = false)
+        public IActionResult GetAllHostels(bool includeDeleted = false, int? sessionId = null)
         {
             try
             {
-                var data = _hostelService.GetAllHostels(CompanyId, SessionId, includeDeleted);
+                if (sessionId == null) 
+                {
+                    sessionId = SessionId;
+                }
+                var data = _hostelService.GetAllHostels(CompanyId, sessionId.Value, includeDeleted);
                 return Ok(ApiResponse<List<HostelViewModel>>.SuccessResponse(data));
             }
             catch (System.Exception ex)
@@ -204,11 +212,15 @@ namespace SchoolERP.API.Controllers
 
         // ─── HOSTEL ROOM ────────────────────────────────────────
         [HttpGet("GetAllHostelRooms")]
-        public IActionResult GetAllHostelRooms(bool includeDeleted = false)
+        public IActionResult GetAllHostelRooms(bool includeDeleted = false, int? sessionId = null)
         {
             try
             {
-                var data = _hostelService.GetAllHostelRooms(CompanyId, SessionId, includeDeleted);
+                if (sessionId == null) 
+                {
+                     sessionId= SessionId;
+                }
+                var data = _hostelService.GetAllHostelRooms(CompanyId, sessionId.Value, includeDeleted);
                 return Ok(ApiResponse<List<HostelRoomViewModel>>.SuccessResponse(data));
             }
             catch (System.Exception ex)

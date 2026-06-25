@@ -1,4 +1,4 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Auth / Login.cshtml
     PURPOSE: User interface rendering for the Auth module.
@@ -224,7 +224,7 @@
 
                 // Asynchronously intercepts the submit action and tunnels credentials via JSON to 'AuthController'
                 $.ajax({
-                    url: apiBaseUrl + 'api/auth/login',
+                    url: '/auth/login',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(loginData),
@@ -239,9 +239,16 @@
                             document.cookie = `token=${token}; path=/; SameSite=Lax`;
                         }
                         localStorage.setItem('user', JSON.stringify(response?.data ?? response));
-                        
+                             // ── Redirect to DashboardURL or default ───────────────
+                            // redirectUrl is set by server based on user's DefaultDashboardID
+                            const redirectUrl = response.redirectUrl || '/Dashboard/Index';
+                            const finalUrl = redirectUrl.startsWith('/')
+                                ? redirectUrl
+                                : '/' + redirectUrl;
+                            
+                            window.location.href = finalUrl;
                         // Redirect to dashboard
-                        window.location.href = '/Dashboard/Index';
+                        //window.location.href = '/Dashboard/Index';
                     },
                     error: function (xhr) {
                         const message =

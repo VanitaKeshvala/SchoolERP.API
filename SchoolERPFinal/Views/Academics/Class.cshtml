@@ -1,14 +1,12 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Academics / Class.cshtml
     PURPOSE: User interface for managing Classes and their Section mappings.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstClassPageViewModel
+@model SchoolERP.Shared.Models.MstClassPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Class Management";
@@ -18,14 +16,8 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-        
-    var canAdd = PermHelper.HasPermissionByUrl("/Academics/Class", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Academics/Class", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Academics/Class", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Academics/Class", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Academics/Class", "Export");
+
+    var p = Model.Permissions;
 }
 
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
@@ -33,34 +25,43 @@
         <h6 class="fw-bold mb-0">Class Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary" id="btnAddClass" onclick="openAddModal()">
+            <a href="/Academics/AddClass" class="btn btn-primary top-btn" id="btnAddClass">
                 <i class="ti ti-plus me-1"></i>Add
-            </button>
+            </a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanEdit)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -92,31 +93,43 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var c in Model.Classes)
+                            @if(Model.Classes !=null)
                             {
-                                <tr class="item-row" onclick="selectItem(@c.ClassID, this)" style="cursor: pointer;">
-                                    <td class="ps-4 text-center">
-                                        <input type="checkbox" name="selectedClass"
-                                               class="form-check-input student-checkbox"
-                                               value="@c.ClassID">
-                                    
+                                @foreach (var c in Model.Classes)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@c.ClassID, this)" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                            <input type="checkbox" name="selectedClass"
+                                                   class="form-check-input student-checkbox" onclick="selectItem(@c.ClassID, this)"
+                                            value="@c.ClassID">
+
+                                        </td>
+                                        <td>@c.ClassName</td>
+                                        <td>@c.SectionNames</td>
+                                        <td>@c.CreatedOn.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (p.CanEdit)
+                                            {
+                                                <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                    <input class="form-check-input class-status-switch" type="checkbox" @(c.IsActive ? "checked" : "") onchange="toggleStatus(@c.ClassID, this.checked)">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span>
+                                            }
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <span class="text-muted">No records found.</span>
                                     </td>
-                                    <td>@c.ClassName</td>
-                                    <td>@c.SectionNames</td>
-                                    <td>@c.CreatedOn.ToString("dd MMM yyyy")</td>
-                                    <td>
-                                        @if (canEdit)
-                                        {
-                                            <div class="form-check form-switch" onclick="event.stopPropagation()">
-                                                <input class="form-check-input class-status-switch" type="checkbox" @(c.IsActive ? "checked" : "") onchange="toggleStatus(@c.ClassID, this.checked)">
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span>
-                                        }
-                                    </td>
-                                    
                                 </tr>
                             }
                         </tbody>
@@ -127,47 +140,7 @@
     </div>
 </div>
 
-<!-- Add/Edit Modal -->
-<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header p-3">
-                <h5 class="modal-title" id="modalTitle">Add Class</h5>
-                <div class="ms-auto d-flex align-items-center gap-1">                    
-                    <button type="button" class="btn btn-success" id="btnSave" onclick="saveItem()">
-                        <i class="ti ti-cloud me-1"></i>Save
-                    </button>
-                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
-                </div>
-            </div>
-            <div class="modal-body p-3">
-                <div id="classModalNotice"></div>
-                <form id="itemForm">
-                    <input type="hidden" id="txtItemId" value="0">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Class Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="txtClassName" placeholder="e.g. 1st Class" autocomplete="off">
-                        <div class="invalid-feedback" id="errTxtClassName"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Assign Sections <span class="text-danger">*</span></label>
-                        <select id="ddlSections" class="form-control select2" multiple data-placeholder="Select Sections">
-                            @foreach (var s in Model.AvailableSections)
-                            {
-                                <option value="@s.SectionID">@s.SectionName</option>
-                            }
-                        </select>
-                        <div class="invalid-feedback" id="errDdlSections"></div>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="isActive" checked>
-                        <label class="form-check-label fw-bold" for="isActive">Active</label>                        
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 @section Styles {
     <style>
@@ -213,252 +186,10 @@
 
 @section Scripts {
     <script>
-        function triggerExport(index) {
-            if ($.fn.DataTable.isDataTable('#classesTable')) {
-                const table = $('#classesTable').DataTable();
-                table.button(index).trigger();
-            }
-        }
-
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
-        const IV = window.InlineFormValidation || {
-            clearMap: (map) => Object.keys(map).forEach(k => { 
-                document.getElementById(k)?.classList.remove('is-invalid');
-                const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }),
-            setFieldError: (id, errId, msg) => {
-                document.getElementById(id)?.classList.add('is-invalid');
-                const err = document.getElementById(errId); if(err) err.textContent = msg;
-            },
-            setNotice: (id, msg) => {
-                const el = document.getElementById(id);
-                if(el) el.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
-            },
-            clearNotice: (id) => { const el = document.getElementById(id); if(el) el.innerHTML = ''; },
-            bindAutoClear: (map) => Object.keys(map).forEach(k => document.getElementById(k)?.addEventListener('input', () => {
-                document.getElementById(k)?.classList.remove('is-invalid');
-                const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }))
-        };
-
-        const classFieldMap = { txtClassName: 'errTxtClassName', ddlSections: 'errDdlSections' };
-        const itemModalEl = document.getElementById('itemModal');
-        const itemModal = new bootstrap.Modal(itemModalEl);
-        let selectedClassId = 0;
-
-        $(document).ready(function() {
-            $('#classesTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: { columns: [1, 2, 3] } },
-                    { extend: 'csv', exportOptions: { columns: [1, 2, 3] } },
-                    { extend: 'excel', exportOptions: { columns: [1, 2, 3] } },
-                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3] } },
-                    { extend: 'print', exportOptions: { columns: [1, 2, 3] } }
-                ],
-                searching: false,
-                paging: false,
-                info: false
-            });
-
-            $('#ddlSections').select2({
-                dropdownParent: $('#itemModal'),
-                placeholder: "Select Sections",
-                allowClear: true
-            });
-        });
-
-        function clearModalValidation() {
-            IV.clearMap(classFieldMap);
-            IV.clearNotice('classModalNotice');
-        }
-
-        IV.bindAutoClear(classFieldMap);
-
-        function selectItem(id, row) {
-            IV.clearNotice('classPageNotice');
-            selectedClassId = id;
-            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
-            row.classList.add('bg-light');
-            //row.querySelector('input[type="radio"]').checked = true;
-            const btnEdit = document.getElementById('btnEdit');
-            const btnDelete = document.getElementById('btnDelete');
-            if (btnEdit && permCanEdit) btnEdit.disabled = false;
-            if (btnDelete && permCanDelete) btnDelete.disabled = false;
-             let checkedCount = $('.student-checkbox:checked').length;
-            $('#btnDelete').prop('disabled', checkedCount === 0);
-            // Edit sirf 1 record select hone par
-            $('#btnEdit').prop('disabled', checkedCount !== 1);
-        }
-
-        function openAddModal() {
-            if (!permCanAdd) {
-                IV.setNotice('classPageNotice', 'You do not have permission to add.');
-                return;
-            }
-            IV.clearNotice('classPageNotice');
-            clearModalValidation();
-            document.getElementById('modalTitle').textContent = 'Add Class';
-            document.getElementById('itemForm').reset();
-            document.getElementById('txtItemId').value = "0";
-            document.getElementById('isActive').checked = true;
-            
-            // Clear multiple select
-            $('#ddlSections').val(null).trigger('change');
-            
-            itemModal.show();
-        }
-
-        async function editSelected() {
-            if (!permCanEdit) {
-                IV.setNotice('classPageNotice', 'You do not have permission to edit.');
-                return;
-            }
-            if (selectedClassId === 0) return;
-            IV.clearNotice('classPageNotice');
-            clearModalValidation();
-            try {
-                const resp = await fetch(`/Academics/GetClass?id=${selectedClassId}`);
-                const res = await resp.json();
-                if (res.success) {
-                    document.getElementById('modalTitle').textContent = 'Edit Class';
-                    document.getElementById('txtItemId').value = res.data.classID;
-                    document.getElementById('txtClassName').value = res.data.className;
-                    document.getElementById('isActive').checked = res.data.isActive;
-                    
-                    // Set multiple select
-                    const selectedIds = res.data.sectionIds || [];
-                    $('#ddlSections').val(selectedIds).trigger('change');
-                    
-                    itemModal.show();
-                } else {
-                    IV.setNotice('classPageNotice', res.message || 'Could not load class.');
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('classPageNotice', 'Could not load class details.');
-            }
-        }
-
-        async function deleteSelected() {
-            if (!permCanDelete) {
-                IV.setNotice('classPageNotice', 'You do not have permission to delete.');
-                return;
-            }
-
-            let selectedIds = [];
-           $('.student-checkbox:checked').each(function () {
-                    selectedIds.push(parseInt($(this).val()));
-                });
-           if (selectedIds.length === 0) {
-                    alert("Please select at least one Class.");
-                    return;
-                }
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You are about to delete this Class record. This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger me-2',
-                    cancelButton: 'btn btn-secondary'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                         url: '/Academics/DeleteClass',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(selectedIds),
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire('Deleted!', 'Class record has been deleted.', 'success')
-                                    .then(() => location.reload());
-                            } else {
-                                Swal.fire('Error!', res.message || 'Failed to delete Class.', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                        }
-                    });
-                }
-            });
-        }
-
-        async function saveItem() {
-            const cid = parseInt(document.getElementById('txtItemId').value);
-            if (cid === 0 && !permCanAdd) {
-                IV.setNotice('classModalNotice', 'You do not have permission to add.');
-                return;
-            }
-            if (cid > 0 && !permCanEdit) {
-                IV.setNotice('classModalNotice', 'You do not have permission to edit.');
-                return;
-            }
-            clearModalValidation();
-            
-            const name = document.getElementById('txtClassName').value.trim();
-            if (!name) {
-                IV.setFieldError('txtClassName', 'errTxtClassName', 'Class name is required.');
-                return;
-            }
-
-            const sectionIds = ($('#ddlSections').val() || []).map(v => parseInt(v));
-            if (sectionIds.length === 0) {
-                IV.setFieldError('ddlSections', 'errDdlSections', 'At least one section must be assigned.');
-                return;
-            }
-
-            const data = {
-                classID: cid,
-                className: name,
-                isActive: document.getElementById('isActive').checked,
-                sectionIds: sectionIds
-            };
-
-            try {
-                const resp = await fetch('/Academics/SaveClass', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const res = await resp.json();
-                if (res.success) location.reload();
-                else IV.setNotice('classModalNotice', res.message || 'Save failed.');
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('classModalNotice', 'Could not save class.');
-            }
-        }
-
-        async function toggleStatus(id, isActive) {
-            if (!permCanEdit) {
-                IV.setNotice('classPageNotice', 'You do not have permission to change status.');
-                location.reload();
-                return;
-            }
-            IV.clearNotice('classPageNotice');
-            try {
-                const resp = await fetch(`/Academics/ToggleClassStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
-                const res = await resp.json();
-                if (res.success) {
-                    if (window.toast) window.toast.success(res.message || 'Status updated.');
-                } else {
-                    IV.setNotice('classPageNotice', res.message || 'Could not update status.');
-                    location.reload();
-                }
-            } catch (err) {
-                console.error(err);
-                IV.setNotice('classPageNotice', 'Could not update status.');
-                location.reload();
-            }
-        }
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
     </script>
+
+    <script src="~/assets/js/Class.js"></script>
 }

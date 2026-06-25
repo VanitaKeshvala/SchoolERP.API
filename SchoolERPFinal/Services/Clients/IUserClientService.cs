@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -14,6 +14,7 @@ namespace SchoolERP.Net.Services.Clients
         /// Asks the main system for a list of all users.
         /// </summary>
         Task<ApiResponse<List<UserViewModel>>> GetAllUsersAsync();
+        Task<ApiResponse<PagedResult<UserViewModel>>> GetAllUsersWithPaginationAsync(UserSearchRequest request);
 
         /// <summary>
         /// Asks the main system for details about a specific user using their ID.
@@ -58,5 +59,7 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<bool>> IsUsernameUniqueAsync(string username, int userId = 0);
         Task<ApiResponse<UserWizardViewModel>> GetUserWizardDataAsync(int userId = 0, string roleIds = "");
         Task<ApiResponse<bool>> SaveUserWizardAsync(UserUpsertRequest request);
+        Task<ApiResponse<bool>> BulkToggleStatusAsync(UserStatusUpdateRequest request);
+        Task<ApiResponse<bool>> DeleteBulkUserAsync(string ids);
     }
 }

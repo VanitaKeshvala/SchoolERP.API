@@ -1,10 +1,10 @@
-﻿using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
-
+﻿using SchoolERP.Shared.Models;
+using Common = SchoolERP.Shared.Models.Common;
 namespace SchoolERP.API.Interfaces
 {
     public interface IAuthServices
     {
-        Task<ApiResponse<UserSessionModel?>> LoginAsync(string username, string password);
+        Task<Common.ApiResponse<UserSessionModel?>> LoginAsync(string username, string password);
+        Task<DashboardModel?> GetDashboardByIdAsync(int dashboardId);
     }
 }

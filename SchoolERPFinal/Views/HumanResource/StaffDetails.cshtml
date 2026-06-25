@@ -1,4 +1,4 @@
-@model SchoolERP.Net.Models.HRStaffViewModel
+@model SchoolERP.Shared.Models.HRStaffViewModel
 @using System.Linq
 @using SchoolERP.Net.Helpers
 @inject PermissionHelper PermHelper
@@ -27,28 +27,28 @@
                         <h6 class="fw-bold mb-0">Staff Profile</h6>
                     </div>
                     <div class="d-flex align-items-center flex-wrap gap-1">
-                        <a asp-action="AddStaff" asp-route-id="@Model.StaffID" class="btn btn-warning d-inline-flex align-items-center me-1" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
+                        <a asp-action="AddStaff" asp-route-id="@Model.StaffID" class="btn btn-warning d-inline-flex align-items-center me-1 top-btn" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
                             <i class="ti ti-edit me-1"></i> Edit
                         </a>
                         @if (Model.UserID.HasValue && Model.UserID > 0)
                         {
-                            <button type="button" class="btn btn-info d-inline-flex align-items-center me-1" onclick="showChangePasswordModal()" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
+                            <button type="button" class="btn btn-info d-inline-flex align-items-center me-1 top-btn" onclick="showChangePasswordModal()" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
                                 <i class="ti ti-key me-1"></i> Change Password
                             </button>
                         }
                         @if (Model.IsActive)
                         {
-                            <button type="button" class="btn btn-danger d-inline-flex align-items-center me-1" onclick="toggleStaffStatus(false)" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
+                            <button type="button" class="btn btn-danger d-inline-flex align-items-center me-1 top-btn" onclick="toggleStaffStatus(false)" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
                                 <i class="ti ti-user-x me-1"></i> Disable
                             </button>
                         }
                         else
                         {
-                            <button type="button" class="btn btn-success d-inline-flex align-items-center me-1" onclick="toggleStaffStatus(true)" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
+                            <button type="button" class="btn btn-success d-inline-flex align-items-center me-1 top-btn" onclick="toggleStaffStatus(true)" asp-permission="Edit" asp-permission-url="/HumanResource/StaffDetails">
                                 <i class="ti ti-user-check me-1"></i> Enable
                             </button>
                         }
-                        <button type="button" class="btn btn-secondary d-inline-flex align-items-center" data-bs-toggle="offcanvas" data-bs-target="#offcanvasStaff"><i class="ti ti-list me-1"></i> Staff</button>
+        <button type="button" class="btn btn-secondary d-inline-flex align-items-center top-btn" data-bs-toggle="offcanvas" data-bs-target="#offcanvasStaff"><i class="ti ti-list me-1"></i> Staff</button>
                     </div>
                 </div>
                 <!-- End Page Header -->
@@ -61,7 +61,7 @@
                                 <div class="me-3 doctor-profile-img">
                                     @if (Model.PhotoDoc != null && Model.PhotoDoc.Length > 0)
                                     {
-                                        var base64 = Convert.ToBase64String(Model.PhotoDoc);
+                                        var base64 =Model.PhotoDoc;// Convert.ToBase64String(Model.PhotoDoc);
                                         var imgSrc = $"data:{Model.PhotoDocType};base64,{base64}";
                                         <img src="@imgSrc" class="rounded" alt="Staff Photo" style="width: 100px; height: 100px; object-fit: cover;">
                                     }

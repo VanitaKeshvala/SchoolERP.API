@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SchoolERP.Net", "SchoolERP.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SchoolERP.API", "..\SchoolERP.API\SchoolERP.API.csproj", "{24A12DBC-7209-4228-8940-5FA885A47B7C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SchoolERP.Shared", "..\SchoolERP.Shared\SchoolERP.Shared.csproj", "{58ED1E1E-23B8-471F-B7C4-60841E3AD48E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{24A12DBC-7209-4228-8940-5FA885A47B7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24A12DBC-7209-4228-8940-5FA885A47B7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24A12DBC-7209-4228-8940-5FA885A47B7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58ED1E1E-23B8-471F-B7C4-60841E3AD48E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58ED1E1E-23B8-471F-B7C4-60841E3AD48E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58ED1E1E-23B8-471F-B7C4-60841E3AD48E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58ED1E1E-23B8-471F-B7C4-60841E3AD48E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

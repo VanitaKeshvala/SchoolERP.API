@@ -1,6 +1,6 @@
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {

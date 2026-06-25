@@ -1,24 +1,25 @@
-using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+﻿using Microsoft.AspNetCore.Mvc;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages all user accounts in the school, allowing you to create staff, teacher, or student login accounts.
     /// </summary>
-    public class UserController : Controller
+    public class UserController : BaseController
     {
         private readonly IUserClientService _userClient;
         private readonly ICompanyClientService _companyClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/User";
 
-        public UserController(IUserClientService userClient, ICompanyClientService companyClient, IUserMenuPermissionClientService menuPerm)
+        public UserController(IUserClientService userClient, ICompanyClientService companyClient, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _userClient = userClient;
             _companyClient = companyClient;
@@ -28,24 +29,66 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the main list of all users registered in the system.
         /// </summary>
-        public async Task<IActionResult> Index()
+        
+        public async Task<IActionResult> Index(
+        int pageIndex ,
+        int pageSize ,
+        string? search,
+        int? companyId,
+        bool? isActive,
+        int? userTypeId)
         {
-            ViewData["Title"] = "User Management";
-
-            var usersResponse = await _userClient.GetAllUsersAsync();
-            var rolesResponse = await _userClient.GetRolesDropdownAsync();
-            var typesResponse = await _userClient.GetUserTypesDropdownAsync();
-            var companiesResponse = await _companyClient.GetAllAsync();
-
-            var model = new UsersPageViewModel
+            try
             {
-                Users     = (usersResponse.Success && usersResponse.Data != null) ? usersResponse.Data : new List<UserViewModel>(),
-                Roles     = (rolesResponse.Success && rolesResponse.Data != null) ? rolesResponse.Data : new List<RoleViewModel>(),
-                UserTypes = (typesResponse.Success && typesResponse.Data != null) ? typesResponse.Data : new List<MstUserTypeViewModel>(),
-                Companies = (companiesResponse.Success && companiesResponse.Data != null) ? companiesResponse.Data : new List<MstCompanyViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/User"
+               );
+                var request = new UserSearchRequest
+                {
+                    pageIndex = pageIndex,
+                    pageSize = pageSize,
+                    search = search,
+                    companyId = companyId,
+                    isActive = isActive,
+                    userTypeId = userTypeId
+                };
 
-            return View(model);
+                // ── Parallel fetch — dropdowns + paged users ─────────────────
+                var usersTask = _userClient.GetAllUsersWithPaginationAsync(request);
+                var rolesTask = _userClient.GetRolesDropdownAsync();
+                var typesTask = _userClient.GetUserTypesDropdownAsync();
+                var companiesTask = _companyClient.GetAllAsync();
+
+                await Task.WhenAll(usersTask, rolesTask, typesTask, companiesTask);
+
+                var pagedResult = await usersTask;
+
+                var model = new UsersPageViewModel
+                {
+                    Users = pagedResult.Data.Data,
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,   
+
+                    Roles = (await rolesTask).Data ?? new(),
+                    UserTypes = (await typesTask).Data ?? new(),
+                    Companies = (await companiesTask).Data ?? new(),
+
+                    // ── Preserve filter state ─────────────────────────────────
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    IsActive = isActive,
+                    UserTypeId = userTypeId
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(new UsersPageViewModel());
+            }
         }
 
         /// <summary>
@@ -95,7 +138,7 @@ namespace SchoolERP.Net.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                return Json(new { success = false, message = ex.Message }); 
             }
         }
 
@@ -242,6 +285,56 @@ namespace SchoolERP.Net.Controllers
 
 
             return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> BulkToggleStatus([FromBody] UserStatusUpdateRequest request)
+        {
+            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                return Json(new { success = false, message = "You do not have permission to change user status." });
+
+            try
+            {
+                var response = await _userClient.BulkToggleStatusAsync(request);
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteBulkUser(string ids)
+        {
+            try
+            {
+                var response = await _userClient.DeleteBulkUserAsync(ids);
+
+                if (response.Success)
+                {
+                    return Json(new
+                    {
+                        success = true,
+                        message = response.Message
+                    });
+                }
+
+                return Json(new
+                {
+                    success = false,
+                    message = response.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-@model SchoolERP.Net.Models.HRStaffPageViewModel
+﻿@model SchoolERP.Shared.Models.HRStaffPageViewModel
 @using System.Security.Claims
 @using SchoolERP.Net.Helpers
 @inject PermissionHelper PermHelper
@@ -44,15 +44,16 @@
         <h6 class="fw-bold mb-0">@(Model.EditStaff == null ? "Add Staff" : "Edit User")</h6>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <a href="/HumanResource/ImportStaff" class="btn btn-primary d-inline-flex align-items-center">
-            <i class="ti ti-file-import me-1"></i>Import Staff
-        </a>
+       
         @if (canSave)
         {
-            <button type="button" class="btn btn-success d-inline-flex align-items-center" onclick="saveStaff()">
+            <button type="button" class="btn btn-success d-inline-flex align-items-center top-btn" onclick="saveStaff()">
                 <i class="ti ti-cloud me-1"></i>Save
             </button>
         }
+        <a href="/HumanResource/Staffs" class="btn btn-sm btn-info d-inline-flex align-items-center top-btn">
+            <i class="ti ti-arrow-narrow-left me-1"></i>Back
+        </a>
     </div>
 </div>
 <!-- End Page Header -->
@@ -86,6 +87,24 @@
                                     </select>
                                 </div>
                             </div>
+
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Default Role</label>
+                                    <select class="form-select" id="ddlDefaultRole">
+                                        <option value="">Select Default Role</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">Default Dashbord</label>
+                                    <select class="form-select" id="ddlDefaultDashboard">
+                                        <option value="">Select Default Role First </option>
+                                    </select>
+                                </div>
+                            </div>
                         }
                         else
                         {
@@ -94,6 +113,8 @@
                                 <input type="hidden" name="RoleIDs" value="@rId" />
                             }
                             <input type="hidden" id="ddlRole" value="@(Model.EditStaff.RoleIDs.FirstOrDefault())" />
+                            <input type="hidden" id="ddlDefaultRole" value="@(Model.EditStaff.DefaultRoleID)" />
+                            <input type="hidden" id="ddlDefaultDashboard" value="@(Model.EditStaff.DashboardID)" />
                         }
                         @if (IsFieldActive("Designation"))
                         {
@@ -593,7 +614,74 @@
             placeholder: "Select",
             allowClear: true
         });
+
+            $('#ddlRole').on('change', function () {
+
+            var $defaultRole = $('#ddlDefaultRole');
+            $defaultRole.empty();
+
+            $defaultRole.append(
+                $('<option>', {
+                    value: '',
+                    text: 'Select Default Role'
+                })
+            );
+
+            $('#ddlRole option:selected').each(function () {
+
+                $defaultRole.append(
+                    $('<option>', {
+                        value: $(this).val(),
+                        text: $(this).text()
+                    })
+                );
+            });
+        });
     });
+
+            // ── WATCH DEFAULT ROLE CHANGE → LOAD DASHBOARDS ───────────────
+            $('#ddlDefaultRole').on('change', function () {
+                const roleId = parseInt($("#ddlDefaultRole").val()) || 0;
+                const ddlDashboard = document.getElementById('ddlDefaultDashboard');
+
+            // Reset dashboard dropdown
+            ddlDashboard.innerHTML = '<option value="">-- Select Default Role First --</option>';
+            //ddlDashboard.disabled  = true;
+
+            if (!roleId || roleId <= 0) return;
+
+            // Show loading state
+            ddlDashboard.innerHTML = '<option value="">Loading...</option>';
+
+            // Call API → /Role/GetByRoleId/{roleId}
+            fetch(`/Role/GetByRoleId?roleId=${roleId}`)
+                .then(r => r.json())
+                .then(res => {
+                    ddlDashboard.innerHTML = '<option value="">-- Select Dashboard --</option>';
+
+                    // API returns single DashboardModel directly
+                    if (res && res.dashboardID && res.dashboardID > 0) {
+                        const opt       = document.createElement('option');
+                        opt.value       = res.dashboardID;
+                        opt.textContent = res.dashboardTital
+                                          || res.dashboardURL
+                                          || `Dashboard #${res.dashboardID}`;
+                        ddlDashboard.appendChild(opt);
+
+                        // Auto-select since only one record per role
+                        ddlDashboard.value    = res.dashboardID;
+                        //ddlDashboard.disabled = false;
+
+                    } else {
+                        ddlDashboard.innerHTML = '<option value="">No dashboard found for this role</option>';
+                    }
+                })
+                .catch(err => {
+                    console.error('Dashboard load failed:', err);
+                    ddlDashboard.innerHTML = '<option value="">Failed to load dashboards</option>';
+                   // ddlDashboard.disabled  = true;
+                });
+        });
 
     async function fileToBase64(file) {
         if (!file) return null;
@@ -694,7 +782,8 @@
             contractType: getVal('ddlContractType'),
             workShift: getVal('txtWorkShift'),
             workLocation: getVal('txtWorkLocation'),
-            
+            defaultRoleID: getInt('ddlDefaultRole'),
+            dashboardID: getInt('ddlDefaultDashboard'),
             // Leaves
             leaveQuotas: $('.leave-quota-input').map(function() {
                 return {

@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class HomeworkController : Controller
+    public class HomeworkController : BaseController
     {
         private readonly IHomeworkClientService _homeworkClient;
         private readonly IClassClientService _classClient;
@@ -22,7 +23,7 @@ namespace SchoolERP.Net.Controllers
             IClassClientService classClient, 
             ISubjectGroupClientService subjectGroupClient,
             ISubjectClientService subjectClient,
-            IUserMenuPermissionClientService menuPerm)
+            IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _homeworkClient = homeworkClient;
             _classClient = classClient;
@@ -33,6 +34,10 @@ namespace SchoolERP.Net.Controllers
 
         public async Task<IActionResult> Add()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/Homework/Add"
+           );
             var homeworksResponse = await _homeworkClient.GetAllAsync();
             var classesResponse = await _classClient.GetAllAsync();
 
@@ -41,7 +46,7 @@ namespace SchoolERP.Net.Controllers
                 Homeworks = homeworksResponse.Success ? homeworksResponse.Data : new List<HomeworkViewModel>(),
                 Classes = classesResponse.Success ? classesResponse.Data : new List<MstClassViewModel>()
             };
-
+            model.Permissions = perms;
             return View(model);
         }
 

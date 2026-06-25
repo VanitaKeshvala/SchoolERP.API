@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -12,9 +12,9 @@ namespace SchoolERP.Net.Services.Clients
         {
         }
 
-        public async Task<ApiResponse<List<MstClassViewModel>>> GetAllAsync(bool includeDeleted = false)
+        public async Task<ApiResponse<List<MstClassViewModel>>> GetAllAsync(bool includeDeleted = false,int? sessionId=null)
         {
-            return await GetAsync<List<MstClassViewModel>>($"api/ClassApi/GetAll?includeDeleted={includeDeleted}");
+            return await GetAsync<List<MstClassViewModel>>($"api/ClassApi/GetAll?includeDeleted={includeDeleted}&sessionId={sessionId}");
         }
 
         public async Task<ApiResponse<MstClassViewModel>> GetByIDAsync(int id)
@@ -32,9 +32,9 @@ namespace SchoolERP.Net.Services.Clients
             return await PostAsync<dynamic>($"api/ClassApi/Delete", ids);
         }
 
-        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(int id, bool isActive)
+        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request)
         {
-            return await PostAsync<dynamic>($"api/ClassApi/ToggleStatus?id={id}&isActive={isActive}", null!);
+            return await PostAsync<dynamic>($"api/ClassApi/ToggleStatus", request);
         }
     }
 }

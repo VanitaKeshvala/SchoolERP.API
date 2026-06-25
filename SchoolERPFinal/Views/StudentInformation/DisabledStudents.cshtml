@@ -9,13 +9,13 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+    var p = Model.Permissions;
 }
 
 @section Styles {
-    <style>
-        .dt-buttons { display: none !important; }
-    </style>
+<style>
+    .dt-buttons { display: none !important; }
+</style>
 }
 
 <!-- Page Header -->
@@ -24,20 +24,27 @@
         <h6 class="fw-bold mb-0">Disabled Students</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        <button class="btn btn-secondary d-inline-flex align-items-center" type="button" onclick="triggerExport(4)">
-            <i class="ti ti-printer me-1"></i>Print
-        </button>
-        <div class="dropdown d-inline-flex">
-            <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="ti ti-download me-1"></i>Export
+        @if(p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" type="button" onclick="triggerExport(4)">
+                <i class="ti ti-printer me-1"></i>Print
             </button>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
-                <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
-            </ul>
-        </div>
+        }
+        @if(p.CanExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(0)"><i class="ti ti-copy me-1"></i>Copy</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(1)"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(2)"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }      
+        
     </div>
 </div>
 <!-- End Page Header -->

@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -11,10 +11,10 @@ namespace SchoolERP.Net.Services.Clients
     {
         public StudentInformationClientService(HttpClient httpClient) : base(httpClient) { }
 
-        public Task<ApiResponse<List<StudentListViewModel>>> GetStudentListAsync(int? classId = null, int? sectionId = null, string? searchTerm = null)
+        public Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? sessionId,int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber=null, int? PageSize=null)
         {
-            var url = $"api/StudentInformationApi/GetStudentList?classId={classId}&sectionId={sectionId}&searchTerm={searchTerm}";
-            return GetAsync<List<StudentListViewModel>>(url);
+            var url = $"api/StudentInformationApi/GetStudentList?sessionId={sessionId}&classId={classId}&sectionId={sectionId}&searchTerm={searchTerm}&PageNumber={PageNumber}&PageSize={PageSize}";
+            return GetAsync<PagedResult<StudentListViewModel>>(url);
         }
 
         public Task<ApiResponse<StudentDetailsViewModel>> GetStudentByIDAsync(int id)
@@ -22,30 +22,29 @@ namespace SchoolERP.Net.Services.Clients
             return GetAsync<StudentDetailsViewModel>($"api/StudentInformationApi/GetByID/{id}");
         }
 
-        public Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons()
+        public Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID)
         {
-            return GetAsync<List<StudentDisableReasonViewModel>>($"api/StudentInformationApi/GetAllDisableReasons");
+            return GetAsync<List<StudentDisableReasonViewModel>>($"api/StudentInformationApi/GetAllDisableReasons?sessionID={sessionID}");
         }
 
-        public Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses()
+        public Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses(int sessionID)
         {
-            return GetAsync<List<StudentHouseViewModel>>($"api/StudentInformationApi/GetAllStudentHouses");
+            return GetAsync<List<StudentHouseViewModel>>($"api/StudentInformationApi/GetAllStudentHouses?sessionID={sessionID}");
         }
 
-        public Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories()
+        public Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId)
         {
-            return GetAsync<List<StudentCategoryViewModel>>($"api/StudentInformationApi/GetAllStudentCategories");
+            return GetAsync<List<StudentCategoryViewModel>>($"api/StudentInformationApi/GetAllStudentCategories?sessionId={sessionId}");
         }
 
         /// <summary>
         /// Generates the next student roll number.
         /// </summary>
-        public Task<ApiResponse<string>> GetNewStudentRollNo(
-            Dictionary<string, string>? dynamicValues = null)
+        public Task<ApiResponse<string>> GetNewStudentRollNo(StudentRollNoRequest request)
         {
             return PostAsync<string>(
                 "api/StudentInformationApi/GetNewStudentRollNo",
-                dynamicValues);
+                request);
         }
 
         /// <summary>
@@ -87,13 +86,14 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<List<StudentListViewModel>>> GetDisabledStudentList(
             int? classId = null,
             int? sectionId = null,
-            string? searchTerm = null)
+            string? searchTerm = null, int? sessionId=null)
         {
             return GetAsync<List<StudentListViewModel>>(
                 $"api/StudentInformationApi/GetDisabledStudentList" +
                 $"?classId={classId}" +
                 $"&sectionId={sectionId}" +
-                $"&searchTerm={Uri.EscapeDataString(searchTerm ?? string.Empty)}");
+                $"&searchTerm={Uri.EscapeDataString(searchTerm ?? string.Empty)}" +
+                $"&sessionId={sessionId}");
         }
 
         /// <summary>
@@ -269,6 +269,21 @@ namespace SchoolERP.Net.Services.Clients
             return PostAsync<object>(
                 $"api/StudentInformationApi/DeleteMultiClass/{id}",
                 new { });
+        }
+
+        public Task<ApiResponse<StudentCategoryViewModel>> GetStudentCategoryByIdAsync(int id)
+        {
+            return GetAsync<StudentCategoryViewModel>($"api/StudentInformationApi/GetStudentCategoryById/{id}");
+        }
+
+        public Task<ApiResponse<StudentHouseViewModel>> GetStudentHouseByIdAsync(int id)
+        {
+            return GetAsync<StudentHouseViewModel>($"api/StudentInformationApi/GetStudentHouseById/{id}");
+        }
+
+        public Task<ApiResponse<StudentDisableReasonViewModel>> GetDisableReasonsByID(int id)
+        {
+            return GetAsync<StudentDisableReasonViewModel>($"api/StudentInformationApi/GetDisableReasonsByID/{id}");
         }
     }
 }

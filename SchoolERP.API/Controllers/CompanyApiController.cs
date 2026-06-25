@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using Common = SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -33,7 +33,7 @@ namespace SchoolERP.API.Controllers
         public IActionResult GetAll(bool includeDeleted = false)
         {
             var data = _companyService.GetAllCompanies(includeDeleted);
-            return Ok(ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(data));
+            return Ok(Common.ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(data));
         }
 
         /// <summary>
@@ -45,12 +45,12 @@ namespace SchoolERP.API.Controllers
             if (IsSuperAdmin())
             {
                 var allData = _companyService.GetAllCompanies(false);
-                return Ok(ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(allData));
+                return Ok(Common.ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(allData));
             }
 
             int userId = GetCurrentUserId();
             var data = _companyService.GetCompaniesByUserId(userId);
-            return Ok(ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(data));
+            return Ok(Common.ApiResponse<List<MstCompanyViewModel>>.SuccessResponse(data));
         }
 
         /// <summary>
@@ -60,8 +60,8 @@ namespace SchoolERP.API.Controllers
         public IActionResult GetByID(int id)
         {
             var data = _companyService.GetCompanyByID(id);
-            if (data == null) return NotFound(ApiResponse<MstCompanyViewModel>.ErrorResponse("Company not found"));
-            return Ok(ApiResponse<MstCompanyViewModel>.SuccessResponse(data));
+            if (data == null) return NotFound(Common.ApiResponse<MstCompanyViewModel>.ErrorResponse("Company not found"));
+            return Ok(Common.ApiResponse<MstCompanyViewModel>.SuccessResponse(data));
         }
 
         /// <summary>
@@ -101,14 +101,22 @@ namespace SchoolERP.API.Controllers
         /// Turns a school company's active status on or off.
         /// </summary>
         [HttpPost("ToggleStatus")]
-        public async Task<IActionResult> ToggleStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] Common.StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change status." });
 
-            int userId = GetCurrentUserId();
-            var (success, message) = _companyService.ToggleStatus(id, isActive, userId);
-            return Ok(new { success, message });
+                int userId = GetCurrentUserId();
+                var (success, message) = _companyService.ToggleStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         /// <summary>
@@ -119,8 +127,8 @@ namespace SchoolERP.API.Controllers
         {
             int userId = GetCurrentUserId();
             var (success, message) = _companyService.UpdateUserCurrentCompany(userId, request.CompanyId);
-            if (!success) return BadRequest(ApiResponse<dynamic>.ErrorResponse(message));
-            return Ok(ApiResponse<dynamic>.SuccessResponse(null, message));
+            if (!success) return BadRequest(Common.ApiResponse<dynamic>.ErrorResponse(message));
+            return Ok(Common.ApiResponse<dynamic>.SuccessResponse(null, message));
         }
 
         /// <summary>
@@ -131,7 +139,7 @@ namespace SchoolERP.API.Controllers
         {
             int userId = GetCurrentUserId();
             var companyId = _companyService.GetUserCurrentCompany(userId);
-            return Ok(ApiResponse<int?>.SuccessResponse(companyId));
+            return Ok(Common.ApiResponse<int?>.SuccessResponse(companyId));
         }
 
         private int GetCurrentUserId()

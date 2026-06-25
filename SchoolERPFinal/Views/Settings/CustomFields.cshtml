@@ -1,7 +1,5 @@
-@model List<SchoolERP.Net.Models.FieldModel>
+@model FieldPageViewModel
 @using System.Security.Claims
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     
@@ -12,12 +10,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    // Permission variables for JS and buttons
-    var canAdd = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Settings/CustomFields", "Delete");
+    var p = Model.Permissions;
 }
 
 <!-- Page Header -->
@@ -27,21 +20,21 @@
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
        
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button type="button" class="btn btn-primary shadow-sm" id="btnAdd" onclick="openModal()">
+            <button type="button" class="btn btn-primary shadow-sm top-btn" id="btnAdd" onclick="openModal()">
                 <i class="ti ti-plus me-1"></i>Add
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button type="button" class="btn btn-info shadow-sm" id="btnEdit" disabled onclick="editSelected()">
+            <button type="button" class="btn btn-info shadow-sm top-btn" id="btnEdit" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button type="button" class="btn btn-danger shadow-sm" id="btnDelete" disabled onclick="deleteSelected()">
+            <button type="button" class="btn btn-danger shadow-sm top-btn" id="btnDelete" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
@@ -81,9 +74,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (Model != null && Model.Any())
+                            @if (Model != null && Model.fieldModels.Any())
                             {
-                                foreach (var field in Model)
+                                foreach (var field in Model.fieldModels)
                                 {
                                     <tr onclick="selectItem(@field.FieldId, this)" style="cursor: pointer;">
                                         <td>
@@ -145,7 +138,7 @@
             <div class="modal-header border-bottom">
                 <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add Custom Field</h5>
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    @if (canAdd || canEdit)
+                    @if (p.CanAdd || p.CanEdit)
                     {
                         <button type="button" class="btn btn-sm btn-success shadow-sm px-3" onclick="saveField()">
                             <i class="ti ti-cloud me-1"></i>Save

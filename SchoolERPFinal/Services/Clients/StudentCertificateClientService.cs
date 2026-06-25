@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;

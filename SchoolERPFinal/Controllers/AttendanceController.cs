@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -10,7 +11,7 @@ namespace SchoolERP.Net.Controllers
     /// It provides pages for marking attendance, viewing attendance reports, 
     /// and approving leave applications from students.
     /// </summary>
-    public class AttendanceController : Controller
+    public class AttendanceController : BaseController
     {
         private readonly IAttendanceClientService _service;
         private readonly IClassClientService _classService;
@@ -27,7 +28,7 @@ namespace SchoolERP.Net.Controllers
             ICompanyClientService companyService,
             ISessionClientService sessionService,
             IStudentLeaveClientService leaveService,
-            IStudentInformationClientService studentService)
+            IStudentInformationClientService studentService, PermissionHelper permHelper) : base(permHelper)
         {
             _service = service;
             _classService = classService;
@@ -93,8 +94,22 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> ApproveLeave()
         {
-            ViewBag.ClassList = (await _classService.GetAllAsync()).Data;
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/StudentInformation/DisabledStudents"
+               );
+
+                ViewBag.ClassList = (await _classService.GetAllAsync()).Data;
+                return View(perms);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]

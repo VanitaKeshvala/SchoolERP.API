@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,12 +11,12 @@ namespace SchoolERP.Net.Controllers
     /// <summary>
     /// This controller manages the school's expenses, including recording new costs and managing different types of expense categories.
     /// </summary>
-    public class ExpenseController : Controller
+    public class ExpenseController : BaseController
     {
         private readonly IAccountHeadClientService _headClient;
         private readonly IAccountEntryClientService _entryClient;
 
-        public ExpenseController(IAccountHeadClientService headClient, IAccountEntryClientService entryClient)
+        public ExpenseController(IAccountHeadClientService headClient, IAccountEntryClientService entryClient, PermissionHelper permHelper) : base(permHelper)
         {
             _headClient = headClient;
             _entryClient = entryClient;
@@ -26,39 +27,82 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            // Step 1: Ask the system for all recorded expenses and all expense categories (heads).
-            var resEntries = await _entryClient.GetAllAccountEntriesAsync("Expense");
-            var resHeads = await _headClient.GetAllAccountHeadsAsync("Expense");
-
-            if (!resEntries.Success) ViewBag.ErrorMessage = resEntries.Message;
-
-            // Step 2: Organize the data to be shown on the expense management page.
-            var model = new AccountEntryPageViewModel
+            try
             {
-                Items = resEntries.Success ? resEntries.Data : new List<AccountEntryViewModel>(),
-                Heads = resHeads.Success ? resHeads.Data : new List<AccountHeadViewModel>(),
-                EntryType = "Expense"
-            };
-            
-            // Step 3: Open the 'Expense' page.
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Expense/Search"
+               );
+
+                // Step 1: Ask the system for all recorded expenses and all expense categories (heads).
+                var resEntries = await _entryClient.GetAllAccountEntriesAsync("Expense");
+                var resHeads = await _headClient.GetAllAccountHeadsAsync("Expense");
+
+                if (!resEntries.Success) ViewBag.ErrorMessage = resEntries.Message;
+
+                // Step 2: Organize the data to be shown on the expense management page.
+                var model = new AccountEntryPageViewModel
+                {
+                    Items = resEntries.Success ? resEntries.Data : new List<AccountEntryViewModel>(),
+                    Heads = resHeads.Success ? resHeads.Data : new List<AccountHeadViewModel>(),
+                    EntryType = "Expense"
+                };
+                model.Permissions = perms;
+                // Step 3: Open the 'Expense' page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
 
         public async Task<IActionResult> ExpenseHead()
         {
-            var res = await _headClient.GetAllAccountHeadsAsync("Expense");
-            var model = new AccountHeadPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<AccountHeadViewModel>(),
-                HeadType = "Expense"
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Expense/ExpenseHead"
+               );
+                var res = await _headClient.GetAllAccountHeadsAsync("Expense");
+                var model = new AccountHeadPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<AccountHeadViewModel>(),
+                    HeadType = "Expense"
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
-        public IActionResult Search()
+        public async Task<IActionResult> Search()
         {
-            var model = new AccountEntrySearchViewModel { EntryType = "Expense" };
-            return View(model);
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/StudentInformation/DisabledStudents"
+               );
+
+                var model = new AccountEntrySearchViewModel { EntryType = "Expense" };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpPost]

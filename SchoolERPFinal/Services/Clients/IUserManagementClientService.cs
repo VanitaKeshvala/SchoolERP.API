@@ -1,5 +1,5 @@
-﻿using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -27,9 +27,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <returns>Operation result.</returns>
         Task<ApiResponse<dynamic>> UpsertPermissionAsync(
             MstPermissionUpsertRequest request);
-        Task<ApiResponse<dynamic>> TogglePermissionStatusAsync(
-            int permissionID,
-            bool isActive);
+        Task<ApiResponse<SpResult>> TogglePermissionStatusAsync(StatusUpdateRequest request);
         Task<ApiResponse<dynamic>> DeletePermissionAsync(
             List<int> permissionID);
     }

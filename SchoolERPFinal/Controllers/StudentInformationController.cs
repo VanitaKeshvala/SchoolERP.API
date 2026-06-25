@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.Net.Services;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using System.Security.Claims;
 using System.IO;
 using System.Text;
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Net.Helpers;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -19,7 +20,7 @@ namespace SchoolERP.Net.Controllers
     /// houses, and other student-specific settings.
     /// Think of this as the manager who decides which page to show when you click on student-related menus.
     /// </summary>
-    public class StudentInformationController : Controller
+    public class StudentInformationController :   BaseController
     {
         private readonly IStudentInformationClientService _studentService;
         private readonly ICompanyClientService _companyService;
@@ -40,7 +41,7 @@ namespace SchoolERP.Net.Controllers
             IRoutePickupPointClientService routePickupPointService,
             IHostelClientService hostelService, IClassClientService classService,
             ISectionClientService sectionService, IVehicleAssignClientService vehicleAssignService, 
-            IAttendanceClientService attendanceService)
+            IAttendanceClientService attendanceService, PermissionHelper permHelper) : base(permHelper)
         {
             _studentService = studentService;
             _companyService = companyService;
@@ -64,8 +65,12 @@ namespace SchoolERP.Net.Controllers
         }
         private async Task<int> GetSessionId()
         {
-            var response = await _sessionService.GetUserCurrentSessionAsync();
-            return response?.Data ?? 0;
+            if(CurrentSessionId == null) 
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
         }
 
         /// <summary>
@@ -73,23 +78,36 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> DisableReason()
         {
-            var response = await _studentService.GetAllDisableReasons();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/StudentInformation/DisableReason"
+           );
+            var sessionId = await GetSessionId();
+            var response = await _studentService.GetAllDisableReasons(sessionId);
 
             var model = new StudentDisableReasonPageViewModel
             {
                 Items = response.Data ?? new List<StudentDisableReasonViewModel>()
             };
+            model.Permissions = perms;
             return View(model);
         }
 
         /// <summary>
         /// Shows the page for managing student houses (e.g., Red House, Blue House).
         /// </summary>
+        
         public async Task<IActionResult> StudentHouse()
         {
-            var response = await _studentService.GetAllStudentHouses();
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms =await GetPermissions(
+                "/StudentInformation/StudentHouse"
+            );
+            var sessionId = await GetSessionId();
+            var response = await _studentService.GetAllStudentHouses(sessionId);
             StudentHousePageViewModel model = new StudentHousePageViewModel();
             model.Items = response.Data;
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -98,9 +116,15 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> StudentCategory()
         {
-            var res = (await _studentService.GetAllStudentCategories()).Data;
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+                "/StudentInformation/StudentCategory"
+            );
+            var sessionId = await GetSessionId();
+            var res = (await _studentService.GetAllStudentCategories(sessionId)).Data;
             StudentCategoryPageViewModel model= new StudentCategoryPageViewModel();
             model.Items = res;
+            model.Permissions = perms;
             return View(model);
         }
 
@@ -130,8 +154,8 @@ namespace SchoolERP.Net.Controllers
 
 
             // Fetch lookup data for dropdowns
-            ViewBag.Categories = (await _studentService.GetAllStudentCategories()).Data;
-            ViewBag.Houses = (await _studentService.GetAllStudentHouses()).Data;
+            ViewBag.Categories = (await _studentService.GetAllStudentCategories(sessionId)).Data;
+            ViewBag.Houses = (await _studentService.GetAllStudentHouses(sessionId)).Data;
             ViewBag.Routes =(await _routeService.GetAllRoutesAsync()).Data;
             ViewBag.PickupPoints =(await _routePickupPointService.GetAllRoutePickupPointsAsync()).Data;
             ViewBag.Hostels =(await _hostelService.GetAllHostelsAsync()).Data;
@@ -149,7 +173,11 @@ namespace SchoolERP.Net.Controllers
                 ViewBag.RollNoDependencies = studentSettings.FieldsToInclude;
                 if (!(ViewBag.IsEdit ?? false))
                 {
-                    ViewBag.NextRollNo = (await _studentService.GetNewStudentRollNo()).Data;
+                    var roleModel = new StudentRollNoRequest
+                    {
+                        SessionId = sessionId
+                    };
+                    ViewBag.NextRollNo = (await _studentService.GetNewStudentRollNo(roleModel)).Data;
                 }
             }
 
@@ -159,11 +187,14 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStudentList(int? classId, int? sectionId, string? searchTerm, int? excludeStudentId)
         {
-            var companyId = GetCompanyId();
-            var sessionId = GetSessionId();
-            var response = await _studentService.GetStudentListAsync(classId, sectionId, searchTerm);
-            var students = response.Data ?? new List<StudentListViewModel>();
-
+            var companyId = await GetCompanyId();
+            var sessionId =await GetSessionId();
+            var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, searchTerm);
+            var students =  new List<StudentListViewModel>();
+            if(response.Success != false && response.Data !=null) 
+            {
+                students = response.Data.Data ?? new List<StudentListViewModel>();
+            }
             if (excludeStudentId.HasValue)
             {
                 students = students.Where(s => s.StudentID != excludeStudentId.Value).ToList();
@@ -184,8 +215,15 @@ namespace SchoolERP.Net.Controllers
         /// Shows the list of all students. 
         /// Users can filter the list by class, section, or search for a specific name/roll number.
         /// </summary>
-        public async Task<IActionResult> Students(int? classId, int? sectionId, string? search, string? viewType)
+        public async Task<IActionResult> Students(int? classId, int? sectionId, string? search, string? viewType, int page ,
+    int pageSize )
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms =await GetPermissions(
+                "/StudentInformation/Students",
+                "/StudentInformation/ImportStudent"
+            );
+
             var companyId =await GetCompanyId();
             var sessionId = await GetSessionId();
             
@@ -195,16 +233,22 @@ namespace SchoolERP.Net.Controllers
             {
                 allFields = allFieldsresponse.Data;
             }
-            var response = await _studentService.GetStudentListAsync(classId, sectionId, search);            
+            var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, search,page,pageSize);
             var model = new StudentListPageViewModel
             {
-                Students = response.Data,
+                Students = response.Data.Data,
+                TotalRecords = response.Data.TotalRecords,
+                PageNumber = response.Data.PageNumber,
+                PageSize = response.Data.PageSize,
+
                 SelectedClassId = classId,
                 SelectedSectionId = sectionId,
                 SearchTerm = search,
                 ViewType = viewType ?? "list",
+
                 SystemFields = allFields.Where(f => f.IsSystemField).ToList(),
-                CustomFields = allFields.Where(f => !f.IsSystemField).ToList()
+                CustomFields = allFields.Where(f => !f.IsSystemField).ToList(),
+                Permissions= perms
             };
 
             ViewBag.Classes =(await _classService.GetAllAsync()).Data;
@@ -251,7 +295,11 @@ namespace SchoolERP.Net.Controllers
             {
                 values[key] = query[key]!;
             }
-            var response = await _studentService.GetNewStudentRollNo();
+            var roleModel = new StudentRollNoRequest
+            {
+                SessionId = await GetSessionId()
+            };
+            var response = await _studentService.GetNewStudentRollNo(roleModel);
             string rollNo =string.Empty;
             if (response.Success)
             {
@@ -280,6 +328,7 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> SaveStudent([FromBody] StudentAdmissionUpsertRequest req)
         {
+            req.SessionId =await GetSessionId();
             var res =await _studentService.UpsertStudentAdmission(req);
             return Json(new { success = res.Success, message = res.Message });
         }
@@ -334,6 +383,10 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> DisabledStudents(int? classId, int? sectionId, string? search)
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/StudentInformation/DisabledStudents"
+           );
             var companyId =await GetCompanyId();
             var sessionId = await GetSessionId();
 
@@ -344,7 +397,7 @@ namespace SchoolERP.Net.Controllers
                 SelectedSectionId = sectionId,
                 SearchTerm = search
             };
-            var response = await _studentService.GetDisabledStudentList(classId,sectionId,search);
+            var response = await _studentService.GetDisabledStudentList(classId,sectionId,search, sessionId);
 
             if (response.Success)
             {
@@ -360,16 +413,20 @@ namespace SchoolERP.Net.Controllers
             {
                 ViewBag.Sections = new List<MstSectionViewModel>();
             }
-
+            model.Permissions = perms;
             return View(model);
         }
 
         public async Task<IActionResult> BulkDelete()
         {
+            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+            var perms = await GetPermissions(
+               "/StudentInformation/BulkDelete"
+            );
             var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
-            ViewBag.Classes = (await _classService.GetAllAsync()).Data;
-            return View();
+            ViewBag.Classes = (await _classService.GetAllAsync(false, sessionId)).Data;
+            return View(perms);
         }
 
         [HttpPost]
@@ -383,7 +440,7 @@ namespace SchoolERP.Net.Controllers
         {
             var companyId =await GetCompanyId();
             var sessionId = await GetSessionId();
-            ViewBag.Classes = (await _classService.GetAllAsync()).Data;
+            ViewBag.Classes = (await _classService.GetAllAsync(false,sessionId)).Data;
             return View();
         }
         [HttpPost]
@@ -394,12 +451,12 @@ namespace SchoolERP.Net.Controllers
 
             try
             {
-                var companyId = GetCompanyId();
-                var sessionId = GetSessionId();
-                var userId = GetUserId();
+                var companyId = await GetCompanyId();
+                var sessionId =await GetSessionId();
+                var userId =  GetUserId();
 
-                var categories =await _studentService.GetAllStudentCategories();
-                var houses =await _studentService.GetAllStudentHouses();
+                var categories =await _studentService.GetAllStudentCategories(sessionId);
+                var houses =await _studentService.GetAllStudentHouses(sessionId);
 
                 using var reader = new StreamReader(file.OpenReadStream());
                 string? headerLine = await reader.ReadLineAsync();
@@ -517,7 +574,8 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllDisableReasons()
         {
-            var data =await _studentService.GetAllDisableReasons();
+            var sessionId = await GetSessionId();
+            var data =await _studentService.GetAllDisableReasons(sessionId);
             return Json(new { success = true, data });
         }
 
@@ -538,7 +596,8 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStudentHouses()
         {
-            var data =await _studentService.GetAllStudentHouses();
+            var sessionId = await GetSessionId();
+            var data =await _studentService.GetAllStudentHouses(sessionId);
             return Json(new { success = true, data });
         }
 
@@ -559,13 +618,15 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStudentCategories()
         {
-            var data = await _studentService.GetAllStudentCategories();
+            var sessionId = await GetSessionId();
+            var data = await _studentService.GetAllStudentCategories(sessionId);
             return Json(new { success = true, data });
         }
 
         [HttpPost]
         public async Task<IActionResult> UpsertStudentCategory([FromBody] StudentCategoryUpsertRequest req)
         {
+            req.SessionID = await GetSessionId();
             var res =await _studentService.UpsertStudentCategory(req);
             return Json(new { success = res.Success, message = res.Message });
         }
@@ -690,5 +751,106 @@ namespace SchoolERP.Net.Controllers
         }
 
         #endregion
+
+        public async Task<IActionResult> AddStudentCategory(int? id) 
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                    "/StudentInformation/StudentHouse"
+                );
+                // Step 1: Initialize a new blank page model.
+                var model = new StudentCategoryAddViewModel();
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _studentService.GetStudentCategoryByIdAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditStudentCategory = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditStudentCategory = null;
+                }
+
+                
+                
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<IActionResult> AddStudentHouse(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                    "/StudentInformation/StudentHouse"
+                );
+                // Step 1: Initialize a new blank page model.
+                var model = new StudentHouseAddViewModel(); //StudentHouseViewModel
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _studentService.GetStudentHouseByIdAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditStudentHouse = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditStudentHouse = null;
+                }
+
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<IActionResult> AddDisableReason(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                    "/StudentInformation/StudentHouse"
+                );
+                // Step 1: Initialize a new blank page model.
+                var model = new StudentDisableReasonAddViewModel(); //StudentHouseViewModel
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _studentService.GetDisableReasonsByID(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditStudentDisableReason = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditStudentDisableReason = null;
+                }
+
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
     }
 }

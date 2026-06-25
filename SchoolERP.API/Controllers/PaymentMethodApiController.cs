@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.API.Services;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
 using SchoolERP.API.Interfaces;
 

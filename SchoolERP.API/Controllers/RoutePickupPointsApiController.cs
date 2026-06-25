@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
+using SchoolERP.Shared.Models;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers

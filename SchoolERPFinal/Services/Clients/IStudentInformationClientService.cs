@@ -1,26 +1,26 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
     public interface IStudentInformationClientService
     {
-        Task<ApiResponse<List<StudentListViewModel>>> GetStudentListAsync(int? classId = null, int? sectionId = null, string? searchTerm = null);
+        Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? sessionId, int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber = null, int? PageSize = null);
         Task<ApiResponse<StudentDetailsViewModel>> GetStudentByIDAsync(int id);
-        Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons();
-        Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses();
-        Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories();
-        Task<ApiResponse<string>> GetNewStudentRollNo(Dictionary<string, string>? dynamicValues = null);
+        Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID);
+        Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses(int sessionID);
+        Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId);
+        Task<ApiResponse<string>> GetNewStudentRollNo(StudentRollNoRequest request);
         Task<ApiResponse<string>> GetNextAdmissionNo();
         Task<ApiResponse<int>> UpsertStudentAdmission(StudentAdmissionUpsertRequest request);
         Task<ApiResponse<object>> BulkDeleteStudents(List<int> studentIds);
         Task<ApiResponse<List<StudentListViewModel>>> GetDisabledStudentList(
             int? classId = null,
             int? sectionId = null,
-            string? searchTerm = null);
+            string? searchTerm = null, int? sessionId = null);
         Task<ApiResponse<object>> UpsertDisableReason(
             StudentDisableReasonUpsertRequest request);
         Task<ApiResponse<object>> DeleteDisableReason([FromBody] List<int> ids);
@@ -44,5 +44,8 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<object>> UpsertMultiClass(
             StudentMultiClassUpsertRequest request);
         Task<ApiResponse<object>> DeleteMultiClass(int id);
+        Task<ApiResponse<StudentCategoryViewModel>> GetStudentCategoryByIdAsync(int id);
+        Task<ApiResponse<StudentHouseViewModel>> GetStudentHouseByIdAsync(int id);
+        Task<ApiResponse<StudentDisableReasonViewModel>> GetDisableReasonsByID(int id);
     }
 }

@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using SchoolERP.API.Services;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -30,16 +30,19 @@ namespace SchoolERP.API.Controllers.Api
         }
 
         [HttpGet("GetAll")]
-        public IActionResult GetAll(bool includeDeleted = false)
+        public IActionResult GetAll(bool includeDeleted = false,int? sessionId = null)
         {
             int userId = GetCurrentUserId();
             int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
-
+             
+            if (sessionId == null) 
+            {
+                sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+            }
             if (companyId == 0 || sessionId == 0)
                 return Ok(ApiResponse<List<MstSubjectGroupViewModel>>.SuccessResponse(new List<MstSubjectGroupViewModel>()));
 
-            var data = _service.GetAll(companyId, sessionId, includeDeleted);
+            var data = _service.GetAll(companyId, sessionId.Value, includeDeleted);
             return Ok(ApiResponse<List<MstSubjectGroupViewModel>>.SuccessResponse(data));
         }
 
@@ -93,14 +96,22 @@ namespace SchoolERP.API.Controllers.Api
         }
 
         [HttpPost("ToggleStatus")]
-        public async Task<IActionResult> ToggleStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change status." });
 
-            int userId = GetCurrentUserId();
-            var (success, message) = _service.ToggleStatus(id, isActive, userId);
-            return Ok(new { success, message });
+                int userId = GetCurrentUserId();
+                var (success, message) = _service.ToggleStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message});
+            }
+            
         }
 
         private int GetCurrentUserId()

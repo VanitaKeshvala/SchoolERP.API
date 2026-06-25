@@ -1,9 +1,8 @@
-@model SchoolERP.Net.Models.HRApplyLeavePageViewModel
+@model SchoolERP.Shared.Models.HRApplyLeavePageViewModel
 @{
     ViewData["Title"] = "Apply Leave";
     Layout = "_Layout";
 }
-@inject PermissionHelper PermHelper
 @{
     
     int currentUserId = 0;
@@ -12,13 +11,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/ApplyLeave", "Export");
+    var p = Model.Permissions;
 
 }
 <style>
@@ -44,19 +37,19 @@
         <h6 class="fw-bold mb-0">Apply Leave</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center" onclick="openAddModal()">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center top-btn" onclick="openAddModal()">
             <i class="ti ti-plus me-1"></i>Apply Leave
         </button>
-         @if (canPrint)
+         @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">

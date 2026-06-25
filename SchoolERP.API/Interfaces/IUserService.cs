@@ -1,4 +1,5 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -8,7 +9,7 @@ namespace SchoolERP.API.Interfaces
     public interface IUserService
     {
         /// <summary>Gets a list of all users registered in the system.</summary>
-        List<UserViewModel> GetAllUsers();
+        Task<PagedResult<UserViewModel>> GetAllUsers(UserSearchRequest request);
 
         /// <summary>Finds the details of a specific user using their unique ID.</summary>
         UserViewModel? GetUserById(int userId);
@@ -56,6 +57,6 @@ namespace SchoolERP.API.Interfaces
         /// <summary>Updates a user's password.</summary>
         (int Result, string Message) ChangePassword(int userId, string password, int modifiedBy);
         (int Result, string Message) BulkToggleUserStatus(UserStatusUpdateRequest request);
-        (int Result, string Message) DeleteBulkUser(string userId, int doneBy);
+        (bool Result, string Message) DeleteBulkUser(string userId, int doneBy);
     }
 }

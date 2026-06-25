@@ -1,22 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the currency settings page, where you can see, add, or change the different types of money used in the system.
     /// </summary>
-    public class CurrenciesController : Controller
+    public class CurrenciesController : BaseController
     {
         private readonly ICurrencyClientService _currencyClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
         private const string MenuPath = "/Currencies";
 
-        public CurrenciesController(ICurrencyClientService currencyClient, IUserMenuPermissionClientService menuPerm)
+        public CurrenciesController(ICurrencyClientService currencyClient, IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _currencyClient = currencyClient;
             _menuPerm = menuPerm;
@@ -27,17 +28,30 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            // Step 1: Ask the system for a list of all different currencies (types of money) set up.
-            var response = await _currencyClient.GetAllAsync();
-            
-            // Step 2: Prepare the data to be shown on the screen.
-            var model = new MstCurrencyPageViewModel
+            try
             {
-                Currencies = response.Success ? response.Data : new List<MstCurrencyViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Currencies"
+               );
+
+                // Step 1: Ask the system for a list of all different currencies (types of money) set up.
+                var response = await _currencyClient.GetAllAsync();
+
+                // Step 2: Prepare the data to be shown on the screen.
+                var model = new MstCurrencyPageViewModel
+                {
+                    Currencies = response.Success ? response.Data : new List<MstCurrencyViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Open the 'Currencies' management page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
             
-            // Step 3: Open the 'Currencies' management page.
-            return View(model);
         }
 
         /// <summary>

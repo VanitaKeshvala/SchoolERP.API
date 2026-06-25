@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Controllers
 {
@@ -50,10 +50,17 @@ namespace SchoolERP.API.Controllers
                 request.Username,
                 request.Password);
 
+            if(result.Data.DashboardID !=null && result.Data.DashboardID != 0) 
+            {
+                var data = await _authService.GetDashboardByIdAsync(result.Data.DashboardID.Value);
+                result.Data.DashboardURL = data.DashboardURL;
+            }
+            
             if (result.Success)
                 return Ok(result);
 
             return Unauthorized(result);
         }
+
     }
 }

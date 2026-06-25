@@ -1,14 +1,12 @@
-@*
+﻿@*
     ======================================================================
     VIEW: Academics / SubjectGroup.cshtml
     PURPOSE: User interface for managing Subject Groups.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstSubjectGroupPageViewModel
+@model SchoolERP.Shared.Models.MstSubjectGroupPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Subject Group Management";
@@ -18,14 +16,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-        
-    var canAdd = PermHelper.HasPermissionByUrl("/Academics/SubjectGroup", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Academics/SubjectGroup", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Academics/SubjectGroup", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Academics/SubjectGroup", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Academics/SubjectGroup", "Export");
+    var p = Model.Permissions;
 }
 
 <!-- Page Header -->
@@ -34,34 +25,43 @@
         <h6 class="fw-bold mb-0">Subject Group</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary" onclick="openAddModal()">
+            <a href="/Academics/AddSubjectGroup" class="btn btn-primary top-btn">
                 <i class="ti ti-plus me-1"></i> Add
-            </button>
+            </a>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanEdit)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center" onclick="triggerExport(4)">
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -91,7 +91,7 @@
                     <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
                         <div class="dropdown">
                             <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                               data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                 <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                             </a>
                             <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
@@ -106,10 +106,14 @@
                                         <label class="form-label mb-1">Class</label>
                                         <select id="filterClass" class="form-select select2" onchange="loadSectionsByClass(this.value, 'filterSection')">
                                             <option value="">All Classes</option>
-                                            @foreach (var c in Model.Classes)
+                                            @if(Model.Classes !=null)
                                             {
-                                                <option value="@c.ClassID" data-name="@c.ClassName">@c.ClassName</option>
+                                                @foreach (var c in Model.Classes)
+                                                {
+                                                    <option value="@c.ClassID" data-name="@c.ClassName">@c.ClassName</option>
+                                                }
                                             }
+
                                         </select>
                                     </div>
                                     <div class="mb-3">
@@ -150,7 +154,7 @@
                                 <th>Name</th>
                                 <th>Class (Sections)</th>
                                 <th>Subjects</th>
-                                
+
                                 <th>Created On</th>
                                 <th>Status</th>
                             </tr>
@@ -163,9 +167,9 @@
                                     <tr class="item-row" onclick="selectItem(@g.SubjectGroupID, this)" style="cursor: pointer;">
                                         <td class="text-center">
                                             <input type="checkbox" name="selectedGroup"
-                                                   class="form-check-input student-checkbox"
-                                                   value="@g.SubjectGroupID">
-                                        
+                                            class="form-check-input student-checkbox"
+                                            value="@g.SubjectGroupID">
+
                                         </td>
                                         <td class="fw-medium">@g.Name</td>
                                         <td>
@@ -183,7 +187,7 @@
                                         </td>
                                         <td>@g.CreatedOn.ToString("dd MMM yyyy")</td>
                                         <td>
-                                            @if (canEdit)
+                                            @if (p.CanEdit)
                                             {
                                                 <div class="form-check form-switch" onclick="event.stopPropagation()">
                                                     <input class="form-check-input status-switch" type="checkbox" @(g.IsActive ? "checked" : "") onchange="toggleStatus(@g.SubjectGroupID, this.checked)">
@@ -194,7 +198,7 @@
                                                 <span class="badge @(g.IsActive ? "bg-success" : "bg-secondary")">@(g.IsActive ? "Active" : "Inactive")</span>
                                             }
                                         </td>
-                                       
+
                                     </tr>
                                 }
                             }
@@ -241,10 +245,14 @@
                             <label class="form-label">Class <span class="text-danger">*</span></label>
                             <select id="ddlClass" class="form-select form-control" onchange="loadSectionsByClass(this.value, 'ddlSections')">
                                 <option value="">Select Class</option>
-                                @foreach (var c in Model.Classes)
+                                @if (Model.Classes !=null)
                                 {
-                                    <option value="@c.ClassID">@c.ClassName</option>
+                                    @foreach (var c in Model.Classes)
+                                    {
+                                        <option value="@c.ClassID">@c.ClassName</option>
+                                    }
                                 }
+
                             </select>
                             <div class="invalid-feedback" id="errDdlClass"></div>
                         </div>
@@ -258,10 +266,15 @@
                         <div class="col-md-12">
                             <label class="form-label">Subjects <span class="text-danger">*</span></label>
                             <select id="ddlSubjects" class="form-select form-control select2" multiple data-placeholder="Select Subjects">
-                                @foreach (var sub in Model.Subjects)
+                                @if (Model.Subjects != null)
                                 {
-                                    <option value="@sub.SubjectID">@sub.SubjectName</option>
-                                }
+                                    @foreach (var sub in Model.Subjects)
+                                    {
+                                        <option value="@sub.SubjectID">@sub.SubjectName</option>
+                                    }
+                                    
+                                }                                
+
                             </select>
                             <div class="invalid-feedback" id="errDdlSubjects"></div>
                         </div>
@@ -299,388 +312,11 @@
 @section Scripts {
     <!--<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>-->
     <script>
-        function triggerExport(index) {
-            if ($.fn.DataTable.isDataTable('#groupsTable')) {
-                const table = $('#groupsTable').DataTable();
-                table.button(index).trigger();
-            }
-        }
-
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
-        const allSections = @Html.Raw(JsonSerializer.Serialize(Model.Sections));
-
-        const IV = {
-            clearMap: (map) => Object.keys(map).forEach(k => { 
-            document.getElementById(k)?.classList.remove('is-invalid');
-            const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }),
-            setFieldError: (id, errId, msg) => {
-                document.getElementById(id)?.classList.add('is-invalid');
-                const err = document.getElementById(errId); if(err) err.textContent = msg;
-            },
-            setNotice: (id, msg, type = 'danger') => {
-                const el = document.getElementById(id);
-                if(el) el.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
-            },
-            clearNotice: (id) => { const el = document.getElementById(id); if(el) el.innerHTML = ''; },
-            bindAutoClear: (map) => Object.keys(map).forEach(k => document.getElementById(k)?.addEventListener('input', () => {
-                document.getElementById(k)?.classList.remove('is-invalid');
-                const err = document.getElementById(map[k]); if(err) err.textContent = '';
-            }))
-        };
-
-        const fieldMap = { txtName: 'errTxtName', ddlClass: 'errDdlClass', ddlSections: 'errDdlSections', ddlSubjects: 'errDdlSubjects' };
-        const itemModal = new bootstrap.Modal(document.getElementById('itemModal'));
-        let selectedId = 0;
-
-        $(document).ready(function() {
-            const exportOpts = {
-                columns: [1, 2, 3, 4, 5],
-                format: {
-                    body: function (data, row, column, node) {
-                        const checkbox = node.querySelector('input.status-switch');
-                        if (checkbox) {
-                            return checkbox.checked ? 'Active' : 'Inactive';
-                        }
-                        if (node.querySelectorAll('.badge').length > 0) {
-                            return Array.from(node.querySelectorAll('.badge')).map(b => b.textContent.trim()).join(', ');
-                        }
-                        const badge = node.querySelector('.badge');
-                        if (badge) {
-                            return badge.textContent.trim();
-                        }
-                        // Remove br or small-spaced sections and strip tags
-                        return data.replace(/<br\s*\/?>/gi, " ").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-                    }
-                }
-            };
-
-            $('#groupsTable').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: exportOpts },
-                    { extend: 'csv', exportOptions: exportOpts },
-                    { extend: 'excel', exportOptions: exportOpts },
-                    { extend: 'pdf', exportOptions: exportOpts },
-                    { extend: 'print', exportOptions: exportOpts }
-                ],
-                searching: false,
-                paging: false,
-                info: false
-            });
-
-            $('.select2').each(function() {
-                const parent = $(this).closest('.modal').length ? $(this).closest('.modal') : $(this).closest('.dropdown-menu');
-                $(this).select2({
-                    dropdownParent: parent,
-                    placeholder: "Select",
-                    allowClear: true
-                });
-            });
-
-            // Prevent dropdown from closing when clicking inside
-            $('.filter-dropdown').on('click', function (e) {
-                e.stopPropagation();
-            });
-            IV.bindAutoClear(fieldMap);
-        });
-
-        function selectItem(id, row) {
-            IV.clearNotice('pageNotice');
-            selectedId = id;
-            document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light-primary'));
-            row.classList.add('bg-light-primary');
-            //row.querySelector('input[type="radio"]').checked = true;
-            if (permCanEdit) document.getElementById('btnEdit').disabled = false;
-            if (permCanDelete) document.getElementById('btnDelete').disabled = false;
-             let checkedCount = $('.student-checkbox:checked').length;
-            $('#btnDelete').prop('disabled', checkedCount === 0);
-            // Edit sirf 1 record select hone par
-            $('#btnEdit').prop('disabled', checkedCount !== 1);
-        }
-
-        async function loadSectionsByClass(classId, targetId) {
-            const ddl = $(`#${targetId}`);
-            ddl.empty();
-            if (!classId) { 
-                ddl.append(new Option(targetId.includes('filter') ? 'All Sections' : 'Select', ''));
-                ddl.trigger('change'); 
-                return null; 
-            }
-            
-            try {
-                const resp = await fetch(`/Academics/GetSectionsByClass?id=${classId}`);
-                const res = await resp.json();
-                if (res.success && res.data) {
-                    if (targetId.includes('filter')) ddl.append(new Option('All Sections', ''));
-                    
-                    res.data.forEach(s => {
-                        ddl.append(new Option(s.sectionName, s.sectionID));
-                    });
-                }
-                ddl.trigger('change');
-                return res.data || [];
-            } catch (err) { 
-                console.error(err); 
-                return []; 
-            }
-        }
-
-        function openAddModal() {
-            if (!permCanAdd) { IV.setNotice('pageNotice', 'No permission to add.'); return; }
-            IV.clearNotice('pageNotice');
-            IV.clearMap(fieldMap);
-            IV.clearNotice('modalNotice');
-            document.getElementById('modalTitle').textContent = 'Add Subject Group';
-            document.getElementById('itemForm').reset();
-            document.getElementById('txtItemId').value = "0";
-            document.getElementById('isActive').checked = true;
-            $('#ddlSections').empty().trigger('change');
-            $('#ddlSubjects').val(null).trigger('change');
-            itemModal.show();
-        }
-
-        async function editSelected() {
-            if (!permCanEdit) { IV.setNotice('pageNotice', 'No permission to edit.'); return; }
-            if (selectedId === 0) return;
-            IV.clearNotice('pageNotice');
-            IV.clearMap(fieldMap);
-            IV.clearNotice('modalNotice');
-            try {
-                const resp = await fetch(`/Academics/GetSubjectGroup?id=${selectedId}`);
-                const res = await resp.json();
-                if (res.success) {
-                    document.getElementById('modalTitle').textContent = 'Edit Subject Group';
-                    document.getElementById('txtItemId').value = res.data.subjectGroupID;
-                    document.getElementById('txtName').value = res.data.name;
-                    document.getElementById('ddlClass').value = res.data.classID;
-                    document.getElementById('txtDescription').value = res.data.description || '';
-                    document.getElementById('isActive').checked = res.data.isActive;
-
-                    // Load sections then set values
-                    await loadSectionsByClass(res.data.classID, 'ddlSections');
-                    $('#ddlSections').val(res.data.sectionIds).trigger('change');
-                    
-                    $('#ddlSubjects').val(res.data.subjectIds).trigger('change');
-                    itemModal.show();
-                } else {
-                    IV.setNotice('pageNotice', res.message || 'Error loading group.');
-                }
-            } catch (err) { console.error(err); IV.setNotice('pageNotice', 'Error loading details.'); }
-        }
-
-        async function saveItem() {
-            const sid = parseInt(document.getElementById('txtItemId').value);
-            IV.clearMap(fieldMap);
-            
-            const name = document.getElementById('txtName').value.trim();
-            const classId = document.getElementById('ddlClass').value;
-            const sectionIds = $('#ddlSections').val() || [];
-            const subjectIds = $('#ddlSubjects').val() || [];
-
-            let hasError = false;
-            if (!name) { IV.setFieldError('txtName', 'errTxtName', 'Name is required.'); hasError = true; }
-            if (!classId) { IV.setFieldError('ddlClass', 'errDdlClass', 'Class is required.'); hasError = true; }
-            if (sectionIds.length === 0) { IV.setFieldError('ddlSections', 'errDdlSections', 'At least one section is required.'); hasError = true; }
-            if (subjectIds.length === 0) { IV.setFieldError('ddlSubjects', 'errDdlSubjects', 'At least one subject is required.'); hasError = true; }
-
-            if (hasError) return;
-
-            const data = {
-                subjectGroupID: sid,
-                name: name,
-                classID: parseInt(classId),
-                description: document.getElementById('txtDescription').value,
-                isActive: document.getElementById('isActive').checked,
-                sectionIds: sectionIds.map(v => parseInt(v)),
-                subjectIds: subjectIds.map(v => parseInt(v))
-            };
-
-            try {
-                const resp = await fetch('/Academics/SaveSubjectGroup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const res = await resp.json();
-                if (res.success) location.reload();
-                else IV.setNotice('modalNotice', res.message || 'Save failed.');
-            } catch (err) { console.error(err); IV.setNotice('modalNotice', 'Error saving.'); }
-        }
-
-        async function deleteSelected() {
-            if (!permCanDelete) { IV.setNotice('pageNotice', 'No permission to delete.'); return; }          
-
-            let selectedIds = [];
-           $('.student-checkbox:checked').each(function () {
-                    selectedIds.push(parseInt($(this).val()));
-                });
-           if (selectedIds.length === 0) {
-                            alert("Please select at least one subject group.");
-                    return;
-                }
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You are about to delete this subject group record. This action cannot be undone!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger me-2',
-                    cancelButton: 'btn btn-secondary'
-                },
-                buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                         url: '/Academics/DeleteSubjectGroup',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(selectedIds),
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire('Deleted!', 'Subject group record has been deleted.', 'success')
-                                    .then(() => location.reload());
-                            } else {
-                                Swal.fire('Error!', res.message || 'Failed to delete subject group.', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                        }
-                    });
-                }
-            });
-        }
-
-        async function toggleStatus(id, isActive) {
-            if (!permCanEdit) { location.reload(); return; }
-            try {
-                const resp = await fetch(`/Academics/ToggleSubjectGroupStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
-                const res = await resp.json();
-                if (!res.success) { IV.setNotice('pageNotice', res.message || 'Status update failed.'); location.reload(); }
-            } catch (err) { console.error(err); location.reload(); }
-        }
-
-        function filterTable() {
-            const search = document.getElementById('txtSearchInput').value.toLowerCase();
-            document.querySelectorAll('#groupsTable tbody tr').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(search) ? '' : 'none';
-            });
-            renderFilterBadges();
-        }
-
-        function applyFilter() {
-            const classId = document.getElementById('filterClass').value;
-            const sectionId = document.getElementById('filterSection').value;
-            const className = document.querySelector(`#filterClass option[value="${classId}"]`)?.getAttribute('data-name');
-            const sectionName = document.querySelector(`#filterSection option[value="${sectionId}"]`)?.textContent;
-
-            document.querySelectorAll('#groupsTable tbody tr').forEach(row => {
-                let show = true;
-                if (className) {
-                    const rowClass = row.cells[2].querySelector('span').textContent;
-                    if (rowClass !== className) show = false;
-                }
-                if (show && sectionName && sectionId) {
-                    const rowSections = row.cells[2].querySelector('small').textContent;
-                    if (!rowSections.includes(sectionName)) show = false;
-                }
-                row.style.display = show ? '' : 'none';
-            });
-            renderFilterBadges();
-            const toggle = document.getElementById('btnFilterToggle');
-            if (toggle) {
-                bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
-            }
-        }
-
-        // --- Filter Badges Logic ---
-        function renderFilterBadges() {
-            const container = document.getElementById('badgeContainer');
-            const mainContainer = document.getElementById('activeFilterBadges');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filters = [
-                { id: 'txtSearchInput', label: 'Search', type: 'text' },
-                { id: 'filterClass', label: 'Class', type: 'select' },
-                { id: 'filterSection', label: 'Section', type: 'select' }
-            ];
-
-            let activeCount = 0;
-
-            filters.forEach(f => {
-                const el = document.getElementById(f.id);
-                if (!el) return;
-
-                let value = el.value;
-                let text = '';
-
-                if (f.type === 'text') {
-                    if (value.trim()) {
-                        text = value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'select') {
-                    if (value && value !== 'all' && value !== '') {
-                        const selectedOption = el.options[el.selectedIndex];
-                        if (selectedOption && selectedOption.value !== "") {
-                            text = selectedOption.text;
-                            activeCount++;
-                        }
-                    }
-                }
-
-                if (text) {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
-                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
-                    container.appendChild(badge);
-                }
-            });
-
-            if (activeCount > 0) {
-                mainContainer.style.display = 'block';
-            } else {
-                mainContainer.style.display = 'none';
-            }
-        }
-
-        function removeFilter(filterId) {
-            const el = document.getElementById(filterId);
-            if (!el) return;
-
-            if (el.tagName === 'INPUT') {
-                el.value = '';
-                filterTable();
-            } else {
-                el.value = '';
-                if (filterId === 'filterClass') {
-                    $('#filterSection').html('<option value="">All Sections</option>');
-                }
-                if (window.jQuery && jQuery(el).data('select2')) {
-                    jQuery(el).trigger('change.select2');
-                }
-                applyFilter();
-            }
-        }
-
-        function resetAllFilters() {
-            document.getElementById('txtSearchInput').value = '';
-            document.getElementById('filterClass').value = '';
-            document.getElementById('filterSection').value = '';
-            
-            $('.select2').trigger('change.select2');
-            
-            // Sync both
-            filterTable();
-            applyFilter();
-        }
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+        window.allSections = @Html.Raw(JsonSerializer.Serialize(Model.Sections));
     </script>
+
+    <script src="~/assets/js/SubjectGroup.js"></script>
 }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -55,14 +55,14 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> ToggleLeaveTypeStatusAsync(int id, bool isActive)
             => PostAsync<dynamic>($"api/HumanResourceApi/ToggleLeaveTypeStatus?id={id}&isActive={isActive}", null!);
 
-        public Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync()
-            => GetAsync<List<HRStaffViewModel>>("api/HumanResourceApi/GetAllStaff");
+        public Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int sessionID)
+            => GetAsync<List<HRStaffViewModel>>($"api/HumanResourceApi/GetAllStaff?sessionID={sessionID}");
 
         public Task<ApiResponse<HRStaffViewModel>> GetStaffByIDAsync(int id)
             => GetAsync<HRStaffViewModel>($"api/HumanResourceApi/GetStaffByID/{id}");
 
-        public Task<ApiResponse<dynamic>> UpsertStaffAsync(HRStaffUpsertRequest req)
-            => PostAsync<dynamic>("api/HumanResourceApi/UpsertStaff", req);
+        public Task<ApiResponse<SpResult>> UpsertStaffAsync(HRStaffUpsertRequest req)
+            => PostAsync<SpResult>("api/HumanResourceApi/UpsertStaff", req);
 
         public Task<ApiResponse<dynamic>> DeleteStaffAsync(List<int> id)
             => PostAsync<dynamic>($"api/HumanResourceApi/DeleteStaff", id);
@@ -130,5 +130,9 @@ namespace SchoolERP.Net.Services.Clients
             int year)
             => GetAsync<HRPayrollGenerationViewModel>(
                 $"api/HumanResourceApi/GetPayrollGenerationData?staffId={staffId}&month={month}&year={year}");
+
+
+        public Task<ApiResponse<dynamic>> UpdateProfileAsync(HRStaffProfileRequest req)
+           => PostAsync<dynamic>("api/HumanResourceApi/UpdateProfile", req);
     }
 }

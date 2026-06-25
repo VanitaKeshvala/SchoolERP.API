@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using System.Security.Claims;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class DownloadCenterController : Controller
+    public class DownloadCenterController : BaseController
     {
         private readonly IDownloadCenterClientService _service;
         private readonly ICompanyClientService _companyService;
@@ -21,7 +22,7 @@ namespace SchoolERP.Net.Controllers
             IClassClientService classService,
             ISectionClientService sectionService,
             ISessionClientService sessionService,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env, PermissionHelper permHelper) : base(permHelper)
         {
             _service = service;
             _companyService = companyService;
@@ -44,9 +45,22 @@ namespace SchoolERP.Net.Controllers
         }
 
         #region Content Type
-        public IActionResult ContentType()
+        public async Task<IActionResult> ContentType()
         {
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Staffs"
+               );
+                return View(perms);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -95,10 +109,23 @@ namespace SchoolERP.Net.Controllers
         #region Video Tutorial
         public async Task<IActionResult> VideoTutorial()
         {
-            var companyId = await GetCompanyId();
-            var sessionId = await GetSessionId();
-            ViewBag.Classes =(await _classService.GetAllAsync()).Data;
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/DownloadCenter/VideoTutorial"
+               );
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+                ViewBag.Classes = (await _classService.GetAllAsync()).Data;
+                return View(perms);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -143,9 +170,22 @@ namespace SchoolERP.Net.Controllers
         #region Upload Content
         public async Task<IActionResult> UploadContent()
         {
-            var companyId = await GetCompanyId();
-            ViewBag.ContentTypes =(await _service.GetContentTypeList()).Data;
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/DownloadCenter/UploadContent"
+               );
+                var companyId = await GetCompanyId();
+                ViewBag.ContentTypes = (await _service.GetContentTypeList()).Data;
+                return View(perms);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -231,9 +271,23 @@ namespace SchoolERP.Net.Controllers
             return Json(sections);
         }
 
-        public IActionResult ContentShareList()
+        public async Task<IActionResult> ContentShareList()
         {
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/DownloadCenter/ContentShareList"
+               );
+
+                return View(perms);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
     }
 }

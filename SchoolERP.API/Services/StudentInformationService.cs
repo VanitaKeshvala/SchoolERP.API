@@ -1,8 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 using System.Text.Json;
 
@@ -101,7 +101,7 @@ namespace SchoolERP.API.Services
                 param.Add("@DisableReasonTitle", req.DisableReasonTitle);
                 param.Add("@UserID", userId);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Student_DisableReason_Upsert",
                     param,
                     commandType: CommandType.StoredProcedure);
@@ -246,7 +246,7 @@ namespace SchoolERP.API.Services
                 param.Add("@StudentHouseDescription", req.StudentHouseDescription);
                 param.Add("@UserID", userId);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_MST_StudentHouse_Upsert",
                     param,
                     commandType: CommandType.StoredProcedure);
@@ -389,7 +389,7 @@ namespace SchoolERP.API.Services
                 param.Add("@StudentCategoryName", req.StudentCategoryName);
                 param.Add("@UserID", userId);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_MST_StudentCategory_Upsert",
                     param,
                     commandType: CommandType.StoredProcedure);
@@ -874,20 +874,54 @@ namespace SchoolERP.API.Services
         /// Note: Dapper auto-maps SP column names to ViewModel properties —
         ///       no manual column-by-column mapping needed.
         /// </summary>
-        public List<StudentListViewModel> GetStudentList(
-            int companyId, int sessionId, int? classId, int? sectionId, string? searchTerm)
+        public async Task<PagedResult<StudentListViewModel>> GetStudentList(
+            int companyId, int sessionId, int? classId, int? sectionId, string? searchTerm, int PageNumber, int PageSize)
         {
             try
             {
+                if(PageNumber == 0 && PageSize ==0) 
+                {
+                    PageNumber = 1;
+                    PageSize = 10;
+                }
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
+
                 // ── 1. Student list ─────────────────────────────────────────────────
-                var students = conn.Query<StudentListViewModel>(
+                //var students = conn.Query<StudentListViewModel>(
+                //    "SP_STUDENT_LIST_GET",
+                //    new { COMPANYID = companyId, SESSIONID = sessionId, CLASSID = classId, SECTIONID = sectionId, SEARCHTERM = searchTerm },
+                //    commandType: CommandType.StoredProcedure
+                //).ToList();
+
+
+                var param = new DynamicParameters();
+
+                param.Add("@COMPANYID", companyId);
+                param.Add("@SESSIONID", sessionId);
+                param.Add("@CLASSID", classId);
+                param.Add("@SECTIONID", sectionId);
+                param.Add("@SEARCHTERM", searchTerm);
+                param.Add("@PAGENUMBER", PageNumber);
+                param.Add("@PAGESIZE", PageSize);
+
+                using var multi = await conn.QueryMultipleAsync(
                     "SP_STUDENT_LIST_GET",
-                    new { COMPANYID = companyId, SESSIONID = sessionId, CLASSID = classId, SECTIONID = sectionId, SEARCHTERM = searchTerm },
-                    commandType: CommandType.StoredProcedure
-                ).ToList();
+                    param,
+                    commandType: CommandType.StoredProcedure);
+
+                var student = (await multi.ReadAsync<StudentListViewModel>()).ToList();
+
+                int totalRecords = await multi.ReadFirstOrDefaultAsync<int>();
+
+                var students =  new PagedResult<StudentListViewModel>
+                {
+                    Data = student,
+                    TotalRecords = totalRecords,
+                    PageNumber = PageNumber,
+                    PageSize = PageSize
+                };
 
                 // ── 2. All custom field values in one query (prevents N+1) ──────────
                 // Grouped into a dictionary: StudentID → list of field values
@@ -898,12 +932,11 @@ namespace SchoolERP.API.Services
 
                 // ── 3. Attach custom fields + filter inactive students ───────────────
                 // IsActive is mapped directly by Dapper; no manual column-name guessing needed
-                return students
-                    .ToList();
+                return students;
             }
             catch
             {
-                return new List<StudentListViewModel>();
+                return new PagedResult<StudentListViewModel>();
             }
         }
 
@@ -1451,5 +1484,119 @@ namespace SchoolERP.API.Services
             }
         }
 
+
+        public StudentCategoryViewModel? GetStudentCategoryById(
+            int studentCategoryId,
+            int companyId,
+            int sessionId,
+            int? userId = null)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@STUDENTCATEGORYID", studentCategoryId);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@SESSIONID", sessionId);
+                parameters.Add("@UserID", userId, DbType.Int32);
+
+                var result = conn.QueryFirstOrDefault<StudentCategoryViewModel>(
+                    "SP_MST_STUDENTCATEGORY_GetById",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                // SP returned no rows
+                if (result == null) return null;
+
+                // SP returned a row but reported failure (RESULT = 0)
+                if (result.Result != 1) return null;
+
+                return result;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
+        }
+
+
+        public StudentHouseViewModel? GetStudentHouseById(
+            int studentHouseId,
+            int companyId,
+            int sessionId,
+            int? userId = null)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@STUDENTHOUSEID", studentHouseId);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@SESSIONID", sessionId);
+                parameters.Add("@UserID", userId, DbType.Int32);
+
+                var result = conn.QueryFirstOrDefault<StudentHouseViewModel>(
+                    "SP_MST_STUDENTHOUSE_GESTUDENTHOUSEBYID",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                // SP returned no rows
+                if (result == null) return null;
+
+                // SP returned a row but reported failure (RESULT = 0)
+                if (result.Result != 1) return null;
+
+                return result;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+        }
+
+
+        public StudentDisableReasonViewModel GetDisableReasonsByID(
+            int companyId,
+            int sessionId,int disableReasonID, int? userID=null)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+
+                param.Add("@DISABLEREASONID", disableReasonID);
+                param.Add("@CompanyID", companyId);
+                param.Add("@SessionID", sessionId);
+                param.Add("@UserID", userID);
+
+                var result = conn.QueryFirstOrDefault<StudentDisableReasonViewModel>(
+                   "sp_Student_DisableReason_GetByID",
+                   param,
+                   commandType: CommandType.StoredProcedure);
+
+                // SP returned no rows
+                if (result == null) return null;
+
+                // SP returned a row but reported failure (RESULT = 0)
+                if (result.Result != 1) return null;
+
+                return result;
+                
+            }
+            catch
+            {
+                return new StudentDisableReasonViewModel();
+            }
+        }
     }
 }

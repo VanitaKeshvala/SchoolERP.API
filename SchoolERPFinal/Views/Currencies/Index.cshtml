@@ -4,11 +4,9 @@
     PURPOSE: User interface rendering for the Currencies module.
     ======================================================================
 *@
-@model SchoolERP.Net.Models.MstCurrencyPageViewModel
+@model SchoolERP.Shared.Models.MstCurrencyPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Currency Management";
@@ -18,13 +16,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canAdd = PermHelper.HasPermissionByUrl("/Currencies", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Currencies", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Currencies", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Currencies", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Currencies", "Export");
+    var p = Model.Permissions;
 }
 
 @section Styles {
@@ -40,34 +32,34 @@
         <h6 class="fw-bold mb-0">Currency Management</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary shadow-sm" id="btnAddCurrency" onclick="openAddModal()">
+            <button class="btn btn-primary shadow-sm top-btn" id="btnAddCurrency" onclick="openAddModal()">
                 <i class="ti ti-plus me-1"></i>Add
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-edit me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanPrint)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -122,7 +114,7 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (canEdit)
+                                        @if (p.CanEdit)
                                         {
                                             <div class="form-check form-switch ms-1" onclick="event.stopPropagation()">
                                                 <input class="form-check-input currency-status-switch" type="checkbox" @(c.IsActive ? "checked" : "") onchange="toggleStatus(@c.CurrencyId, this.checked)">
@@ -214,9 +206,9 @@
 
 @section Scripts {
     <script>
-        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+        const permCanAdd = @Html.Raw(JsonSerializer.Serialize(p.CanAdd));
+        const permCanEdit = @Html.Raw(JsonSerializer.Serialize(p.CanEdit));
+        const permCanDelete = @Html.Raw(JsonSerializer.Serialize(p.CanDelete));
         const IV = window.InlineFormValidation;
         const currencyFieldMap = {
             txtCurrencyTitle: 'errTxtCurrencyTitle',

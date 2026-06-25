@@ -4,16 +4,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using SchoolERP.Net.Models;
+using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
+using SchoolERP.Net.Helpers;
 
 namespace SchoolERP.Net.Controllers
 {
     /// <summary>
     /// This controller manages the school's front office activities, such as visitor logs, complaints, phone calls, and mail (postal) services.
     /// </summary>
-    public class FrontOfficeController : Controller
+    public class FrontOfficeController : BaseController
     {
         private readonly IFrontOfficeClientService _client;
         private readonly IUserMenuPermissionClientService _menuPerm;
@@ -23,14 +24,14 @@ namespace SchoolERP.Net.Controllers
         private readonly IHumanResourceClientService _hrClient;
         private const string MenuPath = "/FrontOffice/Setup";
         private const string ComplaintMenuPath = "/FrontOffice/Complaint";
-
+        private readonly ISessionClientService _sessionService;
         public FrontOfficeController(
             IFrontOfficeClientService client,
             IUserMenuPermissionClientService menuPerm,
             IClassClientService classClient,
             ISectionClientService sectionClient,
             IStudentInformationClientService studentClient,
-            IHumanResourceClientService hrClient)
+            IHumanResourceClientService hrClient, ISessionClientService sessionService, PermissionHelper permHelper) : base(permHelper)
         {
             _client = client;
             _menuPerm = menuPerm;
@@ -38,30 +39,51 @@ namespace SchoolERP.Net.Controllers
             _sectionClient = sectionClient;
             _studentClient = studentClient;
             _hrClient = hrClient;
+            _sessionService = sessionService;
         }
-
+        private async Task<int> GetSessionId()
+        {
+            if (CurrentSessionId == null)
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
+        }
         /// <summary>
         /// Shows the 'Setup' page where you can manage categories for visitors and complaints (like Purposes, Sources, and References).
         /// </summary>
         public async Task<IActionResult> Setup()
         {
-            // Step 1: Gather all categories like 'Visitor Purposes', 'Complaint Types', 'Sources', and 'References'.
-            var purposes        = await _client.GetAllPurposesAsync();
-            var complaintTypes  = await _client.GetAllComplaintTypesAsync();
-            var sources         = await _client.GetAllSourcesAsync();
-            var references      = await _client.GetAllReferencesAsync();
-
-            // Step 2: Organize these lists so they can be shown on the setup management page.
-            var model = new FrontOfficeSetupPageViewModel
+            try
             {
-                Purposes       = purposes.Success       ? purposes.Data       : new List<MstFOPurposeViewModel>(),
-                ComplaintTypes = complaintTypes.Success  ? complaintTypes.Data  : new List<MstFOComplaintTypeViewModel>(),
-                Sources        = sources.Success         ? sources.Data         : new List<MstFOSourceViewModel>(),
-                References     = references.Success      ? references.Data      : new List<MstFOReferenceViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/Setup"
+               );
+                // Step 1: Gather all categories like 'Visitor Purposes', 'Complaint Types', 'Sources', and 'References'.
+                var purposes = await _client.GetAllPurposesAsync();
+                var complaintTypes = await _client.GetAllComplaintTypesAsync();
+                var sources = await _client.GetAllSourcesAsync();
+                var references = await _client.GetAllReferencesAsync();
 
-            // Step 3: Open the 'Setup' page for the user.
-            return View(model);
+                // Step 2: Organize these lists so they can be shown on the setup management page.
+                var model = new FrontOfficeSetupPageViewModel
+                {
+                    Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
+                    ComplaintTypes = complaintTypes.Success ? complaintTypes.Data : new List<MstFOComplaintTypeViewModel>(),
+                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>(),
+                    References = references.Success ? references.Data : new List<MstFOReferenceViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Open the 'Setup' page for the user.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+           
         }
 
         // ─── PURPOSE ────────────────────────────────────────────
@@ -233,21 +255,34 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> Complaint()
         {
-            // Step 1: Fetch all recorded complaints, types of complaints, and where they came from (sources).
-            var complaints      = await _client.GetAllComplaintsAsync();
-            var complaintTypes  = await _client.GetAllComplaintTypesAsync();
-            var sources         = await _client.GetAllSourcesAsync();
-
-            // Step 2: Combine this information to be shown on the complaint management screen.
-            var model = new FOComplaintPageViewModel
+            try
             {
-                Complaints     = complaints.Success      ? complaints.Data      : new List<FOComplaintViewModel>(),
-                ComplaintTypes = complaintTypes.Success  ? complaintTypes.Data  : new List<MstFOComplaintTypeViewModel>(),
-                Sources        = sources.Success         ? sources.Data         : new List<MstFOSourceViewModel>()
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/Complaint"
+               );
 
-            // Step 3: Open the 'Complaint' management page.
-            return View(model);
+                // Step 1: Fetch all recorded complaints, types of complaints, and where they came from (sources).
+                var complaints = await _client.GetAllComplaintsAsync();
+                var complaintTypes = await _client.GetAllComplaintTypesAsync();
+                var sources = await _client.GetAllSourcesAsync();
+
+                // Step 2: Combine this information to be shown on the complaint management screen.
+                var model = new FOComplaintPageViewModel
+                {
+                    Complaints = complaints.Success ? complaints.Data : new List<FOComplaintViewModel>(),
+                    ComplaintTypes = complaintTypes.Success ? complaintTypes.Data : new List<MstFOComplaintTypeViewModel>(),
+                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>()
+                };
+                model.Permissions = perms;
+                // Step 3: Open the 'Complaint' management page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -294,12 +329,26 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> PostalReceive()
         {
-            var res = await _client.GetAllPostalReceivesAsync();
-            var model = new FOPostalReceivePageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<FOPostalReceiveViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/PostalReceive"
+               );
+                var res = await _client.GetAllPostalReceivesAsync();
+                var model = new FOPostalReceivePageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<FOPostalReceiveViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -370,12 +419,25 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> PostalDispatch()
         {
-            var res = await _client.GetAllPostalDispatchesAsync();
-            var model = new FOPostalDispatchPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<FOPostalDispatchViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/PostalDispatch"
+               );
+                var res = await _client.GetAllPostalDispatchesAsync();
+                var model = new FOPostalDispatchPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<FOPostalDispatchViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -446,12 +508,26 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> PhoneCallLog()
         {
-            var res = await _client.GetAllPhoneCallLogsAsync();
-            var model = new FOPhoneCallLogPageViewModel
+            try
             {
-                Items = res.Success ? res.Data : new List<FOPhoneCallLogViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/PhoneCallLog"
+               );
+
+                var res = await _client.GetAllPhoneCallLogsAsync();
+                var model = new FOPhoneCallLogPageViewModel
+                {
+                    Items = res.Success ? res.Data : new List<FOPhoneCallLogViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -492,19 +568,34 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> VisitorBook()
         {
-            var visitors = await _client.GetAllVisitorsAsync();
-            var purposes = await _client.GetAllPurposesAsync();
-            var classes  = await _classClient.GetAllAsync();
-            var staff    = await _hrClient.GetAllStaffAsync();
-
-            var model = new FOVisitorBookPageViewModel
+            try
             {
-                Visitors = visitors.Success ? visitors.Data : new List<FOVisitorBookViewModel>(),
-                Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/VisitorBook"
+               );
+                var sessionId = await GetSessionId();
+                var visitors = await _client.GetAllVisitorsAsync();
+                var purposes = await _client.GetAllPurposesAsync();
+                var classes = await _classClient.GetAllAsync();
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+
+                var model = new FOVisitorBookPageViewModel
+                {
+                    Visitors = visitors.Success ? visitors.Data : new List<FOVisitorBookViewModel>(),
+                    Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         [HttpGet]
@@ -524,7 +615,8 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStaff()
         {
-            var r = await _hrClient.GetAllStaffAsync();
+            var sessionId = await GetSessionId();
+            var r = await _hrClient.GetAllStaffAsync(sessionId);
             return Json(new { success = r.Success, data = r.Data });
         }
 
@@ -592,21 +684,36 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> AdmissionInquiry(DateTime? fromDate = null, DateTime? toDate = null, int sourceId = 0, int classId = 0, string? status = null)
         {
-            var inquiries = await _client.GetAllAdmissionInquiriesAsync(fromDate, toDate, sourceId, classId, status);
-            var classes   = await _classClient.GetAllAsync();
-            var sources   = await _client.GetAllSourcesAsync();
-            var references = await _client.GetAllReferencesAsync();
-            var staff     = await _hrClient.GetAllStaffAsync();
-
-            var model = new FOAdmissionInquiryPageViewModel
+            try
             {
-                Inquiries  = inquiries.Success ? inquiries.Data : new List<FOAdmissionInquiryViewModel>(),
-                Classes    = classes.Success   ? classes.Data   : new List<MstClassViewModel>(),
-                Sources    = sources.Success   ? sources.Data   : new List<MstFOSourceViewModel>(),
-                References = references.Success ? references.Data : new List<MstFOReferenceViewModel>(),
-                Staff      = staff.Success     ? staff.Data     : new List<HRStaffViewModel>()
-            };
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/AdmissionInquiry"
+               );
+                var sessionId = await GetSessionId();
+                var inquiries = await _client.GetAllAdmissionInquiriesAsync(fromDate, toDate, sourceId, classId, status);
+                var classes = await _classClient.GetAllAsync(false,sessionId);
+                var sources = await _client.GetAllSourcesAsync();
+                var references = await _client.GetAllReferencesAsync();
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+
+                var model = new FOAdmissionInquiryPageViewModel
+                {
+                    Inquiries = inquiries.Success ? inquiries.Data : new List<FOAdmissionInquiryViewModel>(),
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>(),
+                    References = references.Success ? references.Data : new List<MstFOReferenceViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpGet]

@@ -1,4 +1,5 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -10,7 +11,10 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Retrieves a list of all sections for a specific school and academic session.
         /// </summary>
-        List<MstSectionViewModel> GetAllSections(int companyId, int sessionId, bool includeDeleted = false);
+        List<MstSectionViewModel> GetAllSections(
+            int companyId,
+            int sessionId,
+            bool includeDeleted = false, int? userId = null);
 
         /// <summary>
         /// Gets all sections that are linked to a specific class.
@@ -35,6 +39,12 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a section's active status on or off.
         /// </summary>
-        (bool success, string message) ToggleSectionStatus(int sectionId, bool isActive, int userId);
+        (bool success, string message) ToggleSectionStatus(StatusUpdateRequest request);
+
+        (bool success, string message, int inserted, int skipped) CopySectionsToSession(
+            string sectionIds,
+            int targetSessionId,
+            int companyId,
+            int userId);
     }
 }

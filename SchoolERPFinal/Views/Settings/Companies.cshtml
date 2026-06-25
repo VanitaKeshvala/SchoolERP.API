@@ -1,8 +1,6 @@
-@model SchoolERP.Net.Models.MstCompanyPageViewModel
+@model SchoolERP.Shared.Models.MstCompanyPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
 @{
     Layout = "_Layout";
     int currentUserId = 0;
@@ -11,13 +9,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0)
-        PermHelper.LoadPermissions(currentUserId);
-    var canAdd = PermHelper.HasPermissionByUrl("/Settings", "Add");
-    var canEdit = PermHelper.HasPermissionByUrl("/Settings", "Edit");
-    var canDelete = PermHelper.HasPermissionByUrl("/Settings", "Delete");
-    var canPrint = PermHelper.HasPermissionByUrl("/Settings", "Print");
-    var canExport = PermHelper.HasPermissionByUrl("/Settings", "Export");
+    var p = Model.Permissions;
 }
 
 <style>
@@ -159,34 +151,43 @@
         <h6 class="fw-bold mb-0">Company Master</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary shadow-sm" id="btnAddCompany" onclick="openModal()">
+            <button class="btn btn-primary shadow-sm top-btn" id="btnAddCompany" onclick="openModal()">
                 <i class="ti ti-plus me-1"></i>Add
             </button>
         }
-        @if (canEdit)
+        @if (p.CanEdit)
         {
-            <button id="btnEdit" class="btn btn-info shadow-sm" disabled onclick="editSelected()">
+            <button id="btnEdit" class="btn btn-info shadow-sm top-btn" disabled onclick="editSelected()">
                 <i class="ti ti-pencil me-1"></i>Edit
             </button>
         }
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger shadow-sm" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger shadow-sm top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
-        @if (canPrint)
+        @if (p.CanEdit)
         {
-            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm" onclick="triggerExport('print')">
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanPrint)
+        {
+            <button class="btn btn-secondary d-inline-flex align-items-center shadow-sm top-btn" onclick="triggerExport('print')">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
-        @if (canExport)
+        @if (p.CanExport)
         {
             <div class="dropdown d-inline-flex">
-                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-warning dropdown-toggle d-inline-flex align-items-center shadow-sm top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="ti ti-download me-1"></i>Export
                 </button>
                 <ul class="dropdown-menu">
@@ -291,7 +292,7 @@
                                 @* <td><span class="text-dark small fw-medium">@item.SessionTitle</span></td> *@
                                 <td><span class="badge bg-light text-dark border">@item.CurrencyCode</span></td>
                                 <td class="text-center">
-                                    @if (canEdit)
+                                    @if (p.CanEdit)
                                     {
                                         <div class="form-check form-switch d-flex justify-content-center" onclick="event.stopPropagation()">
                                             <input class="form-check-input" type="checkbox" checked="@item.IsActive" onchange="toggleStatus(@item.CompanyId, this.checked)">
@@ -320,7 +321,7 @@
                 <h5 class="modal-title fw-bold mb-0" id="modalTitle">Add New Company</h5>
                 <div class="ms-auto d-flex align-items-center gap-2">
                     @* <button type="button" class="btn btn-sm btn-light" id="btnCancel" data-bs-dismiss="modal">Cancel</button> *@
-                    @if (canAdd || canEdit)
+                    @if (p.CanAdd || p.CanEdit)
                     {
                         <button type="button" class="btn btn-sm btn-success shadow-sm" id="btnSave" onclick="saveCompany()"><i class="ti ti-cloud me-1"></i> Save</button>
                     }
@@ -881,9 +882,9 @@
 
 @section Scripts {
 <script>
-    const permCanAdd = @Html.Raw(JsonSerializer.Serialize(canAdd));
-    const permCanEdit = @Html.Raw(JsonSerializer.Serialize(canEdit));
-    const permCanDelete = @Html.Raw(JsonSerializer.Serialize(canDelete));
+    const permCanAdd = @Html.Raw(JsonSerializer.Serialize(p.CanAdd));
+    const permCanEdit = @Html.Raw(JsonSerializer.Serialize(p.CanEdit));
+    const permCanDelete = @Html.Raw(JsonSerializer.Serialize(p.CanDelete));
     const IV = window.InlineFormValidation;
     const companyFieldMap = { 
         txtSchoolName: 'errSchoolName', 
@@ -931,6 +932,8 @@
                 $('#btnDelete').prop('disabled', checkedCount === 0);
                 // Edit sirf 1 record select hone par
                 $('#btnEdit').prop('disabled', checkedCount !== 1);
+                    $('#btnActive').prop('disabled', checkedCount === 0);
+                $('#btnInactive').prop('disabled', checkedCount === 0);
     }
 
     function toggleHierarchy(parentId, event) {
@@ -1176,18 +1179,98 @@
             location.reload();
             return;
         }
-        try {
-            const response = await fetch(`/Settings/ToggleCompanyStatus?id=${id}&isActive=${isActive}`, { method: 'POST' });
-            const result = await response.json();
-            if (!result.success) {
-                showToast(result.message || 'Error updating status', 'error');
-                location.reload();
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('An unexpected error occurred', 'error');
-            location.reload();
-        }
+
+            let sectionIds = [];
+                     $('.student-checkbox:checked').each(function () {
+                        sectionIds.push(parseInt($(this).val()));
+                    });
+
+                    if (sectionIds.length === 0)
+                    {
+                        if(id !=0)
+                        {
+                            sectionIds.push(parseInt(id));
+                        }
+                        else
+                        {
+                            showToast('Please select at least one user', false);
+                            return;
+                        }
+
+                    }
+
+                    const request = {
+                        ids: sectionIds.join(','),
+                        isActive: isActive
+                    };
+                    try
+                    {
+                            const config = isActive
+                            ? {
+                                icon            : 'question',
+                                title           : 'Activate Record(s)?',
+                                text            : 'Activating this record will make it visible and available for use across the system. Do you want to continue?',
+                                confirmText     : 'Yes, Activate',
+                                confirmBtnClass : 'btn btn-success me-2',
+                                successTitle    : 'Activated Successfully!',
+                                successText     : 'The selected record(s) have been activated and are now available for use.'
+                            }
+                            : {
+                                icon            : 'warning',
+                                title           : 'Deactivate Record(s)?',
+                                text            : 'Deactivating this record will hide it from the system and prevent it from being used. Do you want to continue?',
+                                confirmText     : 'Yes, Deactivate',
+                                confirmBtnClass : 'btn btn-danger me-2',
+                                successTitle    : 'Deactivated Successfully!',
+                                successText     : 'The selected record(s) have been deactivated and are no longer available for use.'
+                            };
+
+
+                        Swal.fire({
+                        icon    : config.icon,
+                        title   : config.title,
+                        text    : config.text,
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, proceed!',
+                        customClass: {
+                            confirmButton: 'btn btn-danger me-2',
+                            cancelButton: 'btn btn-secondary'
+                        },
+                        buttonsStyling: false
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                // ✅ fixed typo bluk → bulk
+                                    url: '/Settings/ToggleCompanyStatus',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify(request),
+                                success: function (res) {
+                                    if (res.success) {
+                                        Swal.fire('Updated!', res.message || 'Status updated successfully.', 'success')
+                                            .then(() => location.reload());
+                                    } else {
+                                        Swal.fire('Error!', res.message || 'Failed to update status.', 'error');
+                                    }
+                                },
+                                error: function (xhr) {
+                                    // ✅ log xhr for debugging
+                                    console.error('Status update error:', xhr.status, xhr.responseText);
+                                    Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                                }
+                            });
+                        }
+                    });
+                }
+                catch (err) {
+                    console.error(err);
+                    IV.setNotice('sectionPageNotice', 'Could not update status.');
+                    location.reload();
+                }
+
+        
     }
 
 

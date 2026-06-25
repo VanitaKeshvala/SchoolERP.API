@@ -18461,3 +18461,72 @@ Author URL: https://themeforest.net/user/dreamstechnologies
     background-color: #2E37A4 !important;
     color: #fff;
 }
+
+
+/* Hide DataTable export buttons */
+.dt-buttons {
+    display: none !important;
+}
+
+/*
+             * STICKY — Page Header (Title + Action Buttons)
+             * Uses existing classes already on the div
+             * top: 60px = your navbar height — adjust if needed
+             */
+.d-flex.align-items-sm-center.justify-content-between.flex-wrap.gap-2.mb-2 {
+    position: sticky;
+    top: 60px;
+    z-index: 99;
+    background-color: #f5f5f5;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,.07);
+    box-shadow: 0 2px 6px rgba(0,0,0,.06);
+}
+
+/*
+             * STICKY — Search / Filter Bar
+             * Targets existing .shadow-tbl-outer inside .col-md-12
+             * top: 116px = navbar(60) + header(~56) — adjust if needed
+             */
+.col-md-12 .shadow-tbl-outer {
+    position: sticky;
+    top: 116px;
+    z-index: 98;
+    box-shadow: 0 3px 8px rgba(0,0,0,.08) !important;
+    margin-bottom: 0 !important;
+}
+
+/*
+             * STICKY — Active Filter Badges
+             * Targets existing id #activeFilterBadges already on the div
+             * top: 180px = navbar(60) + header(56) + filter-bar(64) — adjust if needed
+             */
+#activeFilterBadges {
+    position: sticky;
+    top: 180px;
+    z-index: 97;
+    background-color: #f5f5f5;
+    padding-bottom: 4px;
+}
+
+    #activeFilterBadges .card {
+        box-shadow: 0 2px 6px rgba(0,0,0,.06) !important;
+        margin-bottom: 4px !important;
+    }
+
+/* Prevent content hiding under sticky bars on load */
+#card-v,
+#list-v {
+    padding-top: 8px;
+}
+.top-btn {
+    min-width: 105px;
+    height: 30px;
+    padding: 0 16px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px; /* space between icon and text */
+    box-sizing: border-box;
+}

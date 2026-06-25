@@ -1,4 +1,5 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 { 
@@ -35,7 +36,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a company's active status on or off (e.g., to temporarily disable it).
         /// </summary>
-        (bool success, string message) ToggleStatus(int companyId, bool isActive, int userId);
+        (bool success, string message) ToggleStatus(StatusUpdateRequest request);
 
         /// <summary>
         /// Updates which company a specific user is currently working in.

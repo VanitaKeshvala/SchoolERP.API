@@ -1,5 +1,4 @@
-@using SchoolERP.Net.Helpers
-@inject PermissionHelper PermHelper
+@model SchoolERP.Shared.Models.PagePermissions
 @{
     ViewData["Title"] = "Upload & Share Content";
 
@@ -10,10 +9,7 @@
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
-    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
-
-    var canAdd = PermHelper.HasPermissionByUrl("/DownloadCenter/UploadContent", "Add");
-    var canDelete = PermHelper.HasPermissionByUrl("/DownloadCenter/UploadContent", "Delete");
+    var p = Model;
 }
 
 <!-- Page Header -->
@@ -23,18 +19,18 @@
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
        
-        @if (canDelete)
+        @if (p.CanDelete)
         {
-            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center" disabled onclick="deleteSelected()">
+            <button id="btnDelete" class="btn btn-danger d-inline-flex align-items-center top-btn" disabled onclick="deleteSelected()">
                 <i class="ti ti-trash me-1"></i>Delete Selected
             </button>
         }
-        @if (canAdd)
+        @if (p.CanAdd)
         {
-            <button class="btn btn-primary d-inline-flex align-items-center" onclick="openGenModal()">
+            <button class="btn btn-primary d-inline-flex align-items-center top-btn" onclick="openGenModal()">
                 <i class="ti ti-link me-1"></i>Generate URL
             </button>
-            <button class="btn btn-dark d-inline-flex align-items-center" onclick="openUploadModal()">
+            <button class="btn btn-dark d-inline-flex align-items-center top-btn" onclick="openUploadModal()">
                 <i class="ti ti-cloud-upload me-1"></i>Upload Content
             </button>
         }

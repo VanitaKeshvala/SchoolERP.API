@@ -1,4 +1,5 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -20,7 +21,7 @@ namespace SchoolERP.API.Interfaces
         List<MstPermissionViewModel> GetAllPermissions();
         MstPermissionViewModel? GetPermissionByID(int permissionID);
         (bool success, string message) UpsertPermission(MstPermissionUpsertRequest request, int userId, string ipAddress);
-        (bool success, string message) TogglePermissionStatus(int permissionID, bool isActive, int userId, string ipAddress);
+        (bool success, string message) TogglePermissionStatus(StatusUpdateRequest request);
         (bool success, string message) DeletePermission(List<int> permissionID, int userId, string ipAddress);
     }
 }

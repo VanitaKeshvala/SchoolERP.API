@@ -1,0 +1,138 @@
+﻿@model SchoolERP.Shared.Models.DashboardViewModel
+@using System.Security.Claims
+@using SchoolERP.Net.Helpers
+@inject PermissionHelper PermHelper
+@{
+    ViewData["Title"] = "Staff Directory";
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    if (currentUserId > 0) PermHelper.LoadPermissions(currentUserId);
+
+    var canAdd = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Add");
+    var canEdit = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Edit");
+    var canDelete = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Delete");
+    var canPrint = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Print");
+    var canExport = PermHelper.HasPermissionByUrl("/HumanResource/Staffs", "Export");
+    var canSave = (Model.EditDashboard == null && canAdd) || (Model.EditDashboard != null && canEdit);
+}
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">@(Model.EditDashboard == null ? "Add Dashboard" : "Edit Dashboard")</h6>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+
+        @if (canSave)
+        {
+            <button type="button" class="btn btn-success d-inline-flex align-items-center top-btn" onclick="saveDashboard()">
+                <i class="ti ti-cloud me-1"></i>Save
+            </button>
+        }
+        <a href="/Role/Dashboard" class="btn btn-sm btn-info d-inline-flex align-items-center top-btn">
+            <i class="ti ti-arrow-narrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+<!-- End Page Header -->
+<!-- start row -->
+<form id="dashboardForm">
+    <input type="hidden" id="hdnDashboardID" value="@(Model.EditDashboard?.DashboardID ?? 0)">
+   
+
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow-tbl-outer">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Role <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="ddlRole" name="RoleIDs" required>
+                                    @foreach (var r in Model.Roles)
+                                    {
+                                        <option value="@r.RoleID">@r.RoleName</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Dashboard Tital <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtDashboardTital" value="@Model.EditDashboard?.DashboardTital" required />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Dashboard URL <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="txtDashboardURL" value="@Model.EditDashboard?.DashboardURL" required />
+                            </div>
+                        </div>                                              
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@section Scripts {
+<script>
+        async function saveDashboard() {
+                const form = document.getElementById('dashboardForm');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const getVal = (id) => document.getElementById(id)?.value?.trim() ?? "";
+                
+                
+                const getInt = (id) => parseInt(document.getElementById(id)?.value) || 0;
+                const getFloat = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+                const data = {
+                    dashboardID: getInt('hdnDashboardID'),
+                    dashboardTital: getVal('txtDashboardTital'),
+                    dashboardURL: getVal('txtDashboardURL'),
+                    roleId: getInt('ddlRole'),
+                    isActive: true
+                };
+
+              try {
+                    const r   = await fetch('/Role/SaveDashboard', {
+                        method : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body   : JSON.stringify(data)
+                    });
+                    const res = await r.json();
+
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        if (data.dashboardID === 0) {
+                            setTimeout(() => location.href = '/Role/Dashboard', 1500);
+                        } else {
+                            setTimeout(() => location.reload(), 1500);
+                        }
+                    } else {
+                        showToast(res.message, 'danger');
+                    }
+                } catch (e) {
+                    showToast('An unexpected error occurred.', 'danger');
+                    console.error(e);
+                }
+                
+            }
+
+            function showToast(msg, type = 'success') {
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
+                    <div class="d-flex"><div class="toast-body">${msg}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div></div>`;
+                document.body.appendChild(wrapper);
+                setTimeout(() => wrapper.remove(), 4000);
+            }
+</script>
+}

@@ -1,4 +1,4 @@
-﻿using SchoolERP.API.Models;
+﻿using SchoolERP.Shared.Models;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -103,7 +103,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Adds a new staff member or updates an existing one, including personal details, documents, and system access.
         /// </summary>
-        (bool Success, string Message) UpsertStaff(HRStaffUpsertRequest req, int companyId, int sessionId, int userId);
+        StaffUpsertDTO UpsertStaff(HRStaffUpsertRequest req, int companyId, int sessionId, int userId);
 
         /// <summary>
         /// Removes a staff member from the system.
@@ -205,6 +205,9 @@ namespace SchoolERP.API.Interfaces
         (bool Success, string Message) DeleteTimeline(int id, int userId);
         (byte[] Bytes, string FileName, string ContentType) GetTimelineDocument(int id);
         (bool Success, string Message) ToggleStaffStatus(int staffId, bool isActive, int userId, DateTime? statusDate);
-
+        (bool Success, string Message) UpdateProfile(
+           int staffId,
+           string PhotoDoc,
+           int userId);
     }
 }

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SchoolERP.Net.Models;
-using SchoolERP.Net.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Services.Clients
 {
@@ -22,7 +22,10 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await GetAsync<List<UserViewModel>>("api/user");
         }
-
+        public async Task<ApiResponse<PagedResult<UserViewModel>>> GetAllUsersWithPaginationAsync(UserSearchRequest request)
+        {
+            return await PostAsync<PagedResult<UserViewModel>>("api/user", request);
+        }
         /// <summary>
         /// Sends a request to the server to look up details for a specific user by its ID.
         /// </summary>
@@ -100,6 +103,16 @@ namespace SchoolERP.Net.Services.Clients
         public async Task<ApiResponse<bool>> SaveUserWizardAsync(UserUpsertRequest request)
         {
             return await PostAsync<bool>("api/user/save-wizard", request);
+        }
+
+        public async Task<ApiResponse<bool>> BulkToggleStatusAsync(UserStatusUpdateRequest request)
+        {
+            return await PostAsync<bool>("api/user/bulk-toggle-status", request);
+        }
+
+        public async Task<ApiResponse<bool>> DeleteBulkUserAsync(string ids)
+        {
+            return await PostAsync<bool>($"api/user/delete-bulk?ids={Uri.EscapeDataString(ids)}",null!);
         }
     }
 }

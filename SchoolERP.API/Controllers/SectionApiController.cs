@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
-using SchoolERP.API.Models;
-using SchoolERP.API.Models.Common;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -27,17 +27,18 @@ namespace SchoolERP.API.Controllers
             _menuPerm = menuPerm;
         }
 
+
         [HttpGet("GetAll")]
-        public IActionResult GetAll(bool includeDeleted = false)
+        public IActionResult GetAll(bool includeDeleted = false, int sessionId=0)
         {
             int userId = GetCurrentUserId();
             int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+            //int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
 
             if (companyId == 0 || sessionId == 0)
                 return Ok(ApiResponse<List<MstSectionViewModel>>.SuccessResponse(new List<MstSectionViewModel>()));
 
-            var data = _sectionService.GetAllSections(companyId, sessionId, includeDeleted);
+            var data = _sectionService.GetAllSections(companyId, sessionId, includeDeleted, userId);
             return Ok(ApiResponse<List<MstSectionViewModel>>.SuccessResponse(data));
         }
 
@@ -90,20 +91,64 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpPost("ToggleStatus")]
-        public async Task<IActionResult> ToggleStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change section status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change section status." });
 
-            int userId = GetCurrentUserId();
-            var (success, message) = _sectionService.ToggleSectionStatus(id, isActive, userId);
-            return Ok(new { success, message });
+                int userId = GetCurrentUserId();
+                var (success, message) = _sectionService.ToggleSectionStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message =ex.Message });
+            }            
         }
 
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+        }
+
+        
+
+        [HttpPost("CopyToSession")]
+        public async Task<IActionResult> CopyToSession([FromBody] SectionCopyRequest request)
+        {
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to copy sections." });
+
+                if (string.IsNullOrWhiteSpace(request.SectionIds))
+                    return Ok(new { success = false, message = "Please select at least one section to copy." });
+
+                if (request.TargetSessionId <= 0)
+                    return Ok(new { success = false, message = "Please select a target session." });
+
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+
+                if (companyId == 0)
+                    return Ok(new { success = false, message = "Company not found." });
+
+                var (success, message, inserted, skipped) =
+                    _sectionService.CopySectionsToSession(
+                        request.SectionIds,
+                        request.TargetSessionId,
+                        companyId,
+                        userId);
+
+                return Ok(new { success, message, inserted, skipped });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
     }
 }
