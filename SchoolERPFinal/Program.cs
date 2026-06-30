@@ -245,7 +245,21 @@ builder.Services.AddHttpClient<IDashboardClientService, DashboardClientService>(
 {
     client.BaseAddress = new Uri(apiBaseUrl);
 });
+builder.Services.AddHttpClient<ICopySessionServices, CopySessionServices>(client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
 builder.Services.AddHttpClient<IUserManagementClientService, UserManagementClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IHostelTypeClientService, HostelTypeClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IRoomCoolingTypeClientService, RoomCoolingTypeClientService>(client =>
 {
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);

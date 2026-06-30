@@ -572,11 +572,11 @@ namespace SchoolERP.API.Controllers.Api
 
 
         [HttpPost("UpdateProfile")]
-        public IActionResult UpdateProfile([FromBody] HRStaffProfileRequest req)
+        public IActionResult UpdateProfile([FromBody] ProfileRequest req)
         {
             try
             {
-                var result = _hrService.UpdateProfile(req.StaffId, req.PhotoDoc, GetUserId());
+                var result = _hrService.UpdateProfile(req.Id, req.PhotoDoc, GetUserId());
                 return Ok(new { success = result.Success, message = result.Message });
             }
             catch (Exception ex)

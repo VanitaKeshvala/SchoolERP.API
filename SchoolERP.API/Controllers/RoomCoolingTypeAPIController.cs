@@ -1,0 +1,136 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
+using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+using System.Security.Claims;
+
+namespace SchoolERP.API.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class RoomCoolingTypeAPIController : ControllerBase
+    {
+        private readonly IRoomCoolingTypeService _roomCoolingService;
+        private readonly IUserMenuPermissionService _menuPerm;
+        private const string MenuPath = "/RoomCoolingType/Index";
+        public RoomCoolingTypeAPIController(IRoomCoolingTypeService roomCoolingService, IUserMenuPermissionService menuPerm)
+        {
+            _roomCoolingService = roomCoolingService;
+            _menuPerm = menuPerm;
+        }
+        private int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+        }
+        // ------------------------------------------------------------
+        // POST : api/HostelType/Save
+        // INSERT OR UPDATE
+        // ------------------------------------------------------------
+        [HttpPost("Save")]
+        public async Task<IActionResult> Save([FromBody] RoomCoolingTypeListDto model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+                model.UserID = GetCurrentUserId();
+                // Capture client IP if not provided
+                if (string.IsNullOrWhiteSpace(model.IPAddress))
+                    model.IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                var response = await _roomCoolingService.UpsertRoomCoolingTypeAsync(model);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        [HttpGet("GetAll")]
+        public async Task<IActionResult> GetAll([FromQuery] int companyId, [FromQuery] int sessionId)
+        {
+            try
+            {
+                if (companyId <= 0 || sessionId <= 0)
+                    return BadRequest(new ApiResponse
+                    {
+                        Result = 0,
+                        Message = "Valid Company ID and Session ID are required."
+                    });
+
+                var response = await _roomCoolingService.GetAllRoomCoolingTypeAsync(companyId, sessionId, false);
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        // ------------------------------------------------------------
+        // GET : api/HostelType/GetById/{id}
+        // ------------------------------------------------------------
+        [HttpGet("GetById/{id:int}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new ApiResponse { Result = 0, Message = "Invalid ID." });
+
+                var response = await _roomCoolingService.GetRoomCoolingTypeByIdAsync(id);
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+        }
+
+        [HttpPost("Delete")]
+        public async Task<IActionResult> Delete(List<int> ids)
+        {
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete classes." });
+
+                int userId = GetCurrentUserId();
+                var (success, message) = _roomCoolingService.DeleteRoomCoolingType(ids, userId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("ToggleStatus")]
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
+        {
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change class status." });
+
+                int userId = GetCurrentUserId();
+                var (success, message) = _roomCoolingService.ToggleRoomCoolingTypeStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+    }
+}

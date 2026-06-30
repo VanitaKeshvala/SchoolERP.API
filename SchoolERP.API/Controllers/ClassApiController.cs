@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
@@ -30,18 +31,26 @@ namespace SchoolERP.API.Controllers
         [HttpGet("GetAll")]
         public IActionResult GetAll(bool includeDeleted = false,int? sessionId=null)
         {
-            int userId = GetCurrentUserId();
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            //int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
-            if (sessionId == null) 
+            try
             {
-                sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
-            }
-            if (companyId == 0 || sessionId == 0)
-                return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(new List<MstClassViewModel>()));
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                //int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                if (sessionId == null)
+                {
+                    sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (companyId == 0 || sessionId == 0)
+                    return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(new List<MstClassViewModel>()));
 
-            var data = _classService.GetAllClasses(companyId, sessionId.Value, includeDeleted);
-            return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(data));
+                var data = _classService.GetAllClasses(companyId, sessionId.Value, includeDeleted);
+                return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet("GetByID/{id}")]
@@ -55,23 +64,36 @@ namespace SchoolERP.API.Controllers
         [HttpPost("Upsert")]
         public async Task<IActionResult> Upsert([FromBody] MstClassUpsertRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            int userId = GetCurrentUserId();
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
 
-            var isCreate = request.ClassID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add classes." });
-            if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit classes." });
+                var isCreate = request.ClassID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add classes." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit classes." });
+                if (request.CompanyId == null) 
+                {
+                    request.CompanyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionId == null) 
+                {
+                    request.SessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                
+                if (request.CompanyId == 0 || request.SessionId == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
 
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
-
-            if (companyId == 0 || sessionId == 0)
-                return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
-
-            var (success, message) = _classService.UpsertClass(request, companyId, sessionId, userId);
-            return Ok(new { success, message });
+                var (success, message) = _classService.UpsertClass(request, request.CompanyId.Value, request.SessionId.Value, userId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success=false, message=ex.Message });
+            }
+            
         }
 
         [HttpPost("Delete")]
@@ -108,6 +130,35 @@ namespace SchoolERP.API.Controllers
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+        }
+
+        [HttpPost("GetAllClassWithPage")]
+        public async Task<IActionResult> GetAllClassWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(new List<MstClassViewModel>()));
+
+                var data = await _classService.GetAllClassWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstClassViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

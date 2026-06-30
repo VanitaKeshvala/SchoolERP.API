@@ -59,5 +59,11 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<dynamic>> PromoteStudentsAsync(PromotionRequest req)
             => PostAsync<dynamic>("api/AcademicsApi/PromoteStudents", req);
+
+
+        public async Task<ApiResponse<PagedResult<ClassTeacherViewModel>>> GetAllClassWithPageAsync(AcademicsSearchRequest request)
+        {
+            return await PostAsync<PagedResult<ClassTeacherViewModel>>("api/AcademicsApi/GetAllClassTeachersWithPage", request);
+        }
     }
 }

@@ -136,7 +136,11 @@
                                 <div class="doctor-profile-img">
                                     @if (student.StudentPhoto != null)
                                     {
-                                        <img src="data:@(student.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(student.StudentPhoto)" class="rounded" alt="Student Photo" style="width: 100%;" />
+                                        <img src="@(string.IsNullOrEmpty(student.StudentPhoto)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + student.StudentPhoto))"
+                                             class="rounded" alt="Student Photo" style="width: 100%;" />
+                                        // <img src="data:@(student.StudentPhotoType ?? "image/jpeg");base64, @Convert.ToBase64String(student.StudentPhoto)" class="rounded" alt="Student Photo" style="width: 100%;" />
                                     }
                                     else
                                     {

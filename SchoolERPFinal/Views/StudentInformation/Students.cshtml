@@ -21,6 +21,17 @@
     {
         startPage = Math.Max(1, endPage - 4);
     }
+
+    // Helper: build pagination URL preserving all current filters
+    string PageUrl(int pageNum) => Url.Action("Students", "StudentInformation", new
+    {
+        page = pageNum,
+        pageSize = Model.PageSize,
+        classId = Model.SelectedClassId,
+        sectionId = Model.SelectedSectionId,
+        search = Model.SearchTerm,
+        viewType = Model.ViewType
+    })!;
 }
 
 @section Styles {
@@ -41,7 +52,7 @@
         @if (p.CanAdd)
         {
             <a href="/StudentInformation/StudentAdmission" class="btn btn-primary d-inline-flex align-items-center top-btn">
-                <i class="ti ti-plus me-1"></i>New Admission
+                <i class="ti ti-plus me-1"></i>Add
             </a>
         }
         @if (p.CanEdit)
@@ -56,12 +67,16 @@
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }        
+        <!--<button class="btn btn-primary d-inline-flex align-items-center top-btn" type="button" visible="false" onclick="openCopyModal('Students')">
+            <i class="ti ti-copy me-1"></i>Copy
+        </button>-->
         @if (p.CanPrint)
         {
             <button class="btn btn-secondary d-inline-flex align-items-center top-btn" type="button" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
         }
+        
         @if (p.CanImport)
         {
             <a href="/StudentInformation/ImportStudent" class="btn btn-warning d-inline-flex align-items-center top-btn"><i class="ti ti-upload me-1"></i> Import Student</a>
@@ -89,64 +104,153 @@
     <div class="col-md-12">
         <div class="card shadow-tbl-outer mb-2">
             <div class="card-body p-3">
-                <form method="post" action="/StudentInformation/Students" id="filterForm">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <input type="hidden" name="viewType" id="hdnViewType" value="@Model.ViewType" />
-                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                <form method="get" action="/StudentInformation/Students" id="filterForm">
+                    <!-- Preserve pageSize and viewType across filter submits -->
+                    <input type="hidden" name="pageSize"  value="@Model.PageSize" />
+                    <input type="hidden" name="page"      value="1" />             @* always reset to page 1 on new filter *@
+                    <input type="hidden" name="viewType"  id="hdnViewType" value="@Model.ViewType" />
+
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                        <!-- ── Search Box ─────────────────────────────────── -->
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1" style="max-width:420px;">
                             <i class="fas fa-search search-icon-input"></i>
-                            <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search by name, roll, admission..." />
+                            <input type="text"
+                                   name="search"
+                                   id="txtSearchInput"
+                                   class="form-control border-0 ps-2"
+                                   placeholder="Search by name, roll, admission..."
+                                   value="@Model.SearchTerm"
+                                   autocomplete="off" />
+                            @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                            {
+                                <a href="javascript:void(0)" onclick="clearSearch()" class="text-muted ms-1" title="Clear search">
+                                    <i class="ti ti-x fs-14"></i>
+                                </a>
+                            }
                         </div>
-                        <!--<input type="text" name="search" id="txtSearchInput" class="form-control w-25 me-3" placeholder="Search by name, roll, admission..." value="@Model.SearchTerm" />-->
+
                         <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+
+                            <!-- ── Filter Dropdown ────────────────────────── -->
                             <div class="dropdown">
-                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
-                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                <a href="#" class="btn btn-white border btn-lg @(Model.SelectedClassId.HasValue || Model.SelectedSectionId.HasValue ? "text-primary border-primary" : "")"
+                                   data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    <i class="ti ti-filter me-1"></i>Filters
+                                    @if (Model.SelectedClassId.HasValue || Model.SelectedSectionId.HasValue)
+                                    {
+                                        <span class="badge bg-primary ms-1 mt-1">
+                                            @((Model.SelectedClassId.HasValue ? 1 : 0) + (Model.SelectedSectionId.HasValue ? 1 : 0))
+                                        </span>
+                                    }
                                 </a>
                                 <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
-                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
                                         <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                        <div class="d-flex align-items-center justify-content-end">
-                                            <button type="submit" class="btn text-primary fs-6">Apply Filter</button>
-                                        </div>
+                                       
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i class="ti ti-filter-check me-1"></i>Apply
+                                        </button>
                                     </div>
                                     <div class="filter-body pb-0 p-3">
+                                        <!-- Class Filter -->
                                         <div class="mb-3">
-                                            <label class="form-label mb-1">Class</label>
+                                            <label class="form-label mb-1 fw-semibold">Class</label>
                                             <select name="classId" id="classSelect" class="form-select form-control select2">
                                                 <option value="">All Classes</option>
                                                 @foreach (var c in ViewBag.Classes)
                                                 {
-                                                    <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
+                                                    <option value="@c.ClassID">
+                                                        @c.ClassName
+                                                    </option>
                                                 }
                                             </select>
                                         </div>
+                                        <!-- Section Filter — populated via AJAX when class changes -->
                                         <div class="mb-3">
-                                            <label class="form-label mb-1">Section</label>
+                                            <label class="form-label mb-1 fw-semibold">Section</label>
                                             <select name="sectionId" id="sectionSelect" class="form-select form-control select2">
                                                 <option value="">All Sections</option>
                                                 @foreach (var s in ViewBag.Sections)
                                                 {
-                                                    <option value="@s.SectionID" selected="@(Model.SelectedSectionId == s.SectionID)">@s.SectionName</option>
+                                                    <option value="@s.SectionID">
+                                                        @s.SectionName
+                                                    </option>
                                                 }
                                             </select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white border border-muted rounded px-1 py-1 text-center d-flex align-items-center justify-content-center">
-                                <a href="#list-v" id="list-view-btn" class="btn rounded d-flex align-items-center justify-content-center @(Model.ViewType == "list" ? "active" : "")">
+
+                            <!-- ── View Toggle ────────────────────────────── -->
+                            <div class="bg-white border border-muted rounded px-1 py-1 d-flex align-items-center">
+                                <a href="#list-v" id="list-view-btn"
+                                   class="btn rounded d-flex align-items-center @(Model.ViewType == "list" ? "active" : "")">
                                     <i class="ti ti-list fs-14 text-body"></i>
                                 </a>
-                                <a href="#card-v" id="card-view-btn" class="btn rounded d-flex align-items-center justify-content-center @(Model.ViewType == "card" ? "active" : "")">
+                                <a href="#card-v" id="card-view-btn"
+                                   class="btn rounded d-flex align-items-center @(Model.ViewType == "card" ? "active" : "")">
                                     <i class="ti ti-layout-grid fs-14 text-body"></i>
                                 </a>
                             </div>
+
                         </div>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    <!-- ══ ACTIVE FILTER BADGES ══════════════════════════════════════════ -->
+    @{
+        bool hasActiveFilters = !string.IsNullOrEmpty(Model.SearchTerm)
+        || Model.SelectedClassId.HasValue
+        || Model.SelectedSectionId.HasValue;
+    }
+    @if (hasActiveFilters)
+    {
+        <div class="col-xl-12">
+            <div class="card shadow-tbl border-0 py-2 mb-2">
+                <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span class="text-muted small fw-bold ms-2 me-2">
+                        <i class="ti ti-filter-check me-1"></i>Active Filters:
+                    </span>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                        {
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1">
+                                Search: @Model.SearchTerm
+                                <a href="@PageUrl(1).Replace("search=" + Uri.EscapeDataString(Model.SearchTerm ?? ""), "search=")"
+                                   class="text-primary ms-1"><i class="ti ti-x" style="font-size:10px"></i></a>
+                            </span>
+                        }
+                        @if (Model.SelectedClassId.HasValue)
+                        {
+                            var className = ((IEnumerable<dynamic>)ViewBag.Classes)
+                            .FirstOrDefault(c => c.ClassID == Model.SelectedClassId.Value)?.ClassName ?? Model.SelectedClassId.ToString();
+                            <a href="@Url.Action("Students","StudentInformation", new { page=1, pageSize=Model.PageSize, sectionId=Model.SelectedSectionId, search=Model.SearchTerm, viewType=Model.ViewType })"
+                               class="badge bg-info-subtle text-info border border-info-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1 text-decoration-none">
+                                Class: @className <i class="ti ti-x ms-1" style="font-size:10px"></i>
+                            </a>
+                        }
+                        @if (Model.SelectedSectionId.HasValue)
+                        {
+                            var sectionName = ((IEnumerable<dynamic>)ViewBag.Sections)
+                            .FirstOrDefault(s => s.SectionID == Model.SelectedSectionId.Value)?.SectionName ?? Model.SelectedSectionId.ToString();
+                            <a href="@Url.Action("Students","StudentInformation", new { page=1, pageSize=Model.PageSize, classId=Model.SelectedClassId, search=Model.SearchTerm, viewType=Model.ViewType })"
+                               class="badge bg-success-subtle text-success border border-success-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1 text-decoration-none">
+                                Section: @sectionName <i class="ti ti-x ms-1" style="font-size:10px"></i>
+                            </a>
+                        }
+                    </div>
+                    <a href="/StudentInformation/Students?viewType=@Model.ViewType&pageSize=@Model.PageSize&page=1"
+                       class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none">
+                        <i class="ti ti-trash me-1"></i>Clear All
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
 
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">
@@ -164,18 +268,24 @@
         <div class="row">
             @foreach (var student in Model.Students)
             {
-                <div class="col-xl-6 col-md-12 student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                <div class="col-xl-6 col-md-12 student-item-row" 
+                onclick="selectStudent(@student.StudentID, this)" 
+                style="cursor: pointer;">
                     <div class="card shadow-tbl-outer mb-2">
+                        <input type="checkbox" name="selectedStudent"
+                               class="form-check-input student-checkbox me-3 position-absolute m-1"
+                               value="@student.StudentID">
                         <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
                             <div class="me-3 d-flex align-items-center">
 
-                                <input type="checkbox" name="selectedStudent"
-                                       class="form-check-input student-checkbox me-3 position-absolute"
-                                       value="@student.StudentID">
+                                
                                 <div class="doctor-profile-img">
                                     @if (student.StudentPhoto != null)
                                     {
-                                        <img src="data:@(student.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(student.StudentPhoto)" class="rounded" alt="Student Photo" style="width: 100%;" />
+                                        <img src="@(string.IsNullOrEmpty(student.StudentPhoto)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + student.StudentPhoto))"                                         
+                                        class="rounded" alt="Student Photo" style="width: 100%;height:130px" />
                                     }
                                     else
                                     {
@@ -213,6 +323,99 @@
                     <h5 class="text-muted">No students found matching the criteria.</h5>
                 </div>
             }
+
+            <div class="d-flex justify-content-between align-items-center mt-3 mb-3 p-1">
+
+                <div class="text-muted small">
+                    Showing Page @Model.PageNumber of @totalPages
+                    (Total Records : @Model.TotalRecords)
+                </div>
+
+                <nav aria-label="Student Pagination">
+                    <ul class="pagination pagination-sm mb-0">
+
+                        <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType ="card"
+                    })">
+                                First
+                            </a>
+                        </li>
+
+                        <li class="page-item @(Model.PageNumber == 1 ? "disabled" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = Model.PageNumber - 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = "card"
+                    })">
+                                Prev
+                            </a>
+                        </li>
+
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Students","StudentInformation",
+                        new {
+                            page = i,
+                            pageSize = Model.PageSize,
+                            classId = Model.SelectedClassId,
+                            sectionId = Model.SelectedSectionId,
+                            search = Model.SearchTerm,
+                            viewType ="card"
+                        })">
+                                    @i
+                                </a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = Model.PageNumber + 1,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType ="card"
+                    })">
+                                Next
+                            </a>
+                        </li>
+
+                        <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                            <a class="page-link"
+                               href="@Url.Action("Students","StudentInformation",
+                    new {
+                        page = totalPages,
+                        pageSize = Model.PageSize,
+                        classId = Model.SelectedClassId,
+                        sectionId = Model.SelectedSectionId,
+                        search = Model.SearchTerm,
+                        viewType = "card"
+                    })">
+                                Last
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+
+            </div>
         </div>
     </div>
 
@@ -241,11 +444,11 @@
                         <tbody>
                             @foreach (var student in Model.Students)
                             {
-                                <tr class="student-item-row" onclick="selectStudent(@student.StudentID, this)" style="cursor: pointer;">
+                                <tr class="student-item-row"  style="cursor: pointer;">
                                     <td class="ps-3">
                                         <input type="checkbox" name="selectedStudent"
                                                class="form-check-input student-checkbox"
-                                               value="@student.StudentID">
+                                               value="@student.StudentID" onclick="selectStudent(@student.StudentID, this)">
 
                                     </td>
                                     <td>@student.AdmissionNo</td>
@@ -287,7 +490,7 @@
                         classId = Model.SelectedClassId,
                         sectionId = Model.SelectedSectionId,
                         search = Model.SearchTerm,
-                        viewType = Model.ViewType
+                        viewType = "list"
                     })">
                                         First
                                     </a>
@@ -302,7 +505,7 @@
                         classId = Model.SelectedClassId,
                         sectionId = Model.SelectedSectionId,
                         search = Model.SearchTerm,
-                        viewType = Model.ViewType
+                        viewType = "list"
                     })">
                                         Prev
                                     </a>
@@ -319,7 +522,7 @@
                             classId = Model.SelectedClassId,
                             sectionId = Model.SelectedSectionId,
                             search = Model.SearchTerm,
-                            viewType = Model.ViewType
+                            viewType = "list"
                         })">
                                             @i
                                         </a>
@@ -335,7 +538,7 @@
                         classId = Model.SelectedClassId,
                         sectionId = Model.SelectedSectionId,
                         search = Model.SearchTerm,
-                        viewType = Model.ViewType
+                        viewType = "list"
                     })">
                                         Next
                                     </a>
@@ -350,7 +553,7 @@
                         classId = Model.SelectedClassId,
                         sectionId = Model.SelectedSectionId,
                         search = Model.SearchTerm,
-                        viewType = Model.ViewType
+                        viewType = "list"
                     })">
                                         Last
                                     </a>
@@ -367,202 +570,154 @@
     <!-- end col -->
 </div>
 <!-- end row -->
+
+
+
+<!-- end copy -->
+
 @section Scripts {
     <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
     <script>
+        // ── State ────────────────────────────────────────────────────────────
         let selectedStudentId = 0;
 
+        // ── Select a student row ─────────────────────────────────────────────
         function selectStudent(id, element) {
             selectedStudentId = id;
 
-            // UI Feedback
             $('.student-item-row .card').removeClass('border-primary shadow-sm bg-light');
             $('.student-item-row').removeClass('bg-light');
 
             const $row = $(element);
-            if ($row.hasClass('col-xl-6')) { // Card view
+            if ($row.hasClass('col-xl-6')) {
                 $row.find('.card').addClass('border-primary shadow-sm bg-light');
-            } else { // List view
+            } else {
                 $row.addClass('bg-light');
             }
 
-            $row.find('input[type="radio"]').prop('checked', true);
+            // Toggle checkbox
+            const cb = $row.find('.student-checkbox')[0];
+            if (cb) cb.checked = !cb.checked;
 
-            // Enable Buttons
-            //$('#btnEdit, #btnDelete').prop('disabled', false);
-             let checkedCount = $('.student-checkbox:checked').length;
-            $('#btnDelete').prop('disabled', checkedCount === 0);
-            // Edit sirf 1 record select hone par
-            $('#btnEdit').prop('disabled', checkedCount !== 1);
+            updateButtonState();
         }
 
+        // ── Select All checkbox ──────────────────────────────────────────────
+        function toggleSelectAll(master) {
+            $('.student-checkbox').prop('checked', master.checked);
+            updateButtonState();
+        }
+
+        // ── Enable/disable Edit & Delete buttons ─────────────────────────────
+        function updateButtonState() {
+            const checkedCount = $('.student-checkbox:checked').length;
+            $('#btnDelete').prop('disabled', checkedCount === 0);
+            $('#btnEdit').prop('disabled', checkedCount !== 1);
+
+            // Keep selectedStudentId in sync when exactly 1 is checked
+            if (checkedCount === 1) {
+                selectedStudentId = parseInt($('.student-checkbox:checked').val()) || 0;
+            } else if (checkedCount === 0) {
+                selectedStudentId = 0;
+            }
+        }
+
+        // ── Edit ─────────────────────────────────────────────────────────────
         function editSelected() {
             if (selectedStudentId > 0) {
                 window.location.href = '/StudentInformation/StudentAdmission?id=' + selectedStudentId;
             }
         }
+        
 
-        // --- Filter Badges Logic ---
-        document.addEventListener('DOMContentLoaded', () => {
-            renderFilterBadges();
-        });
-
-        function renderFilterBadges() {
-            const container = document.getElementById('badgeContainer');
-            const mainContainer = document.getElementById('activeFilterBadges');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filters = [
-                { id: 'txtSearchInput', label: 'Search', type: 'text' },
-                { id: 'classSelect', label: 'Class', type: 'select' },
-                { id: 'sectionSelect', label: 'Section', type: 'select' }
-            ];
-
-            let activeCount = 0;
-
-            filters.forEach(f => {
-                const el = document.getElementById(f.id);
-                if (!el) return;
-
-                let value = el.value;
-                let text = '';
-
-                if (f.type === 'text') {
-                    if (value.trim()) {
-                        text = value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'select') {
-                    if (value && value !== 'all' && value !== '') {
-                        const selectedOption = el.options[el.selectedIndex];
-                        text = selectedOption ? selectedOption.text : value;
-                        activeCount++;
-                    }
-                }
-
-                if (text) {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
-                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
-                    container.appendChild(badge);
-                }
-            });
-
-            if (activeCount > 0) {
-                mainContainer.style.display = 'block';
-            } else {
-                mainContainer.style.display = 'none';
-            }
-        }
-
-        function removeFilter(filterId) {
-            const el = document.getElementById(filterId);
-            if (!el) return;
-
-            if (el.tagName === 'INPUT') {
-                el.value = '';
-            } else {
-                el.value = '';
-            }
-
-            document.getElementById('filterForm').submit();
-        }
-
-        function resetAllFilters() {
-            const filters = ['txtSearchInput', 'classSelect', 'sectionSelect'];
-            filters.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                if (el.tagName === 'INPUT') el.value = '';
-                else el.value = '';
-            });
-            document.getElementById('filterForm').submit();
-        }
-
+                 
+        // ── Delete ───────────────────────────────────────────────────────────
         function deleteSelected() {
-             deleteStudent();
-        }
-
-        function deleteStudent()
-        {
-           let selectedIds = [];
-           $('.student-checkbox:checked').each(function () {
-                    selectedIds.push(parseInt($(this).val()));
-                });
-           if (selectedIds.length === 0) {
-                    alert("Please select at least one student.");
-                    return;
-                }
+            const selectedIds = [];
+            $('.student-checkbox:checked').each(function () {
+                selectedIds.push(parseInt($(this).val()));
+            });
+            if (selectedIds.length === 0) {
+                Swal.fire('Info', 'Please select at least one student.', 'info');
+                return;
+            }
             Swal.fire({
                 title: 'Are you sure?',
-                text: "You are about to delete this student record. This action cannot be undone!",
+                text: `You are about to delete ${selectedIds.length} student record(s). This cannot be undone!`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                customClass: {
-                    confirmButton: 'btn btn-danger me-2',
-                    cancelButton: 'btn btn-secondary'
-                },
+                confirmButtonText: 'Yes, delete!',
+                customClass: { confirmButton: 'btn btn-danger me-2', cancelButton: 'btn btn-secondary' },
                 buttonsStyling: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                         url: '/StudentInformation/DeleteStudent',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(selectedIds),
-                        success: function (res) {
-                            if (res.success) {
-                                Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
-                                    .then(() => location.reload());
-                            } else {
-                                Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
-                            }
-                        },
-                        error: function () {
-                            Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+            }).then(result => {
+                if (!result.isConfirmed) return;
+                $.ajax({
+                    url: '/StudentInformation/DeleteStudent',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(selectedIds),
+                    success(res) {
+                        if (res.success) {
+                            Swal.fire('Deleted!', 'Student record(s) deleted successfully.', 'success')
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Error!', res.message || 'Failed to delete.', 'error');
                         }
-                    });
-                }
+                    },
+                    error() {
+                        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                    }
+                });
             });
         }
 
+        // ── Export via DataTable buttons ─────────────────────────────────────
         function triggerExport(index) {
             if ($.fn.DataTable.isDataTable('#tblStudents')) {
-                const table = $('#tblStudents').DataTable();
-                table.button(index).trigger();
+                $('#tblStudents').DataTable().button(index).trigger();
             } else {
-                Swal.fire('Info', 'No data available to export', 'info');
+                Swal.fire('Info', 'No data available to export.', 'info');
             }
+        }
+
+        // ── Change page size → re-submit filter with new pageSize ────────────
+        function changePageSize(size) {
+            const form = document.getElementById('filterForm');
+            document.querySelector('[name="pageSize"]').value = size;
+            document.querySelector('[name="page"]').value = 1;
+            form.submit();
+        }
+
+        // ── Clear search box and submit ──────────────────────────────────────
+        function clearSearch() {
+            document.getElementById('txtSearchInput').value = '';
+            document.getElementById('filterForm').submit();
         }
 
         $(document).ready(function () {
-            // Calculate total columns dynamically for export
-            var totalCols = 9 + @activeCustomFieldsOnTable.Count;
-            var exportCols = [];
-            for (var i = 1; i < totalCols; i++) {
-                exportCols.push(i);
-            }
 
-            // Initialize DataTable
+            // ── DataTable (export only — no paging/searching, we handle that) ──
+            var totalCols  = 9 + @activeCustomFieldsOnTable.Count;
+            var exportCols = [];
+            for (var i = 1; i < totalCols; i++) exportCols.push(i);
+
             $('#tblStudents').DataTable({
                 dom: 'Bfrtip',
                 buttons: [
-                    { extend: 'copy', exportOptions: { columns: exportCols } },
-                    { extend: 'csv', exportOptions: { columns: exportCols } },
+                    { extend: 'copy',  exportOptions: { columns: exportCols } },
+                    { extend: 'csv',   exportOptions: { columns: exportCols } },
                     { extend: 'excel', exportOptions: { columns: exportCols } },
-                    { extend: 'pdf', exportOptions: { columns: exportCols } },
+                    { extend: 'pdf',   exportOptions: { columns: exportCols } },
                     { extend: 'print', exportOptions: { columns: exportCols } }
                 ],
-                searching: false,
-                paging: false,
-                info: false
+                searching: false,   // ✅ DB-side search — no JS filtering
+                paging:    false,   // ✅ DB-side pagination
+                info:      false,
+                ordering:  false    // ✅ use server ordering if needed
             });
-            // View Toggle
-            $('#list-view-btn').click(function (e) {
+
+            // ── View Toggle ──────────────────────────────────────────────────
+            $('#list-view-btn').on('click', function (e) {
                 e.preventDefault();
                 $('#card-v').addClass('d-none');
                 $('#list-v').removeClass('d-none');
@@ -571,7 +726,7 @@
                 $('#hdnViewType').val('list');
             });
 
-            $('#card-view-btn').click(function (e) {
+            $('#card-view-btn').on('click', function (e) {
                 e.preventDefault();
                 $('#list-v').addClass('d-none');
                 $('#card-v').removeClass('d-none');
@@ -580,35 +735,43 @@
                 $('#hdnViewType').val('card');
             });
 
-            // Real-time Search
-            $('#txtSearchInput').on('keyup', function() {
-                var q = $(this).val().toLowerCase();
-
-                // Filter Table
-                $('#tblStudents tbody tr').each(function() {
-                    var text = $(this).text().toLowerCase();
-                    $(this).toggle(text.indexOf(q) > -1);
-                });
-
-                // Filter Cards
-                $('#card-v .student-item-row').each(function() {
-                    var text = $(this).text().toLowerCase();
-                    $(this).toggle(text.indexOf(q) > -1);
-                });
-            });
-
-            // Auto-update Sections on Class Change
-            $('#classSelect').change(function () {
-                var classId = $(this).val();
-                $('#sectionSelect').empty().append('<option value="">All Sections</option>');
-                if (classId) {
-                    $.get('/StudentInformation/GetSections', { classId: classId }, function (data) {
-                        $.each(data, function (i, item) {
-                            $('#sectionSelect').append('<option value="' + item.id + '">' + item.name + '</option>');
-                        });
-                    });
+            // ── Search: submit on Enter key ──────────────────────────────────
+            $('#txtSearchInput').on('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('filterForm').submit();
                 }
             });
+
+            // ── Search: debounced auto-submit (500ms) ────────────────────────
+            let searchTimer;
+            $('#txtSearchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                const val = $(this).val();
+                searchTimer = setTimeout(function () {
+                    // Only auto-submit if value changed from current model value
+                    const currentSearch = '@Html.Raw(Model.SearchTerm ?? "")';
+                    if (val !== currentSearch) {
+                        document.getElementById('filterForm').submit();
+                    }
+                }, 500);
+            });
+
+            // ── Section AJAX load when class changes ─────────────────────────
+            $('#classSelect').on('change', function () {
+                const classId = $(this).val();
+                const $sec    = $('#sectionSelect');
+                $sec.empty().append('<option value="">All Sections</option>');
+                if (!classId) return;
+                $.get('/StudentInformation/GetSections', { classId }, function (data) {
+                    $.each(data, function (_, item) {
+                        $sec.append(`<option value="${item.id}">${item.name}</option>`);
+                    });
+                });
+            });
+
         });
+
+          
     </script>
 }

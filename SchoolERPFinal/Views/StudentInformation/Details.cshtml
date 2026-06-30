@@ -56,7 +56,11 @@
                 <div class="me-3 doctor-profile-img" style="width: 85px;">
                     @if (Model.BasicInfo.StudentPhoto != null)
                     {
-                        <img src="data:@(Model.BasicInfo.StudentPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.StudentPhoto)" class="rounded w-100" alt="Student Photo">
+                        <img src="@(string.IsNullOrEmpty(Model.BasicInfo.StudentPhoto)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.BasicInfo.StudentPhoto))"
+                             class="rounded" alt="Student Photo" style="width: 100%;" />
+                        
                     }
                     else
                     {
@@ -164,7 +168,11 @@
                                                 </div>
                                                 @if (Model.BasicInfo.FatherPhoto != null)
                                                 {
-                                                    <img src="data:@(Model.BasicInfo.FatherPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.FatherPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Father" />
+                                                    <img src="@(string.IsNullOrEmpty(Model.BasicInfo.FatherPhotoType)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.BasicInfo.FatherPhotoType))"
+                                                         class="rounded" alt="Student Photo" style="width: 100%;" />
+                                                    
                                                 }
                                             </div>
                                         </li>
@@ -177,7 +185,11 @@
                                                 </div>
                                                 @if (Model.BasicInfo.MotherPhoto != null)
                                                 {
-                                                    <img src="data:@(Model.BasicInfo.MotherPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.MotherPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Mother" />
+                                                    <img src="@(string.IsNullOrEmpty(Model.BasicInfo.MotherPhotoType)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.BasicInfo.MotherPhotoType))"
+                                                         class="rounded" alt="Student Photo" style="width: 100%;" />
+                                                    
                                                 }
                                             </div>
                                         </li>
@@ -191,7 +203,11 @@
                                                 </div>
                                                 @if (Model.BasicInfo.GuardianPhoto != null)
                                                 {
-                                                    <img src="data:@(Model.BasicInfo.GuardianPhotoType ?? "image/jpeg");base64,@Convert.ToBase64String(Model.BasicInfo.GuardianPhoto)" class="rounded-circle border" width="60" height="60" style="object-fit: cover;" alt="Guardian" />
+                                                    <img src="@(string.IsNullOrEmpty(Model.BasicInfo.GuardianPhotoType)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.BasicInfo.GuardianPhotoType))"
+                                                         class="rounded" alt="Student Photo" style="width: 100%;" />
+                                                    
                                                 }
                                             </div>
                                         </li>

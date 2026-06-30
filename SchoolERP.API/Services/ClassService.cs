@@ -198,5 +198,138 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
+
+
+        public async Task<PagedResult<MstClassViewModel>> GetAllClassWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@SectionID", req.SectionID);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<MstClassViewModel>(
+                "sp_Class_GetAllWithPagination",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstClassViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<MstClassViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<(bool Success, string Message)> CopyClassToSession(CopyRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+                parameters.Add("@FROMCOMPANYID", req.FromCompanyId);
+                parameters.Add("@FROMSESSIONID", req.FromSessionId);
+                parameters.Add("@TOCOMPANYID", req.ToCompanyId);
+                parameters.Add("@TOSESSIONID", req.ToSessionId);
+                parameters.Add("@USERID", req.UserID);
+
+                var result = await conn.QueryFirstOrDefaultAsync<SpResult>(
+                    "SP_CLASS_COPY",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                SpResult model = new SpResult();
+                model.Result = 0;
+                model.Message = ex.Message;
+                return (
+                    Convert.ToInt32(model.Result) == 1,
+                    Convert.ToString(model.Message) ?? string.Empty
+                );
+            }
+
+        }
+
+        public async Task<(bool Success, string Message)> CopyStudentHouseToSession(CopyRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+                parameters.Add("@FROMCOMPANYID", req.FromCompanyId);
+                parameters.Add("@FROMSESSIONID", req.FromSessionId);
+                parameters.Add("@TOCOMPANYID", req.ToCompanyId);
+                parameters.Add("@TOSESSIONID", req.ToSessionId);
+                parameters.Add("@USERID", req.UserID);
+
+                var result = await conn.QueryFirstOrDefaultAsync<SpResult>(
+                    "SP_MST_STUDENTHOUSE_COPY",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                SpResult model = new SpResult();
+                model.Result = 0;
+                model.Message = ex.Message;
+                return (
+                    Convert.ToInt32(model.Result) == 1,
+                    Convert.ToString(model.Message) ?? string.Empty
+                );
+            }
+
+        }
     }
 }

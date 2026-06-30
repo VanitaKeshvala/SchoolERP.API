@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace SchoolERP.Shared.Models
@@ -42,6 +42,12 @@ namespace SchoolERP.Shared.Models
         public string? StudentHouseDescription { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class StudentHouseUpsertRequest
@@ -55,6 +61,20 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<StudentHouseViewModel> Items { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalPages => PageSize > 0
+                             ? (int)Math.Ceiling((double)TotalRecords / PageSize)
+                             : 0;
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
 
     public class StudentCategoryViewModel
@@ -91,6 +111,7 @@ namespace SchoolERP.Shared.Models
         public int StudentID { get; set; }
         public string RollNo { get; set; } = "";
         public int SessionId { get; set; }
+        public int CompanyID { get; set; }
         public Dictionary<string, string> FieldValues { get; set; } = new();
     }
 
@@ -132,19 +153,19 @@ namespace SchoolERP.Shared.Models
         public int SectionID { get; set; }
         public int StudentCategoryID { get; set; }
         public int? StudentHouseID { get; set; }
-        public byte[]? StudentPhoto { get; set; }
+        public string? StudentPhoto { get; set; }
         public string? StudentPhotoType { get; set; }
         
         // Parent Details
         public string? FatherName { get; set; }
         public string? FatherPhone { get; set; }
         public string? FatherOccupation { get; set; }
-        public byte[]? FatherPhoto { get; set; }
+        public string? FatherPhoto { get; set; }
         public string? FatherPhotoType { get; set; }
         public string? MotherName { get; set; }
         public string? MotherPhone { get; set; }
         public string? MotherOccupation { get; set; }
-        public byte[]? MotherPhoto { get; set; }
+        public string? MotherPhoto { get; set; }
         public string? MotherPhotoType { get; set; }
         public string? IfGuardianIs { get; set; }
         public string? GuardianName { get; set; }
@@ -152,7 +173,7 @@ namespace SchoolERP.Shared.Models
         public string? GuardianOccupation { get; set; }
         public string? GuardianRelation { get; set; }
         public string? GuardianEmail { get; set; }
-        public byte[]? GuardianPhoto { get; set; }
+        public string? GuardianPhoto { get; set; }
         public string? GuardianPhotoType { get; set; }
 
         // Auth
@@ -231,7 +252,7 @@ namespace SchoolERP.Shared.Models
         public DateTime? DOB { get; set; }
         public string? CategoryName { get; set; }
         public string? MobileNo { get; set; }
-        public byte[]? StudentPhoto { get; set; }
+        public string? StudentPhoto { get; set; }
         public string? StudentPhotoType { get; set; }
         public bool IsActive { get; set; }
         public string? DisableReasonName { get; set; }
@@ -375,4 +396,6 @@ namespace SchoolERP.Shared.Models
         public StudentDisableReasonViewModel Items { get; set; } = new();
         public StudentDisableReasonViewModel? EditStudentDisableReason { get; set; }
     }
+
+
 }

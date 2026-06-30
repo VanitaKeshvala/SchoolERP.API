@@ -530,9 +530,13 @@ namespace SchoolERP.Shared.Models
         public List<HRDepartmentViewModel> Data { get; set; }
     }
 
-    public class HRStaffProfileRequest
+    public class ProfileRequest
     {
-        public int StaffId { get; set; }
+        public int Id { get; set; }
         public string PhotoDoc { get; set; }
+        public string? MotherPhoto { get; set; }
+        public string? FatherPhoto { get; set; }
+        public string? GuardianPhoto { get; set; }
+        public int UserId { get; set; }
     }
 }

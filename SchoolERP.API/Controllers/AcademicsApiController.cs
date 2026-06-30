@@ -81,9 +81,24 @@ namespace SchoolERP.Net.Controllers.Api
         [HttpPost("UpsertClassTeacher")]
         public IActionResult UpsertClassTeacher([FromBody] ClassTeacherUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var (success, message) = _svc.UpsertClassTeacher(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if(req.CompanyID==null && req.CompanyID == 0) 
+                {
+                    req.CompanyID = CompanyId;
+                }
+                if (req.SessionID == null && req.SessionID == 0)
+                {
+                    req.SessionID = SessionId;
+                }
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _svc.UpsertClassTeacher(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success=false, message=ex.Message });
+            }            
         }
 
         [HttpPost("DeleteClassTeacher")]
@@ -110,6 +125,35 @@ namespace SchoolERP.Net.Controllers.Api
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var (success, message) = _svc.PromoteStudents(req, CompanyId, UserId);
             return Ok(new { success, message });
+        }
+
+        [HttpPost("GetAllClassTeachersWithPage")]
+        public async Task<IActionResult> GetAllClassTeachersWithPage([FromBody] AcademicsSearchRequest request)
+        {
+            try
+            {
+                int userId = UserId;
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<ClassTeacherViewModel>>.SuccessResponse(new List<ClassTeacherViewModel>()));
+
+                var data = await _svc.GetAllClassTeachersWithPage(request);
+                return Ok(ApiResponse<PagedResult<ClassTeacherViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

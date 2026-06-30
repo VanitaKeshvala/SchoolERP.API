@@ -54,6 +54,6 @@ namespace SchoolERP.Net.Services.Clients
             int month,
             int year);
 
-        Task<ApiResponse<dynamic>> UpdateProfileAsync(HRStaffProfileRequest req);
+        Task<ApiResponse<dynamic>> UpdateProfileAsync(ProfileRequest req);
     }
 }

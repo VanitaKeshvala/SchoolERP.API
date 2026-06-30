@@ -69,7 +69,15 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSubjects()
         {
-            var res = await _subjectClient.GetAllAsync();
+            var request = new SubjectSearchRequest
+            {
+                PageNumber = 1,
+                PageSize = 10,
+                SearchKeyword = null,
+                CompanyID = 1,//await GetCompanyId(),
+                SessionID = 2//sessionId
+            };
+            var res = await _subjectClient.GetAllAsync(request);
             return Json(res);
         }
 

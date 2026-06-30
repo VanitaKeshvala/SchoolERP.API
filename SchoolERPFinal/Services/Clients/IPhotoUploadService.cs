@@ -24,5 +24,25 @@ namespace SchoolERP.Net.Services.Clients
         /// Builds the relative URL from module/recordId/filename.
         /// </summary>
         string GetRelativeUrl(PhotoModule module, int recordId, string fileName);
+
+
+        // ─────────────────────────────────────────────────────────
+        // POST  /UploadProfilePhoto
+        // ─────────────────────────────────────────────────────────
+        // Called from JS AFTER the main record is saved.
+        // JS already sends: photo (file), recordId (int), module (string)
+        // No JS or HTML changes needed — just wire this endpoint.
+        //
+        // Example JS call (already in your pages via fileToBase64 pattern):
+        //   formData.append('photo',    photoFile);
+        //   formData.append('recordId', savedId);
+        //   formData.append('module',   'Staff');   // Staff/Student/Employee/User
+        //   fetch('/UploadProfilePhoto', { method: 'POST', body: formData })
+        // ─────────────────────────────────────────────────────────
+        Task<PhotoUploadResult> SaveBase64PhotoAsync(
+           string base64String,
+           string originalFileName,
+           PhotoModule module,
+           int recordId);
     }
 }

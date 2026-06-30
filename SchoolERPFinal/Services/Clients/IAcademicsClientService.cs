@@ -20,5 +20,6 @@ namespace SchoolERP.Net.Services.Clients
 
         Task<ApiResponse<List<StudentPromotionViewModel>>> GetStudentsForPromotionAsync(int classId, int sectionId);
         Task<ApiResponse<dynamic>> PromoteStudentsAsync(PromotionRequest req);
+        Task<ApiResponse<PagedResult<ClassTeacherViewModel>>> GetAllClassWithPageAsync(AcademicsSearchRequest request);
     }
 }

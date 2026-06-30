@@ -36,5 +36,10 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<dynamic>($"api/ClassApi/ToggleStatus", request);
         }
+
+        public async Task<ApiResponse<PagedResult<MstClassViewModel>>> GetAllClassWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstClassViewModel>>("api/ClassApi/GetAllClassWithPage", request);
+        }
     }
 }

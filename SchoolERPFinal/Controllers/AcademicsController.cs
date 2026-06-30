@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using SchoolERP.Net.Services;
@@ -6,6 +6,8 @@ using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SchoolERP.Net.Helpers;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.Design;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -22,7 +24,7 @@ namespace SchoolERP.Net.Controllers
         private readonly IHumanResourceClientService _hrClient;
         private readonly ISessionClientService _sessionClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
-        
+        private readonly ICompanyClientService _companyService;
         private const string ClassMenuPath = "/Academics/Class";
         private const string SubjectMenuPath = "/Academics/Subject";
         private const string SubjectGroupMenuPath = "/Academics/SubjectGroup";
@@ -36,7 +38,7 @@ namespace SchoolERP.Net.Controllers
             IAcademicsClientService academicsClient,
             IHumanResourceClientService hrClient,
             ISessionClientService sessionClient,
-            IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
+            IUserMenuPermissionClientService menuPerm, ICompanyClientService companyService, PermissionHelper permHelper) : base(permHelper)
         {
             _classClient = classClient;
             _sectionClient = sectionClient;
@@ -46,8 +48,13 @@ namespace SchoolERP.Net.Controllers
             _hrClient = hrClient;
             _sessionClient = sessionClient;
             _menuPerm = menuPerm;
+            _companyService = companyService;
         }
-
+        private async Task<int> GetCompanyId()
+        {
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
+        }
         private async Task<int> GetSessionId()
         {
             if (CurrentSessionId == null)
@@ -60,7 +67,14 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'Class' management page where you can define the different grades or classes in the school.
         /// </summary>
-        public async Task<IActionResult> Class()
+        public async Task<IActionResult> Class(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        int? sectionId,
+        bool? isActive,
+        int? userTypeId)
         {
             try
             {
@@ -68,13 +82,40 @@ namespace SchoolERP.Net.Controllers
                 var perms = await GetPermissions(
                    "/Academics/Class"
                );
+
+                var request = new ClassSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    SectionID=sectionId??null
+                };
+
                 var sessionId = await GetSessionId();
-                var classesResponse = await _classClient.GetAllAsync(false, sessionId);
+                var classesResponse = _classClient.GetAllClassWithPageAsync(request);
                 var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
+
+                var sessionTask = _sessionClient.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(classesResponse, sessionTask, companiesTask);
+
+                var pagedResult = await classesResponse;
+
                 var model = new MstClassPageViewModel
                 {
-                    Classes = classesResponse.Success ? classesResponse.Data : new List<MstClassViewModel>(),
-                    AvailableSections = sectionsResponse.Success ? sectionsResponse.Data : new List<MstSectionViewModel>()
+                    Classes = pagedResult.Success ? pagedResult.Data.Data : new List<MstClassViewModel>(),
+                    AvailableSections = sectionsResponse.Success ? sectionsResponse.Data : new List<MstSectionViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionId
                 };
                 model.Permissions = perms;
                 return View(model);
@@ -98,13 +139,24 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveClass([FromBody] MstClassUpsertRequest request)
         {
-            var isCreate = request.ClassID <= 0;
-            if (isCreate && !(await _menuPerm.Has( ClassMenuPath, "Add")).Data)
-                return Json(new { success = false, message = "You do not have permission to add classes." });
-            if (!isCreate && !(await _menuPerm.Has(ClassMenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "You do not have permission to edit classes." });
-            var response = await _classClient.UpsertAsync(request);
-            return Json(new { success = response.Success, message = response.Message });
+            try
+            {
+                var isCreate = request.ClassID <= 0;
+                request.CompanyId = await GetCompanyId();
+                request.SessionId = await GetSessionId();
+
+                if (isCreate && !(await _menuPerm.Has(ClassMenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "You do not have permission to add classes." });
+                if (!isCreate && !(await _menuPerm.Has(ClassMenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to edit classes." });
+                var response = await _classClient.UpsertAsync(request);
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost]
@@ -124,20 +176,59 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'Subject' management page where you can define all the subjects taught in the school (like Math, Science, or English).
         /// </summary>
-        public async Task<IActionResult> Subject()
+      
+        public async Task<IActionResult> Subject(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        bool? isActive,
+        int? userTypeId)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Academics/Subject"
-           );
-            var sessionId = await GetSessionId();
-            var response = await _subjectClient.GetAllAsync(false, sessionId);
-            var model = new MstSubjectPageViewModel
+            try
             {
-                Subjects = response.Success ? response.Data : new List<MstSubjectViewModel>()
-            };
-            model.Permissions = perms;
-            return View(model);
+                // Retrieves the logged-in Subject's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Academics/Subject"
+               );
+                var request = new SubjectSearchRequest
+                {
+                    PageNumber = pageIndex??1,
+                    PageSize = pageSize??10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+                var sessionId = await GetSessionId();
+               
+                // ── Parallel fetch — dropdowns + paged users ─────────────────
+                var subjectTask = _subjectClient.GetAllAsync(request);
+                var sessionTask = _sessionClient.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(subjectTask, sessionTask, companiesTask);
+
+                var pagedResult = await subjectTask;
+                var model = new MstSubjectPageViewModel
+                {
+                    Subjects = pagedResult.Success ? pagedResult.Data.Data : new List<MstSubjectViewModel>(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId=sessionId,
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -207,16 +298,24 @@ namespace SchoolERP.Net.Controllers
                    "/Academics/SubjectGroup"
                );
                 var sessionId = await GetSessionId();
+                var request = new DropdowRequest
+                {
+                    CompanyID = await GetCompanyId(),
+                    SessionID = sessionId
+                };
+
+
+
                 var groupsResponse = await _subjectGroupClient.GetAllAsync(false, sessionId);
                 var classesResponse = await _classClient.GetAllAsync(false, sessionId);
                 var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
-                var subjectsResponse = await _subjectClient.GetAllAsync(false, sessionId);
+                var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
                 var model = new MstSubjectGroupPageViewModel
                 {
                     SubjectGroups = groupsResponse.Success ? groupsResponse.Data : new List<MstSubjectGroupViewModel>(),
                     Classes = classesResponse.Success ? classesResponse.Data : new List<MstClassViewModel>(),
                     Sections = sectionsResponse.Success ? sectionsResponse.Data : new List<MstSectionViewModel>(),
-                    Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<MstSubjectViewModel>()
+                    Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<Dropdowbinding>()
                 };
                 model.Permissions = perms;
                 return View(model);
@@ -256,62 +355,93 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> AddTimeTable()
         {
-            var sessionId = await GetSessionId();
-            var classes = await _classClient.GetAllAsync();
-            var subjectsResponse = await _subjectClient.GetAllAsync();
-            var staff = await _hrClient.GetAllStaffAsync(sessionId);
-            var subjectGroups = await _subjectGroupClient.GetAllAsync();
-
-            var model = new AddTimeTablePageViewModel
+            try
             {
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<MstSubjectViewModel>(),
-                Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
-                SubjectGroups = subjectGroups.Success ? subjectGroups.Data : new List<MstSubjectGroupViewModel>()
-            };
+                var sessionId = await GetSessionId();
+                var request = new DropdowRequest
+                {
+                    CompanyID = await GetCompanyId(),
+                    SessionID = sessionId
+                };
 
-            return View(model);
+                var classes = await _classClient.GetAllAsync();
+                var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var subjectGroups = await _subjectGroupClient.GetAllAsync();
+
+                var model = new AddTimeTablePageViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<Dropdowbinding>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
+                    SubjectGroups = subjectGroups.Success ? subjectGroups.Data : new List<MstSubjectGroupViewModel>()
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
         }
 
         [HttpPost]
         public async Task<IActionResult> AddTimeTable(int classId, int sectionId, int subjectGroupId = 0)
         {
-            var sessionId = await GetSessionId();
-            var classes = await _classClient.GetAllAsync();
-            var subjectsResponse = await _subjectClient.GetAllAsync();
-            var staff = await _hrClient.GetAllStaffAsync(sessionId);
-            var subjectGroups = await _subjectGroupClient.GetAllAsync();
-
-            var allSubjects = subjectsResponse.Success ? subjectsResponse.Data : new List<MstSubjectViewModel>();
-            var allSubjectGroups = subjectGroups.Success ? subjectGroups.Data : new List<MstSubjectGroupViewModel>();
-
-            if (subjectGroupId > 0)
+            try
             {
-                var groupResponse = await _subjectGroupClient.GetByIDAsync(subjectGroupId);
-                if (groupResponse.Success && groupResponse.Data != null && groupResponse.Data.SubjectIds != null && groupResponse.Data.SubjectIds.Any())
+                var sessionId = await GetSessionId();
+                var request = new DropdowRequest
                 {
-                    allSubjects = allSubjects.Where(s => groupResponse.Data.SubjectIds.Contains(s.SubjectID.ToString())).ToList();
+                    CompanyID = await GetCompanyId(),
+                    SessionID = sessionId
+                };
+
+
+                var classes = await _classClient.GetAllAsync();
+                var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var subjectGroups = await _subjectGroupClient.GetAllAsync();
+
+                var allSubjects = subjectsResponse.Success ? subjectsResponse.Data : new List<Dropdowbinding>();
+                var allSubjectGroups = subjectGroups.Success ? subjectGroups.Data : new List<MstSubjectGroupViewModel>();
+
+                if (subjectGroupId > 0)
+                {
+                    var groupResponse = await _subjectGroupClient.GetByIDAsync(subjectGroupId);
+                    if (groupResponse.Success && groupResponse.Data != null && groupResponse.Data.SubjectIds != null && groupResponse.Data.SubjectIds.Any())
+                    {
+                        allSubjects = allSubjects.Where(s => groupResponse.Data.SubjectIds.Contains(s.SubjectID.ToString())).ToList();
+                    }
                 }
+
+                var model = new AddTimeTablePageViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Subjects = allSubjects,
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
+                    SubjectGroups = allSubjectGroups,
+                    SelectedClassId = classId,
+                    SelectedSectionId = sectionId,
+                    SelectedSubjectGroupId = subjectGroupId
+                };
+
+                if (classId > 0 && sectionId > 0)
+                {
+                    var slots = await _academicsClient.GetTimeTableByClassAsync(classId, sectionId);
+                    model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
+                }
+
+                return View(model);
             }
-
-            var model = new AddTimeTablePageViewModel
+            catch (Exception ex)
             {
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                Subjects = allSubjects,
-                Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
-                SubjectGroups = allSubjectGroups,
-                SelectedClassId = classId,
-                SelectedSectionId = sectionId,
-                SelectedSubjectGroupId = subjectGroupId
-            };
 
-            if (classId > 0 && sectionId > 0)
-            {
-                var slots = await _academicsClient.GetTimeTableByClassAsync(classId, sectionId);
-                model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
+                throw;
             }
-
-            return View(model);
+           
         }
 
         [HttpGet]
@@ -401,32 +531,86 @@ namespace SchoolERP.Net.Controllers
             return View(model);
         }
 
-        public async Task<IActionResult> AssignClassTeacher()
+        public async Task<IActionResult> AssignClassTeacher(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        string? sectionId,
+        string? classId)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Academics/AssignClassTeacher"
-           );
-            var sessionId = await GetSessionId();
-            var classes = await _classClient.GetAllAsync(false,sessionId);
-            var staff = await _hrClient.GetAllStaffAsync(sessionId);
-            var assignments = await _academicsClient.GetAllClassTeachersAsync(null,null, sessionId);
-
-            var model = new AssignClassTeacherPageViewModel
+            try
             {
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
-                Assignments = assignments.Success ? assignments.Data : new List<ClassTeacherViewModel>()
-            };
-            model.Permissions = perms;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Academics/AssignClassTeacher"
+               );
+
+
+                var request = new AcademicsSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    SectionID = sectionId ?? null,
+                    ClassIDs = classId ?? null
+                };
+
+                var sessionId = await GetSessionId();
+                var classes = await _classClient.GetAllAsync(false, sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var assignments =  _academicsClient.GetAllClassWithPageAsync(request);
+
+
+                var sessionTask = _sessionClient.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(assignments, sessionTask, companiesTask);
+
+                var pagedResult = await assignments;
+
+                var model = new AssignClassTeacherPageViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
+                    Assignments = pagedResult.Success ? pagedResult.Data.Data : new List<ClassTeacherViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionId
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
         }
 
         [HttpPost]
         public async Task<IActionResult> SaveClassTeacher([FromBody] ClassTeacherUpsertRequest request)
         {
-            var response = await _academicsClient.UpsertClassTeacherAsync(request);
-            return Json(new { success = response.Success, message = response.Message });
+            try
+            {
+                request.CompanyID = await GetCompanyId();
+                request.SectionID = await GetSessionId();
+
+                var response = await _academicsClient.UpsertClassTeacherAsync(request);
+                return Json(new { success = response.Success, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            
         }
 
         [HttpPost]
@@ -602,14 +786,22 @@ namespace SchoolERP.Net.Controllers
                    "/Academics/SubjectGroup"
                );
                 var sessionId = await GetSessionId();
+
+                var request = new DropdowRequest
+                {
+                    CompanyID = await GetCompanyId(),
+                    SessionID = sessionId
+                };
+
+
                 var classesResponse = await _classClient.GetAllAsync(false, sessionId);
                 var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
-                var subjectsResponse = await _subjectClient.GetAllAsync(false, sessionId);
+                var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
                 var model = new MstSubjectGroupAddViewModel
                 {                    
                     Classes = classesResponse.Success ? classesResponse.Data : new List<MstClassViewModel>(),
                     Sections = sectionsResponse.Success ? sectionsResponse.Data : new List<MstSectionViewModel>(),
-                    Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<MstSubjectViewModel>()
+                    Subjects = subjectsResponse.Success ? subjectsResponse.Data : new List<Dropdowbinding>()
                 };
 
                 if (id.HasValue && id.Value > 0)
@@ -633,6 +825,49 @@ namespace SchoolERP.Net.Controllers
                 throw;
             }
 
+        }
+
+
+        public async Task<IActionResult> AddAssignClassTeacher(int? id, int? sectionId, string staffIds = null)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Academics/Class"
+               );
+                var sessionId = await GetSessionId();
+                var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
+                var classes = await _classClient.GetAllAsync(false, sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var model = new AssignClassTeacherAddViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                };
+
+
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _sectionClient.GetByClassAsync(id.Value);
+                    if (response.Success)
+                    {
+                        //model.Assignments = response.Data;
+                        model.EditAssignments = true;
+                    }
+                }
+                else
+                {
+                    model.EditAssignments = false;
+                }
+
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }

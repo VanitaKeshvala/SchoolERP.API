@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -34,7 +36,7 @@ namespace SchoolERP.API.Controllers
         private int SessionId => _sessionSvc.GetUserCurrentSession(UserId) ?? 0;
 
         [HttpGet("GetAllRoomTypes")]
-        public IActionResult GetAllRoomTypes(bool includeDeleted = false, int? sessionId = null)
+        public IActionResult GetAllRoomTypes(bool includeDeleted = false, int? sessionId = null,int? companyId=null)
         {
             try
             {
@@ -42,7 +44,11 @@ namespace SchoolERP.API.Controllers
                 {
                     sessionId = SessionId;
                 }
-                var data = _hostelService.GetAllRoomTypes(CompanyId, sessionId.Value, includeDeleted);
+                if (companyId == null)
+                {
+                    companyId = CompanyId;
+                }
+                var data = _hostelService.GetAllRoomTypes(companyId.Value, sessionId.Value, includeDeleted);
                 return Ok(ApiResponse<List<RoomTypeViewModel>>.SuccessResponse(data));
             }
             catch (System.Exception ex)
@@ -77,9 +83,16 @@ namespace SchoolERP.API.Controllers
                     return Ok(new { success = false, message = "You do not have permission to add room types." });
                 if (!isCreate && !await _menuPerm.Has(User, RoomTypeMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to edit room types." });
-
-                var result = _hostelService.UpsertRoomType(req, CompanyId, SessionId, UserId);
-                return Ok(new { success = result.Success, message = result.Message });
+                if (req.SessionID == null && req.SessionID == 0)
+                {
+                    req.SessionID = SessionId;
+                }
+                if (req.CompanyID == null && req.CompanyID == 0)
+                {
+                    req.CompanyID = CompanyId;
+                }
+                var (success, message) = _hostelService.UpsertRoomType(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
             }
             catch (System.Exception ex)
             {
@@ -105,15 +118,15 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpPost("ToggleRoomTypeStatus")]
-        public async Task<IActionResult> ToggleRoomTypeStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleRoomTypeStatus([FromBody] StatusUpdateRequest request)
         {
             try
             {
                 if (!await _menuPerm.Has(User, RoomTypeMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to change room type status." });
-
-                var result = _hostelService.ToggleRoomTypeStatus(id, isActive, UserId);
-                return Ok(new { success = result.Success, message = result.Message });
+                request.DoneBy = UserId;
+                var (success, message) =  _hostelService.ToggleRoomTypeStatus(request);
+                return Ok(new { success, message });
             }
             catch (System.Exception ex)
             {
@@ -123,7 +136,7 @@ namespace SchoolERP.API.Controllers
 
         // ─── HOSTEL ─────────────────────────────────────────────
         [HttpGet("GetAllHostels")]
-        public IActionResult GetAllHostels(bool includeDeleted = false, int? sessionId = null)
+        public IActionResult GetAllHostels(bool includeDeleted = false, int? sessionId = null,int ? companyId = null)
         {
             try
             {
@@ -131,7 +144,11 @@ namespace SchoolERP.API.Controllers
                 {
                     sessionId = SessionId;
                 }
-                var data = _hostelService.GetAllHostels(CompanyId, sessionId.Value, includeDeleted);
+                if (companyId == null)
+                {
+                    companyId = CompanyId;
+                }
+                var data = _hostelService.GetAllHostels(companyId.Value, sessionId.Value, includeDeleted);
                 return Ok(ApiResponse<List<HostelViewModel>>.SuccessResponse(data));
             }
             catch (System.Exception ex)
@@ -166,9 +183,16 @@ namespace SchoolERP.API.Controllers
                     return Ok(new { success = false, message = "You do not have permission to add hostels." });
                 if (!isCreate && !await _menuPerm.Has(User, HostelMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to edit hostels." });
-
-                var result = _hostelService.UpsertHostel(req, CompanyId, SessionId, UserId);
-                return Ok(new { success = result.Success, message = result.Message });
+                if(req.SessionID==null && req.SessionID == 0) 
+                {
+                    req.SessionID = SessionId;
+                }
+                if (req.CompanyID == null && req.CompanyID == 0)
+                {
+                    req.CompanyID = CompanyId;
+                }
+                var (success, message) = _hostelService.UpsertHostel(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success , message });
             }
             catch (System.Exception ex)
             {
@@ -194,15 +218,15 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpPost("ToggleHostelStatus")]
-        public async Task<IActionResult> ToggleHostelStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleHostelStatus([FromBody] StatusUpdateRequest request)
         {
             try
             {
                 if (!await _menuPerm.Has(User, HostelMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to change hostel status." });
-
-                var result = _hostelService.ToggleHostelStatus(id, isActive, UserId);
-                return Ok(new { success = result.Success, message = result.Message });
+                request.DoneBy = UserId;
+                var (success, message) = _hostelService.ToggleHostelStatus(request);
+                return Ok(new { success , message  });
             }
             catch (System.Exception ex)
             {
@@ -255,9 +279,17 @@ namespace SchoolERP.API.Controllers
                     return Ok(new { success = false, message = "You do not have permission to add hostel rooms." });
                 if (!isCreate && !await _menuPerm.Has(User, HostelRoomMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to edit hostel rooms." });
-
-                var result = _hostelService.UpsertHostelRoom(req, CompanyId, SessionId, UserId);
-                return Ok(new { success = result.Success, message = result.Message });
+                
+                if (req.SessionID == null && req.SessionID == 0)
+                {
+                    req.SessionID = SessionId;
+                }
+                if (req.CompanyID == null && req.CompanyID == 0)
+                {
+                    req.CompanyID = CompanyId;
+                }
+                var (success, message) = _hostelService.UpsertHostelRoom(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
             }
             catch (System.Exception ex)
             {
@@ -283,20 +315,107 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpPost("ToggleHostelRoomStatus")]
-        public async Task<IActionResult> ToggleHostelRoomStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleHostelRoomStatus([FromBody] StatusUpdateRequest request)
         {
             try
             {
                 if (!await _menuPerm.Has(User, HostelRoomMenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to change hostel room status." });
-
-                var result = _hostelService.ToggleHostelRoomStatus(id, isActive, UserId);
+                request.DoneBy = UserId;
+                var result = _hostelService.ToggleHostelRoomStatus(request);
                 return Ok(new { success = result.Success, message = result.Message });
             }
             catch (System.Exception ex)
             {
                 return Ok(new { success = false, message = ex.Message });
             }
+        }
+
+        [HttpPost("GetAllRoomTypeWithPage")]
+        public async Task<IActionResult> GetAllRoomTypeWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                int userId = UserId;
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(new List<MstClassViewModel>()));
+
+                var data = await _hostelService.GetAllRoomTypeWithPage(request);
+                return Ok(ApiResponse<PagedResult<RoomTypeViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        [HttpPost("GetAllHotelWithPage")]
+        public async Task<IActionResult> GetAllHotelWithPage([FromBody] HotelSearchRequest request)
+        {
+            try
+            {
+                int userId = UserId;
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HostelViewModel>>.SuccessResponse(new List<HostelViewModel>()));
+
+                var data = await _hostelService.GetAllHostelWithPage(request);
+                return Ok(ApiResponse<PagedResult<HostelViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        [HttpPost("GetAllHostelRoomlWithPage")]
+        public async Task<IActionResult> GetAllHostelRoomlWithPage([FromBody] HotelSearchRequest request)
+        {
+            try
+            {
+                int userId = UserId;
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HostelRoomViewModel>>.SuccessResponse(new List<HostelRoomViewModel>()));
+
+                var data = await _hostelService.GetAllHostelRoomlWithPage(request);
+                return Ok(ApiResponse<PagedResult<HostelRoomViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

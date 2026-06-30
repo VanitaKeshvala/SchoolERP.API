@@ -29,21 +29,30 @@ namespace SchoolERP.API.Controllers.Api
             _menuPerm = menuPerm;
         }
 
-        [HttpGet("GetAll")]
-        public IActionResult GetAll(bool includeDeleted = false,int? sessionId=null)
+        [HttpPost("GetAll")]
+        public async Task<IActionResult> GetAll([FromBody] SubjectSearchRequest request)
         {
-            int userId = GetCurrentUserId();
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            
-            if (sessionId == null) 
+            try
             {
-                sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
-            }
-            if (companyId == 0 || sessionId == 0)
-                return Ok(ApiResponse<List<MstSubjectViewModel>>.SuccessResponse(new List<MstSubjectViewModel>()));
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
 
-            var data = _subjectService.GetAllSubjects(companyId, sessionId.Value, includeDeleted);
-            return Ok(ApiResponse<List<MstSubjectViewModel>>.SuccessResponse(data));
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (companyId == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstSubjectViewModel>>.SuccessResponse(new List<MstSubjectViewModel>()));
+
+                var data =await _subjectService.GetAllSubjects(request);
+                return Ok(ApiResponse<PagedResult<MstSubjectViewModel>>.SuccessResponse(data));
+                
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet("GetByID/{id}")]
@@ -102,6 +111,34 @@ namespace SchoolERP.API.Controllers.Api
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+        }
+
+        [HttpPost("SubjectsDropdowBind")]
+        public async Task<IActionResult> SubjectsDropdowBind([FromBody] DropdowRequest request)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                if (request.CompanyID == null) 
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstSubjectViewModel>>.SuccessResponse(new List<MstSubjectViewModel>()));
+
+                var data = await _subjectService.SubjectsDropdowBinding(request);
+                return Ok(ApiResponse<List<Dropdowbinding>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

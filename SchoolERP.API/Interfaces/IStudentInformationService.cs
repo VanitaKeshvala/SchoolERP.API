@@ -54,5 +54,14 @@ namespace SchoolERP.API.Interfaces
         StudentDisableReasonViewModel GetDisableReasonsByID(
             int companyId,
             int sessionId,  int disableReasonID, int? userID=null);
+
+        Task<List<StudentListViewModel>> GetStudentCopyList(
+            int companyId, int sessionId);
+
+        Task<(bool Success, string Message)> CopyStudentsToSession(CopyRequest req);
+
+        (bool Success, string Message) UpdateStudentProfile(ProfileRequest req);
+
+        Task<PagedResult<StudentHouseViewModel>> GetStudentHouseList(SubjectSearchRequest req);
     }
 }

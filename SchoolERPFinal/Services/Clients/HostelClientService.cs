@@ -10,8 +10,8 @@ namespace SchoolERP.Net.Services.Clients
     {
         public HostelClientService(HttpClient httpClient) : base(httpClient) { }
 
-        public Task<ApiResponse<List<RoomTypeViewModel>>> GetAllRoomTypesAsync(bool includeDeleted = false, int? sessionId = null)
-            => GetAsync<List<RoomTypeViewModel>>($"api/HostelApi/GetAllRoomTypes?includeDeleted={includeDeleted}&sessionId={sessionId}");
+        public Task<ApiResponse<List<RoomTypeViewModel>>> GetAllRoomTypesAsync(bool includeDeleted = false, int? sessionId = null, int? companyId = null)
+            => GetAsync<List<RoomTypeViewModel>>($"api/HostelApi/GetAllRoomTypes?includeDeleted={includeDeleted}&sessionId={sessionId}&companyId={companyId}");
 
         public Task<ApiResponse<RoomTypeViewModel>> GetRoomTypeByIDAsync(int id)
             => GetAsync<RoomTypeViewModel>($"api/HostelApi/GetRoomTypeByID/{id}");
@@ -22,12 +22,12 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteRoomTypeAsync(List<int> id)
             => PostAsync<dynamic>($"api/HostelApi/DeleteRoomType",id);
 
-        public Task<ApiResponse<dynamic>> ToggleRoomTypeStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/HostelApi/ToggleRoomTypeStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleRoomTypeStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/HostelApi/ToggleRoomTypeStatus", request!);
 
         // Hostel
-        public Task<ApiResponse<List<HostelViewModel>>> GetAllHostelsAsync(bool includeDeleted = false, int? sessionId = null)
-            => GetAsync<List<HostelViewModel>>($"api/HostelApi/GetAllHostels?includeDeleted={includeDeleted}&sessionId={sessionId}");
+        public Task<ApiResponse<List<HostelViewModel>>> GetAllHostelsAsync(bool includeDeleted = false, int? sessionId = null,int? companyId=null)
+            => GetAsync<List<HostelViewModel>>($"api/HostelApi/GetAllHostels?includeDeleted={includeDeleted}&sessionId={sessionId}&companyId={companyId}");
 
         public Task<ApiResponse<HostelViewModel>> GetHostelByIDAsync(int id)
             => GetAsync<HostelViewModel>($"api/HostelApi/GetHostelByID/{id}");
@@ -38,8 +38,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteHostelAsync(List<int> id)
             => PostAsync<dynamic>($"api/HostelApi/DeleteHostel", id!);
 
-        public Task<ApiResponse<dynamic>> ToggleHostelStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/HostelApi/ToggleHostelStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleHostelStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/HostelApi/ToggleHostelStatus", request!);
 
         // Hostel Room
         public Task<ApiResponse<List<HostelRoomViewModel>>> GetAllHostelRoomsAsync(bool includeDeleted = false,int? sessionId=null)
@@ -54,7 +54,22 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteHostelRoomAsync(List<int> id)
             => PostAsync<dynamic>($"api/HostelApi/DeleteHostelRoom", id);
 
-        public Task<ApiResponse<dynamic>> ToggleHostelRoomStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/HostelApi/ToggleHostelRoomStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleHostelRoomStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/HostelApi/ToggleHostelRoomStatus", request);
+
+        public async Task<ApiResponse<PagedResult<RoomTypeViewModel>>> GetAllRoomTypeWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<RoomTypeViewModel>>("api/HostelApi/GetAllRoomTypeWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<HostelViewModel>>> GetAllHotelWithPageAsync(HotelSearchRequest request)
+        {
+            return await PostAsync<PagedResult<HostelViewModel>>("api/HostelApi/GetAllHotelWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<HostelRoomViewModel>>> GetAllHostelRoomWithPageAsync(HotelSearchRequest request)
+        {
+            return await PostAsync<PagedResult<HostelRoomViewModel>>("api/HostelApi/GetAllHostelRoomlWithPage", request);
+        }
     }
 }

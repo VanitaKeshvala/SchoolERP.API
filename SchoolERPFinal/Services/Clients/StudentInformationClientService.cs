@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -284,6 +285,16 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<StudentDisableReasonViewModel>> GetDisableReasonsByID(int id)
         {
             return GetAsync<StudentDisableReasonViewModel>($"api/StudentInformationApi/GetDisableReasonsByID/{id}");
+        }
+
+        public Task<ApiResponse<SpResult>> UpdateStudentProfileAsync(ProfileRequest req)
+           => PostAsync<SpResult>("api/StudentInformationApi/UpdateStudentProfile", req);
+
+
+        
+        public async Task<ApiResponse<PagedResult<StudentHouseViewModel>>> GetStudentHouseListAsync(SubjectSearchRequest request)
+        {
+            return await PostAsync<PagedResult<StudentHouseViewModel>>("api/StudentInformationApi/GetStudentHouseList", request);
         }
     }
 }

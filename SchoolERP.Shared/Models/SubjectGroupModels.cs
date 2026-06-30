@@ -71,7 +71,7 @@ namespace SchoolERP.Shared.Models
         public List<MstSubjectGroupViewModel> SubjectGroups { get; set; } = new List<MstSubjectGroupViewModel>();
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
         public List<MstSectionViewModel> Sections { get; set; } = new List<MstSectionViewModel>();
-        public List<MstSubjectViewModel> Subjects { get; set; } = new List<MstSubjectViewModel>();
+        public List<Dropdowbinding> Subjects { get; set; } = new List<Dropdowbinding>();
     }
 
 
@@ -81,7 +81,7 @@ namespace SchoolERP.Shared.Models
         public MstSubjectGroupViewModel SubjectGroups { get; set; } = new MstSubjectGroupViewModel();
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
         public List<MstSectionViewModel> Sections { get; set; } = new List<MstSectionViewModel>();
-        public List<MstSubjectViewModel> Subjects { get; set; } = new List<MstSubjectViewModel>();
+        public List<Dropdowbinding> Subjects { get; set; } = new List<Dropdowbinding>();
         public MstSubjectGroupViewModel? EditSubjectGroups { get; set; } = new MstSubjectGroupViewModel();
     }
 }

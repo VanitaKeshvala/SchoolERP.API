@@ -1,0 +1,127 @@
+﻿@*
+    ======================================================================
+    PARTIAL: Shared / _CopySessionModal.cshtml
+    PURPOSE: Single, shared "Copy to another Session / Company" modal.
+             Rendered ONCE in _Layout.cshtml so it is available on every
+             page. Each page's own "Copy" button only needs to call:
+
+                 openCopyModal('EntityKey')
+
+             where EntityKey matches a key in ENTITY_COLUMNS inside
+             wwwroot/js/copySessionModal.js (e.g. 'Hostels', 'Students',
+             'Subject', 'Classs', 'sections', 'StudentHouse', 'RoomTypes',
+             'HostelType'). Do NOT copy/paste this markup into individual
+             pages — that was the original problem with the Hostel page.
+    ======================================================================
+*@
+<!-- start copy model-->
+<div class="modal fade" id="copySessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-xl">
+
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+                    <i class="ti ti-copy"></i> Copy Sections to Session
+                </h5>
+                <div class="ms-auto d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnCopy" onclick="handleCopy()" disabled>
+                        <i class="ti ti-copy me-1"></i>Copy
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-body p-4">
+
+                <!-- ── Dropdowns Row ── -->
+                <div class="row align-items-start g-3">
+
+                    <div class="col-5 text-center">
+                        <p class="fw-semibold text-primary small mb-2">Source (From)</p>
+                        <select class="form-select form-select-sm mb-2" id="fromAccount" onchange="validateCopy()">
+                            <option value="">From main account</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="fromSession" onchange="validateCopy()">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <div class="col-2 d-flex justify-content-center" style="padding-top:42px">
+                        <div class="d-flex align-items-center text-primary">
+                            <i class="ti ti-arrow-left fs-18"></i>
+                            <div style="width:20px;height:2px;background:currentColor"></div>
+                            <i class="ti ti-arrow-right fs-18"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-5 text-center">
+                        <p class="fw-semibold text-primary small mb-2">Destination (To)</p>
+                        <select class="form-select form-select-sm mb-2" id="toAccount" onchange="validateCopy()">
+                            <option value="">To main account</option>
+                        </select>
+                        <select class="form-select form-select-sm mb-2" id="toSession" onchange="validateCopy()">
+                            <option value="">Loading...</option>
+                        </select>
+                       
+                    </div>
+                </div>
+
+
+                <!-- Validation Message -->
+                <div id="validationBox" class="d-none border-top mt-4 pt-3">
+                    <div class="text-center mb-3">
+                        <i class="ti ti-alert-triangle text-danger" style="font-size:40px"></i>
+                        <p class="text-danger fw-semibold mt-1 mb-0">Cannot Copy to the Same Location</p>
+                    </div>
+                    <div id="conflictList" class="d-flex flex-column align-items-center gap-2"></div>
+                </div>
+
+                <!-- ── Conflict Warning ── -->
+                <div id="conflictBox" class="d-none border-top mt-3 pt-3 text-center">
+                    <i class="ti ti-alert-triangle text-danger" style="font-size:36px"></i>
+                    <p class="text-danger fw-semibold small mt-1 mb-2">Cannot copy to the same location</p>
+                    <div id="conflictList" class="d-flex flex-column align-items-center gap-2"></div>
+                </div>
+
+                <!-- ── Sections Table ── -->
+                <div id="tableSection" class="d-none border-top mt-3 pt-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-semibold small">
+                            <i class="ti ti-list me-1"></i>Sections to copy
+                        </span>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="chkSelectAll" onchange="toggleSelectAll(this)">
+                                <label class="form-check-label small" for="chkSelectAll">Select all</label>
+                            </div>
+                            <span class="badge bg-secondary" id="selCount">0 selected</span>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable table container -->
+                    <div class="border rounded" style="max-height:220px;overflow-y:auto">
+                        <table class="table table-sm table-hover mb-0" id="tblSections">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th style="width:40px"></th>
+                                    <th style="width:40px">#</th>
+                                    <th>Section name</th>
+                                    <th>Section code</th>
+                                    <th>Class</th>
+                                    <th style="width:80px">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sectionsTbody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-1 mb-0">
+                        <i class="ti ti-info-circle me-1"></i>
+                        Only selected sections will be copied to the destination session.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

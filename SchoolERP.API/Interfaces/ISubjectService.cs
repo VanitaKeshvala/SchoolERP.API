@@ -11,7 +11,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Retrieves a list of all subjects for a specific school and academic session.
         /// </summary>
-        List<MstSubjectViewModel> GetAllSubjects(int companyId, int sessionId, bool includeDeleted = false);
+        Task<PagedResult<MstSubjectViewModel>> GetAllSubjects(SubjectSearchRequest req);
 
         /// <summary>
         /// Finds and returns the details of a specific subject using its unique ID.
@@ -32,5 +32,9 @@ namespace SchoolERP.API.Interfaces
         /// Turns a subject's active status on or off.
         /// </summary>
         (bool success, string message) ToggleSubjectStatus(StatusUpdateRequest request);
+
+        Task<(bool Success, string Message)> CopySubjectToSession(CopyRequest req);
+
+        Task<List<Dropdowbinding>> SubjectsDropdowBinding(DropdowRequest request);
     }
 }

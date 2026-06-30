@@ -32,5 +32,11 @@ namespace SchoolERP.API.Interfaces
         /// Turns a class's active status on or off.
         /// </summary>
         (bool success, string message) ToggleClassStatus(StatusUpdateRequest request);
+
+        Task<PagedResult<MstClassViewModel>> GetAllClassWithPage(ClassSearchRequest req);
+
+        Task<(bool Success, string Message)> CopyClassToSession(CopyRequest req);
+
+        Task<(bool Success, string Message)> CopyStudentHouseToSession(CopyRequest req);
     }
 }

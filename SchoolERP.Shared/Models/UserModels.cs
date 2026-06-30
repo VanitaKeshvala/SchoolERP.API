@@ -85,7 +85,7 @@
         public DateTime? ModifiedOn { get; set; }
 
 
-        // ✅ Must exist — mapped from TOTALCOUNT column in SP
+        // Must exist — mapped from TOTALCOUNT column in SP
         public int TotalCount { get; set; }   // ← TOTALCOUNT
         public int PageIndex { get; set; }   // ← PAGEINDEX
         public int PageSize { get; set; }   // ← PAGESIZE

@@ -152,31 +152,39 @@ namespace SchoolERP.API.Services
         /// <returns>A list of <see cref="ClassTeacherViewModel"/> representing all class teachers.</returns>
         public List<ClassTeacherViewModel> GetAllClassTeachers(int companyId, int sessionId, List<int> classId=null, List<int> sectionId=null)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
+
+                string classIds = null;
+                string sectionIds = null;
+                if (classId != null && classId.Count != 0)
+                {
+                    classIds = string.Join(",", classId);
+                }
+                if (sectionId != null && sectionId.Count != 0)
+                {
+                    sectionIds = string.Join(",", sectionId);
+                }
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@CompanyID", companyId);
+                parameters.Add("@SessionID", sessionId);
+                parameters.Add("@CLASSIDS", classIds);
+                parameters.Add("@SECTIONIDS", sectionIds);
+
+                return conn.Query<ClassTeacherViewModel>(
+                    "sp_Academics_ClassTeacher_GetAll",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
             
-            string classIds =null;
-            string sectionIds = null;
-            if(classId != null && classId.Count !=0) 
-            {
-                classIds = string.Join(",", classId);
-            }
-            if(sectionId != null && sectionId.Count != 0) 
-            {
-                sectionIds = string.Join(",", sectionId);
-            }
-
-            var parameters = new DynamicParameters();
-            parameters.Add("@CompanyID", companyId);
-            parameters.Add("@SessionID", sessionId);
-            parameters.Add("@CLASSIDS", classIds);
-            parameters.Add("@SECTIONIDS", sectionIds);
-
-            return conn.Query<ClassTeacherViewModel>(
-                "sp_Academics_ClassTeacher_GetAll",
-                parameters,
-                commandType: CommandType.StoredProcedure
-            ).ToList();
         }
 
         /// <summary>
@@ -208,7 +216,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@UserId", userId);
 
                 // Dapper auto-maps SP result columns → anonymous type — no foreach needed
-                var result = conn.QueryFirstOrDefault(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Academics_ClassTeacher_Upsert",
                     parameters,
                     commandType: CommandType.StoredProcedure);
@@ -216,7 +224,9 @@ namespace SchoolERP.API.Services
                 if (result == null)
                     return (false, "No response from stored procedure.");
 
-                return (Convert.ToInt32(result.Result) > 0, (string)result.Message);
+                return result is not null
+                   ? (result.Result > 0, result.Message ?? string.Empty)
+                   : (false, "No response from stored procedure.");
             }
             catch (Exception ex)
             {
@@ -346,6 +356,67 @@ namespace SchoolERP.API.Services
                 return (true, $"{successCount} of {total} student(s) promoted. Last error: {lastError}");
 
             return (false, $"Promotion failed for all {total} student(s). Error: {lastError}");
+        }
+
+        public async Task<PagedResult<ClassTeacherViewModel>> GetAllClassTeachersWithPage(AcademicsSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@CLASSIDS", req.ClassIDs);
+                param.Add("@SECTIONIDS", req.SectionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);                
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<ClassTeacherViewModel>(
+                "sp_Academics_ClassTeacher_GetAllPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<ClassTeacherViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<ClassTeacherViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

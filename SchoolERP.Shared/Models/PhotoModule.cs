@@ -11,6 +11,8 @@ namespace SchoolERP.Shared.Models
         Staff,      // → wwwroot/Staff/Profile/{id}/
         Student,    // → wwwroot/Student/Profile/{id}/
         Employee,   // → wwwroot/Employee/Profile/{id}/
-        User        // → wwwroot/User/Profile/{id}/
+        User,        // → wwwroot/User/Profile/{id}/
+        Parent,    // → wwwroot/Student/Profile/{id}/
+
     }
 }

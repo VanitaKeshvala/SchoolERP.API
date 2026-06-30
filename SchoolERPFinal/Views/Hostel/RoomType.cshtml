@@ -1,5 +1,6 @@
-@model SchoolERP.Shared.Models.RoomTypePageViewModel
+﻿@model SchoolERP.Shared.Models.RoomTypePageViewModel
 @using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Room Type";
     int currentUserId = 0;
@@ -9,6 +10,9 @@
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
     var p = Model.Permissions;
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
 }
 <style>
     .dt-buttons {
@@ -23,7 +27,7 @@
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
         {
-            <a href="javascript:void(0)" class="btn btn-primary top-btn" onclick="openAddModal()">
+            <a href="/Hostel/AddRoomType" class="btn btn-primary top-btn">
                 <i class="ti ti-plus me-1"></i> Add
             </a>
         }
@@ -39,7 +43,22 @@
                 <i class="ti ti-trash me-1"></i> Delete
             </button>
         }
-
+        @if (p.CanEdit)
+        {
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
+        @if (p.CanAdd)
+        {
+            <button class="btn btn-primary d-inline-flex align-items-center top-btn" type="button"
+                    onclick="openCopyModal('RoomTypes')">
+                <i class="ti ti-copy me-1"></i>Copy
+            </button>
+        }
         @if (p.CanPrint)
         {
             <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
@@ -65,20 +84,108 @@
 
 <div class="row">
 
-    <!-- Filters -->
-    <div class="col-md-12">
-        <div class="card shadow-tbl-outer mb-2">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput"
-                        placeholder="Search by title..." style="min-width: 220px;">
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Room Type, Description..."
+                               style="min-width: 320px;" />
                     </div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="RoomType" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
+                        <input type="hidden" name="sectionID" id="hdnSectionID" value="" />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Active filter badges -->
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
 
 
     <!-- Data Table -->
@@ -130,219 +237,90 @@
                             }
                         </tbody>
                     </table>
+                
+                
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
+                    
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add / Edit Modal -->
-<div class="modal fade" id="roomTypeModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title" id="modalTitle">Add Room Type</h5>
-                <div>
-                    <button class="btn btn-success" onclick="saveRecord()">
-                        <i class="ti ti-cloud me-1"></i> Save
-                    </button>
-                    <button class="btn btn-danger" data-bs-dismiss="modal">
-                        <i class="ti ti-x me-1"></i> Close
-                    </button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <form id="roomTypeForm">
-                    <input type="hidden" id="hdnRoomTypeID" value="0">
-                    <div class="row row-gap-3">
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Room Type Title <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="txtTitle" required>
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Description</label>
-                            <textarea class="form-control" id="txtDescription" rows="3"></textarea>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" type="checkbox" id="chkActive" checked>
-                                <label class="form-check-label" for="chkActive">Active</label>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
-<script>
-    let selectedId = 0;
-        const canEdit = @p.CanEdit.ToString().ToLower();
-        const canDelete = @p.CanDelete.ToString().ToLower();
-
-        function triggerExport(index) {
-            if ($.fn.DataTable.isDataTable('#tblRoomType')) {
-                const table = $('#tblRoomType').DataTable();
-                table.button(index).trigger();
-            }
-        }
-
-        $(document).ready(function () {
-            $('#tblRoomType').DataTable({
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: { columns: [1, 2] } },
-                    { extend: 'csv', exportOptions: { columns: [1, 2] } },
-                    { extend: 'excel', exportOptions: { columns: [1, 2] } },
-                    { extend: 'pdf', exportOptions: { columns: [1, 2] } },
-                    { extend: 'print', exportOptions: { columns: [1, 2] } }
-                ],
-                searching: false,
-                paging: false,
-                info: false
-            });
-        })
-
-
-
-    function selectItem(id, row) {
-        selectedId = id;
-        document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
-        row.classList.add('bg-light');
-        //row.querySelector('input[type="radio"]').checked = true;
-
-        if (canEdit) document.getElementById('btnEdit').disabled = false;
-        if (canDelete) document.getElementById('btnDelete').disabled = false;
-            }let checkedCount = $('.student-checkbox:checked').length;
-        $('#btnDelete').prop('disabled', checkedCount === 0);
-        // Edit sirf 1 record select hone par
-        $('#btnEdit').prop('disabled', checkedCount !== 1);
-
-    // Search
-        document.getElementById('txtSearchInput').addEventListener('keyup', function () {
-        const q = this.value.toLowerCase();
-        document.querySelectorAll('#tblRoomType tbody tr').forEach(row => {
-            if (row.classList.contains('item-row')) {
-                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-            }
-        });
-    });
-
-    function openAddModal() {
-        document.getElementById('modalTitle').textContent = 'Add Room Type';
-        document.getElementById('hdnRoomTypeID').value = 0;
-        document.getElementById('roomTypeForm').reset();
-        document.getElementById('chkActive').checked = true;
-        new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
-    }
-
-    function editSelected() {
-        if (!selectedId) return;
-        fetch(`/Hostel/GetRoomTypeByID/${selectedId}`)
-            .then(r => r.json())
-            .then(res => {
-                if (!res.success) { showToast(res.message, 'danger'); return; }
-                const d = res.data;
-                document.getElementById('modalTitle').textContent = 'Edit Room Type';
-                document.getElementById('hdnRoomTypeID').value = d.roomTypeID;
-                document.getElementById('txtTitle').value = d.roomTypeTitle;
-                document.getElementById('txtDescription').value = d.roomTypeDescription || '';
-                document.getElementById('chkActive').checked = d.isActive;
-
-                new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
-            });
-    }
-
-    function saveRecord() {
-        const form = document.getElementById('roomTypeForm');
-        if (!form.checkValidity()) { form.reportValidity(); return; }
-
-        const data = {
-            roomTypeID:          parseInt(document.getElementById('hdnRoomTypeID').value) || 0,
-            roomTypeTitle:       document.getElementById('txtTitle').value.trim(),
-            roomTypeDescription: document.getElementById('txtDescription').value.trim() || null,
-            isActive:            document.getElementById('chkActive').checked
-        };
-
-        fetch('/Hostel/UpsertRoomType', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        .then(r => r.json())
-        .then(res => {
-            showToast(res.message, res.success ? 'success' : 'danger');
-            if (res.success) {
-                bootstrap.Modal.getInstance(document.getElementById('roomTypeModal')).hide();
-                setTimeout(() => location.reload(), 800);
-            }
-        });
-    }
-
-    function deleteSelected() {
-        if (!selectedId) return;
-
-                   let selectedIds = [];
-        $('.student-checkbox:checked').each(function () {
-                 selectedIds.push(parseInt($(this).val()));
-             });
-        if (selectedIds.length === 0) {
-                 alert("Please select at least one student.");
-                 return;
-             }
-         Swal.fire({
-             title: 'Are you sure?',
-             text: "You are about to delete this student record. This action cannot be undone!",
-             icon: 'warning',
-             showCancelButton: true,
-             confirmButtonColor: '#d33',
-             cancelButtonColor: '#3085d6',
-             confirmButtonText: 'Yes, delete it!',
-             customClass: {
-                 confirmButton: 'btn btn-danger me-2',
-                 cancelButton: 'btn btn-secondary'
-             },
-             buttonsStyling: false
-         }).then((result) => {
-             if (result.isConfirmed) {
-                 $.ajax({
-                          url: '/Hostel/DeleteRoomType',
-                     type: 'POST',
-                     contentType: 'application/json',
-                     data: JSON.stringify(selectedIds),
-                     success: function (res) {
-                         if (res.success) {
-                             Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
-                                 .then(() => location.reload());
-                         } else {
-                             Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
-                         }
-                     },
-                     error: function () {
-                         Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                     }
-                 });
-             }
-         });
-    }
-
-    function toggleStatus(id, isActive) {
-        fetch(`/Hostel/ToggleRoomTypeStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
-            .then(r => r.json())
-            .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
-    }
-
-    function showToast(msg, type = 'success') {
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">
-            <div class="d-flex"><div class="toast-body">${msg}</div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div></div>`;
-        document.body.appendChild(wrapper);
-        setTimeout(() => wrapper.remove(), 3000);
-    }
-</script>
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+    </script>
+    <script src="~/assets/js/RoomType.js"></script>
 }
 

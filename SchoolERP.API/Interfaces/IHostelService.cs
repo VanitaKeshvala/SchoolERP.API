@@ -1,4 +1,5 @@
 ﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -32,7 +33,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a room type's active status on or off.
         /// </summary>
-        (bool Success, string Message) ToggleRoomTypeStatus(int id, bool isActive, int userId);
+        (bool Success, string Message) ToggleRoomTypeStatus(StatusUpdateRequest request);
 
         // --- Hostel ---
 
@@ -59,7 +60,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a hostel building's active status on or off.
         /// </summary>
-        (bool Success, string Message) ToggleHostelStatus(int id, bool isActive, int userId);
+        (bool Success, string Message) ToggleHostelStatus(StatusUpdateRequest request);
 
         // --- Hostel Room ---
 
@@ -86,6 +87,18 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a hostel room's active status on or off.
         /// </summary>
-        (bool Success, string Message) ToggleHostelRoomStatus(int id, bool isActive, int userId);
+        (bool Success, string Message) ToggleHostelRoomStatus(StatusUpdateRequest request);
+
+        /// <summary>
+        /// Retrieves a list of all WITH PAGEINDEX room categories (e.g., 'Single', 'Shared') from the database.
+        /// </summary>
+        Task<PagedResult<RoomTypeViewModel>> GetAllRoomTypeWithPage(ClassSearchRequest req);
+
+        Task<(bool Success, string Message)> CopyRoomTypeToSession(CopyRequest req);
+
+        Task<PagedResult<HostelViewModel>> GetAllHostelWithPage(HotelSearchRequest req);
+
+        Task<(bool Success, string Message)> CopyHotelToSession(CopyRequest req);
+        Task<PagedResult<HostelRoomViewModel>> GetAllHostelRoomlWithPage(HotelSearchRequest req);
     }
 }

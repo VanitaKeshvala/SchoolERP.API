@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using SchoolERP.Net.Services;
 using SchoolERP.Shared.Models;
 using System.Security.Claims;
@@ -33,6 +33,7 @@ namespace SchoolERP.Net.Controllers
         private readonly ISectionClientService _sectionService;
         private readonly IVehicleAssignClientService _vehicleAssignService;
         private readonly IAttendanceClientService _attendanceService;
+        private readonly IPhotoUploadService _photoService;
         //private readonly PermissionHelper _permHelper;
 
         public StudentInformationController(IStudentInformationClientService studentService,
@@ -41,7 +42,7 @@ namespace SchoolERP.Net.Controllers
             IRoutePickupPointClientService routePickupPointService,
             IHostelClientService hostelService, IClassClientService classService,
             ISectionClientService sectionService, IVehicleAssignClientService vehicleAssignService, 
-            IAttendanceClientService attendanceService, PermissionHelper permHelper) : base(permHelper)
+            IAttendanceClientService attendanceService, IPhotoUploadService photoService, PermissionHelper permHelper) : base(permHelper)
         {
             _studentService = studentService;
             _companyService = companyService;
@@ -54,6 +55,7 @@ namespace SchoolERP.Net.Controllers
             _sectionService = sectionService;
             _vehicleAssignService = vehicleAssignService;
             _attendanceService = attendanceService;
+            _photoService = photoService;
         }
 
 
@@ -78,37 +80,80 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> DisableReason()
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/StudentInformation/DisableReason"
-           );
-            var sessionId = await GetSessionId();
-            var response = await _studentService.GetAllDisableReasons(sessionId);
-
-            var model = new StudentDisableReasonPageViewModel
+            var model = new StudentDisableReasonPageViewModel();
+            try
             {
-                Items = response.Data ?? new List<StudentDisableReasonViewModel>()
-            };
-            model.Permissions = perms;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/StudentInformation/DisableReason"
+               );
+
+                var sessionId = await GetSessionId();
+                var response = await _studentService.GetAllDisableReasons(sessionId);
+                                
+                model.Items = response.Data ?? new List<StudentDisableReasonViewModel>();
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }            
         }
 
         /// <summary>
         /// Shows the page for managing student houses (e.g., Red House, Blue House).
         /// </summary>
         
-        public async Task<IActionResult> StudentHouse()
+        public async Task<IActionResult> StudentHouse(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms =await GetPermissions(
-                "/StudentInformation/StudentHouse"
-            );
-            var sessionId = await GetSessionId();
-            var response = await _studentService.GetAllStudentHouses(sessionId);
-            StudentHousePageViewModel model = new StudentHousePageViewModel();
-            model.Items = response.Data;
-            model.Permissions = perms;
-            return View(model);
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                    "/StudentInformation/StudentHouse"
+                );
+
+                var request = new SubjectSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+                var studentHouseTask = _studentService.GetStudentHouseListAsync(request);
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(studentHouseTask, sessionTask, companiesTask);
+                var pagedResult = await studentHouseTask;
+                var model = new StudentHousePageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<StudentHouseViewModel>(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID,
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                };
+               
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         /// <summary>
@@ -210,7 +255,6 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpGet]
-        [HttpPost]
         /// <summary>
         /// Shows the list of all students. 
         /// Users can filter the list by class, section, or search for a specific name/roll number.
@@ -218,53 +262,69 @@ namespace SchoolERP.Net.Controllers
         public async Task<IActionResult> Students(int? classId, int? sectionId, string? search, string? viewType, int page ,
     int pageSize )
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms =await GetPermissions(
-                "/StudentInformation/Students",
-                "/StudentInformation/ImportStudent"
-            );
+            var model = new StudentListPageViewModel();
+            try
+            {                
+                // ── Permissions ──────────────────────────────────────────────
+                var perms = await GetPermissions(
+                    "/StudentInformation/Students",
+                    "/StudentInformation/ImportStudent"
+                );
 
-            var companyId =await GetCompanyId();
-            var sessionId = await GetSessionId();
-            
-            var allFieldsresponse =await _fieldService.GetAllFieldsAsync(companyId, sessionId, belongsTo: "students");
-            List<FieldModel> allFields = new List<FieldModel>();
-            if (allFieldsresponse.Success) 
-            {
-                allFields = allFieldsresponse.Data;
+                // ── Redirect if no view permission ───────────────────────────
+                if (!perms.CanView)
+                {
+                    TempData["Error"] = "You do not have permission to view students.";
+                    return RedirectToAction("Index", "Home");
+                }
+
+
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+
+                var allFieldsresponse = await _fieldService.GetAllFieldsAsync(companyId, sessionId, belongsTo: "students");
+                List<FieldModel> allFields = new List<FieldModel>();
+                if (allFieldsresponse.Success)
+                {
+                    allFields = allFieldsresponse.Data;
+                }
+                var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, search, page, pageSize);
+
+                model.Students = response.Data.Data;
+                model.TotalRecords = response.Data.TotalRecords;
+                model.PageNumber = response.Data.PageNumber;
+                model.PageSize = response.Data.PageSize;
+                model.SelectedClassId = classId;
+                model.SelectedSectionId = sectionId;
+                model.SearchTerm = search;
+                model.ViewType = viewType ?? "list";
+                model.SystemFields = allFields.Where(f => f.IsSystemField).ToList();
+                model.CustomFields = allFields.Where(f => !f.IsSystemField).ToList();
+                model.Permissions = perms;
+                
+
+                ViewBag.Classes = (await _classService.GetAllAsync()).Data;
+                if (classId.HasValue)
+                {
+                    ViewBag.Sections = (await _sectionService.GetByClassAsync(classId.Value)).Data;
+                }
+                else
+                {
+                    ViewBag.Sections = new List<MstSectionViewModel>();
+                }
+
+                int currentUserId = Convert.ToInt32(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                return View(model);
             }
-            var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, search,page,pageSize);
-            var model = new StudentListPageViewModel
+            catch (Exception ex)
             {
-                Students = response.Data.Data,
-                TotalRecords = response.Data.TotalRecords,
-                PageNumber = response.Data.PageNumber,
-                PageSize = response.Data.PageSize,
-
-                SelectedClassId = classId,
-                SelectedSectionId = sectionId,
-                SearchTerm = search,
-                ViewType = viewType ?? "list",
-
-                SystemFields = allFields.Where(f => f.IsSystemField).ToList(),
-                CustomFields = allFields.Where(f => !f.IsSystemField).ToList(),
-                Permissions= perms
-            };
-
-            ViewBag.Classes =(await _classService.GetAllAsync()).Data;
-            if (classId.HasValue)
-            {
-                ViewBag.Sections = (await _sectionService.GetByClassAsync(classId.Value)).Data;
-            }
-            else
-            {
-                ViewBag.Sections = new List<MstSectionViewModel>();
-            }
-
-            int currentUserId = Convert.ToInt32(User.FindFirstValue(ClaimTypes.NameIdentifier));            
-
-            return View(model);
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }            
         }
+        
+        
         [Route("StudentInformation/Details/{id}")]
         /// <summary>
         /// Shows the detailed profile page of a specific student.
@@ -328,8 +388,78 @@ namespace SchoolERP.Net.Controllers
         /// </summary>
         public async Task<IActionResult> SaveStudent([FromBody] StudentAdmissionUpsertRequest req)
         {
+            req.CompanyID = await GetCompanyId();
             req.SessionId =await GetSessionId();
             var res =await _studentService.UpsertStudentAdmission(req);
+            req.FieldValues.TryGetValue("Student Photo", out var photoBase64);
+            req.FieldValues.TryGetValue("Student Photo Name", out var photoName);
+
+            req.FieldValues.TryGetValue("Mother Photo", out var photoMotherPhotoBase64);
+            req.FieldValues.TryGetValue("Student Photo Name", out var motherPhotoType);
+
+            req.FieldValues.TryGetValue("Father Photo", out var photoFatherPhotoBase64);
+            req.FieldValues.TryGetValue("Father Photo Name", out var fatherPhotoType);
+
+            req.FieldValues.TryGetValue("Guardian Photo", out var photoGuardianPhotoBase64);
+            req.FieldValues.TryGetValue("Guardian Photo Name", out var guardianPhotoType);
+            if (res.Success)
+            {
+                int studentid = res.Data;
+                PhotoUploadResult photoResult = new PhotoUploadResult();
+                if (photoBase64 != null && photoBase64 !="")
+                {
+                    photoResult = await _photoService.SaveBase64PhotoAsync(
+                        photoBase64,
+                        photoName ?? "photo.jpg",
+                        PhotoModule.Student,
+                        studentid
+                    );
+                }
+
+                PhotoUploadResult photoFatherResult = new PhotoUploadResult();
+                if(photoFatherPhotoBase64 != null && photoFatherPhotoBase64 != "") 
+                {
+                    photoFatherResult = await _photoService.SaveBase64PhotoAsync(
+                        photoFatherPhotoBase64,
+                        fatherPhotoType ?? "photo.jpg",
+                        PhotoModule.Parent,
+                        studentid
+                    );
+                }
+                PhotoUploadResult photoMotherResult = new PhotoUploadResult();
+                if (photoMotherPhotoBase64 != null && photoMotherPhotoBase64 != "") 
+                {
+                        photoMotherResult = await _photoService.SaveBase64PhotoAsync(
+                            photoMotherPhotoBase64,
+                            motherPhotoType ?? "photo.jpg",
+                            PhotoModule.Parent,
+                            studentid
+                    );
+                }
+
+                PhotoUploadResult photoGuardianResult = new PhotoUploadResult();
+                if (photoMotherPhotoBase64 != null && photoMotherPhotoBase64 != "") 
+                {
+                   photoGuardianResult = await _photoService.SaveBase64PhotoAsync(
+                       photoGuardianPhotoBase64,
+                       guardianPhotoType ?? "photo.jpg",
+                       PhotoModule.Parent,
+                       studentid
+                   );
+                }
+                   
+
+                if (photoResult.Success)
+                {
+                    var model = new ProfileRequest();
+                    model.Id =studentid;
+                    model.PhotoDoc = photoResult.PhotoUrl;
+                    model.MotherPhoto= photoMotherResult.PhotoUrl;
+                    model.FatherPhoto= photoFatherResult.PhotoUrl;
+                    model.GuardianPhoto = photoGuardianResult.PhotoUrl;
+                    await _studentService.UpdateStudentProfileAsync(model);
+                }
+            }
             return Json(new { success = res.Success, message = res.Message });
         }
 

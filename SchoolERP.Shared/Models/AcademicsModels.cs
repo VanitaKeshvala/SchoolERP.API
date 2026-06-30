@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -42,7 +42,7 @@ namespace SchoolERP.Shared.Models
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<MstClassViewModel> Classes { get; set; } = new();
         public List<MstSectionViewModel> Sections { get; set; } = new();
-        public List<MstSubjectViewModel> Subjects { get; set; } = new();
+        public List<Dropdowbinding> Subjects { get; set; } = new();
         public List<HRStaffViewModel> Staff { get; set; } = new();
         public List<MstSubjectGroupViewModel> SubjectGroups { get; set; } = new();
         public List<TimeTableViewModel> TimeTableSlots { get; set; } = new();
@@ -61,6 +61,9 @@ namespace SchoolERP.Shared.Models
 
     public class ClassTeacherViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int ClassTeacherID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -71,6 +74,13 @@ namespace SchoolERP.Shared.Models
         public int StaffID { get; set; }
         public string StaffName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class ClassTeacherUpsertRequest
@@ -78,6 +88,8 @@ namespace SchoolERP.Shared.Models
         public int ClassID { get; set; }
         public int SectionID { get; set; }
         public List<int> StaffIDs { get; set; } = new();
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     public class AssignClassTeacherPageViewModel
@@ -86,6 +98,17 @@ namespace SchoolERP.Shared.Models
         public List<ClassTeacherViewModel> Assignments { get; set; } = new();
         public List<MstClassViewModel> Classes { get; set; } = new();
         public List<HRStaffViewModel> Staff { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? SectionID { get; set; }
     }
 
     public class StudentPromotionViewModel
@@ -129,6 +152,28 @@ namespace SchoolERP.Shared.Models
         public int? NextSessionId { get; set; }
         public int? NextClassId { get; set; }
         public int? NextSectionId { get; set; }
+    }
+
+    public class AssignClassTeacherAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public MstSectionViewModel Assignments { get; set; } = new();
+        public List<MstClassViewModel> Classes { get; set; } = new();
+        public List<HRStaffViewModel> Staff { get; set; } = new();
+        public bool EditAssignments { get; set; } = false;
+    }
+
+
+    public class AcademicsSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+        public string? SectionID { get; set; }
+        public string? ClassIDs { get; set; }
     }
 
 }

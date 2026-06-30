@@ -1,4 +1,7 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
@@ -24,28 +27,64 @@ namespace SchoolERP.API.Services
         /// Retrieves all subjects for the specified company and session.
         /// Optionally includes deleted subjects.
         /// </summary>
-        public List<MstSubjectViewModel> GetAllSubjects(int companyId, int sessionId, bool includeDeleted = false)
+        
+        public async Task<PagedResult<MstSubjectViewModel>> GetAllSubjects(SubjectSearchRequest req)
         {
-            using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
-            var result= conn.Query<MstSubjectViewModel>(
-                "sp_Subject_GetAll",
-                new
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
                 {
-                    CompanyID = companyId,
-                    SessionID = sessionId,
-                    IncludeDeleted = includeDeleted
-                },
-                commandType: CommandType.StoredProcedure
-            ).ToList();
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
 
-            // If SP returned no rows at all
-            if (!result.Any()) return null;
 
-            // If SP returned rows but RESULT != 1 (failure case)
-            if (result.First().Result != 1) return null;
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
 
-            return result;
+                var result = (await conn.QueryAsync<MstSubjectViewModel>(
+                "sp_Subject_GetAll",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstSubjectViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+                
+                if (res == 0) 
+                {
+                    userModel = new PagedResult<MstSubjectViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         /// <summary>
@@ -169,6 +208,65 @@ namespace SchoolERP.API.Services
             {
                 return (false, ex.Message);
             }
+        }
+
+        public async Task<(bool Success, string Message)> CopySubjectToSession(CopyRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+                parameters.Add("@FROMCOMPANYID", req.FromCompanyId);
+                parameters.Add("@FROMSESSIONID", req.FromSessionId);
+                parameters.Add("@TOCOMPANYID", req.ToCompanyId);
+                parameters.Add("@TOSESSIONID", req.ToSessionId);
+                parameters.Add("@USERID", req.UserID);
+
+                var result = await conn.QueryFirstOrDefaultAsync<SpResult>(
+                    "SP_SUBJECT_COPY",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                SpResult model = new SpResult();
+                model.Result = 0;
+                model.Message = ex.Message;
+                return (
+                    Convert.ToInt32(model.Result) == 1,
+                    Convert.ToString(model.Message) ?? string.Empty
+                );
+            }
+
+        }
+
+        public async Task<List<Dropdowbinding>> SubjectsDropdowBinding(DropdowRequest request)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var param = new DynamicParameters();
+                param.Add("@CompanyID", request.CompanyID);
+                param.Add("@SessionID", request.SessionID);
+                param.Add("@UserId", request.UserId);
+                var result = (await conn.QueryAsync<Dropdowbinding>(
+                "sp_Subject_GETAllDROPDOWNBINDING",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+                return result;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

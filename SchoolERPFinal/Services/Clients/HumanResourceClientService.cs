@@ -132,7 +132,7 @@ namespace SchoolERP.Net.Services.Clients
                 $"api/HumanResourceApi/GetPayrollGenerationData?staffId={staffId}&month={month}&year={year}");
 
 
-        public Task<ApiResponse<dynamic>> UpdateProfileAsync(HRStaffProfileRequest req)
+        public Task<ApiResponse<dynamic>> UpdateProfileAsync(ProfileRequest req)
            => PostAsync<dynamic>("api/HumanResourceApi/UpdateProfile", req);
     }
 }

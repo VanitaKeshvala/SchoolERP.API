@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
@@ -659,16 +660,16 @@ namespace SchoolERP.API.Services
                     { "Student Password", ("@STUDENTPASSWORD", "string") },
                     { "Parent Username", ("@PARENTUSERNAME", "string") },
                     { "Parent Password", ("@PARENTPASSWORD", "string") },
-                    { "Student Photo", ("@STUDENTPHOTO", "byte[]") },
+                    { "Student Photo", ("@STUDENTPHOTO", "string") },
                     { "Student Photo Name", ("@STUDENTPHOTONAME", "string") },
                     { "Student Photo Type", ("@STUDENTPHOTOTYPE", "string") },
-                    { "Father Photo", ("@FATHERPHOTO", "byte[]") },
+                    { "Father Photo", ("@FATHERPHOTO", "string") },
                     { "Father Photo Name", ("@FATHERPHOTONAME", "string") },
                     { "Father Photo Type", ("@FATHERPHOTOTYPE", "string") },
-                    { "Mother Photo", ("@MOTHERPHOTO", "byte[]") },
+                    { "Mother Photo", ("@MOTHERPHOTO", "string") },
                     { "Mother Photo Name", ("@MOTHERPHOTONAME", "string") },
                     { "Mother Photo Type", ("@MOTHERPHOTOTYPE", "string") },
-                    { "Guardian Photo", ("@GUARDIANPHOTO", "byte[]") },
+                    { "Guardian Photo", ("@GUARDIANPHOTO", "string") },
                     { "Guardian Photo Name", ("@GUARDIANPHOTONAME", "string") },
                     { "Guardian Photo Type", ("@GUARDIANPHOTOTYPE", "string") },
 
@@ -1598,5 +1599,177 @@ namespace SchoolERP.API.Services
                 return new StudentDisableReasonViewModel();
             }
         }
+
+
+
+        public async Task<List<StudentListViewModel>> GetStudentCopyList(
+            int companyId, int sessionId)
+        {
+            try
+            {
+                
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+
+
+
+                var param = new DynamicParameters();
+
+                param.Add("@COMPANYID", companyId);
+                param.Add("@SESSIONID", sessionId);
+
+                var multi = await conn.QueryMultipleAsync(
+                    "SP_STUDENT_LIST_GETFORCOPYSHOWDATA",
+                    param,
+                    commandType: CommandType.StoredProcedure);
+
+                var student = (await multi.ReadAsync<StudentListViewModel>()).ToList();
+
+                
+                return student;
+            }
+            catch(Exception ex)
+            {
+                return new List<StudentListViewModel>();
+            }
+        }
+
+
+
+        
+        public async Task<(bool Success, string Message)> CopyStudentsToSession(CopyRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+                parameters.Add("@FROM_COMPANYID", req.FromCompanyId);
+                parameters.Add("@FROM_SESSIONID", req.FromSessionId);
+                parameters.Add("@TO_COMPANYID", req.ToCompanyId);
+                parameters.Add("@TO_SESSIONID", req.ToSessionId);
+                parameters.Add("@STUDENT_IDS", null);
+                parameters.Add("@COPY_PHOTO", 1);
+                parameters.Add("@COPY_ADDRESS", 1);
+                parameters.Add("@COPY_TRANSPORT", 1);
+                parameters.Add("@COPY_HOSTEL", 1);
+                parameters.Add("@COPY_CUSTOMFIELDS", 1);
+                parameters.Add("@USERID", req.UserID);
+
+                var result = await conn.QueryFirstOrDefaultAsync<SpResult>(
+                    "SP_STUDENT_COPY_TO_SESSION",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+
+            
+        }
+
+
+        public (bool Success, string Message) UpdateStudentProfile(ProfileRequest req)
+        {
+            try
+            {
+
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@StudentID", req.Id);
+                parameters.Add("@PHOTODOC", req.PhotoDoc);
+                parameters.Add("@USERID", req.UserId);
+                parameters.Add("@MotherPhoto", req.MotherPhoto);
+                parameters.Add("@FatherPhoto", req.FatherPhoto);
+                parameters.Add("@GuardianPhoto", req.GuardianPhoto);
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "SP_Mst_Students_UpdateProfile",
+                   parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a filtered list of active students with their custom field values.
+        ///
+        /// Flow:
+        ///   1. Calls SP_STUDENT_LIST_GET with optional class/section/search filters.
+        ///   2. Calls sp_StudentCustomFieldValues_GetAllActive once (avoids N+1 queries),
+        ///      groups results by StudentID into a lookup dictionary.
+        ///   3. Maps custom fields onto each student from the pre-built dictionary.
+        ///
+        /// Note: Dapper auto-maps SP column names to ViewModel properties —
+        ///       no manual column-by-column mapping needed.
+        /// </summary>
+        public async Task<PagedResult<StudentHouseViewModel>> GetStudentHouseList(SubjectSearchRequest req)
+        {
+            try
+            {
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SEARCHTERM", req.SearchKeyword);
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+                             
+
+                var result = (await conn.QueryAsync<StudentHouseViewModel>(
+                "SP_MST_STUDENTHOUSE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+
+                var students = new PagedResult<StudentHouseViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };                
+
+                // ── 3. Attach custom fields + filter inactive students ───────────────
+                // IsActive is mapped directly by Dapper; no manual column-name guessing needed
+                return students;
+            }
+            catch
+            {
+                return new PagedResult<StudentHouseViewModel>();
+            }
+        }
+
     }
 }

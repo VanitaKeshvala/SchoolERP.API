@@ -70,13 +70,25 @@
 
     <!-- Main CSS -->
     <link rel="stylesheet" href="~/assets/css/style.css" id="app-style">
+    <style>
+        .sidebar .sidebar-menu > ul > li ul > li.active a .menu-arrow::before {
+            border-right: none !important; 
+            border-bottom: none !important;
+        }
 
+        .sidebar .sidebar-menu > ul > li ul > li.active a.subdrop i {
+            background: var(--primary-transparent) !important;
+            
+            border-radius: 5px !important;
+            color: var(--primary) !important;
+        }
+    </style>
     @RenderSection("Styles", required: false)
 
 </head>
 
 <body>
-   
+
     <!-- Begin Wrapper -->
     <div class="main-wrapper">
 
@@ -109,7 +121,7 @@
                         <i class="ti ti-arrow-right"></i>
                     </button>
 
-                  @*   <button class="me-1 fw-bold btn btn-primary" data-bs-toggle="modal" data-bs-target="#session-year" type="button">
+                    @*   <button class="me-1 fw-bold btn btn-primary" data-bs-toggle="modal" data-bs-target="#session-year" type="button">
                         <span id="activeSessionTitle">—</span> <i class="ti ti-pencil ms-1 fs-15 align-middle"></i>
                     </button> *@
 
@@ -150,7 +162,7 @@
                     </div>-->
 
 
-                   @*  <div class="header-item">
+                    @*  <div class="header-item">
                         <button class="me-3 fw-bold btn btn-primary" data-bs-toggle="modal" data-bs-target="#session-year">
                             2024-2025 <i class="ti ti-pencil ms-1 fs-15 align-middle"></i>
                         </button>
@@ -163,7 +175,7 @@
                         </button>
                     </div>
 
-                   
+
                     <!-- Light/Dark Mode Button -->
                     <div class="header-item d-none d-sm-flex me-2">
                         <button class="topbar-link btn btn-icon topbar-link" id="light-dark-mode" type="button">
@@ -347,7 +359,7 @@
                                 <img src="~/assets/img/users/user-01.jpg" class="rounded-circle" width="42" height="42" alt="">
                                 <div class="ms-2">
                                     <p class="fw-medium text-dark mb-0">@User.Identity.Name</p>
-                                    
+
                                 </div>
                             </div>
 
@@ -364,7 +376,7 @@
                             </a>
 
                             <!-- item -->
-                           @*  <div class="form-check form-switch form-check-reverse d-flex align-items-center justify-content-between dropdown-item mb-0">
+                            @*  <div class="form-check form-switch form-check-reverse d-flex align-items-center justify-content-between dropdown-item mb-0">
                                 <label class="form-check-label" for="notify"><i class="ti ti-bell me-1"></i>Notifications</label>
                                 <input class="form-check-input me-0" type="checkbox" role="switch" id="notify">
                             </div> *@
@@ -389,24 +401,20 @@
         </header>
         <!-- Topbar End -->
         <!-----Change Session------->
-        
-
-        
-
         <!-- Sidenav Menu Start -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-logo">
                 <a href="/" class="logo logo-normal">
                     <img src="~/assets/img/logo.svg" alt="Logo">
                 </a>
-                <button class="sidenav-toggle-btn btn border-0 p-0 active" id="toggle_btn"> 
+                <button class="sidenav-toggle-btn btn border-0 p-0 active" id="toggle_btn">
                     <i class="ti ti-arrow-left text-body"></i>
                 </button>
             </div>
 
             <div class="sidebar-inner" data-simplebar>
                 <div id="sidebar-menu" class="sidebar-menu">
-                    <ul class="sidebar-menu">                        
+                    <ul class="sidebar-menu">
                         @* Added Menu View Component invocation to render dynamic sidebar menu.
                          Uses Component.InvokeAsync("Menu")
                          Executes MenuViewComponent asynchronously
@@ -415,7 +423,7 @@
                          Keeps layout clean and reusable
                          Supports dynamic menu generation *@
                         @await Component.InvokeAsync("Menu")
-                    </ul>                    
+                    </ul>
                 </div>
             </div>
         </div>
@@ -436,9 +444,6 @@
 
     </div>
     <!-- End Wrapper -->
-
-
-
     <!----Session Year Modal--->
     @* <div class="modal fade" id="session-year">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -486,14 +491,17 @@
         </div>
     </div>
 
-    
-   
+    @await Html.PartialAsync("_CopySessionModal")
+
     <!-- jQuery -->
     <script src="~/assets/js/jquery-3.7.1.min.js"></script>
+    <script src="~/js/select2.min.js"></script>
     <script>
                 // In _Layout.cshtml — inside <script> tag at bottom of body
         // Make these available globally so Section.js can use them
-       
+           window.appConfig = {
+            apiBaseUrl: "@Configuration["ApiSettings:BaseUrl"]"
+        };
         window.fetchSessions = async function () {
             const resp = await fetch('/Sessions/GetAll?includeDeleted=false', { method: 'GET' });
             const payload = await resp.json();
@@ -512,8 +520,8 @@
                 return 0;
             }
         };
-        
-    
+
+
         (function () {
             function getJwtToken() {
                 try {
@@ -562,11 +570,11 @@
                 });
             }
         })();
-        
-            
-        
+
+
+
     </script>
-    <script src="~/js/select2.min.js"></script>
+
     <!-- Bootstrap Core JS -->
     <script src="~/assets/js/bootstrap.bundle.min.js"></script>
 
@@ -582,8 +590,8 @@
     <script src="~/assets/js/form-fileupload.js"></script>
 
     <!-- Editor JS -->
-    <script src="~/js/ckeditor.js"></script>    
-   
+    <script src="~/js/ckeditor.js"></script>
+
 
     <!-- Daterangepikcer JS -->
     <script src="~/assets/js/moment.min.js"></script>
@@ -594,8 +602,9 @@
     <script src="~/assets/js/script.js"></script>
     <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
 
-
-
+    <script src="~/assets/js/copySessionModal.js"></script>
+    <!-- Sidebar Active Menu Highlighting -->
+    <script src="~/assets/js/sidebarActiveMenu.js"></script>
 
 
     <!-- DataTable Core -->
@@ -617,13 +626,7 @@
     <script src="~/js/buttons.print.min.js"></script>
 
     <script>
-        const input = document.getElementById("txtBackDaysAllow");
 
-        input.addEventListener("keydown", (e) => {
-            if (e.key === "-" || e.key === "Minus") {
-                e.preventDefault();
-            }
-        });
 
 
         $(document).ready(function () {
@@ -642,30 +645,36 @@
     </script>
 
     <script>
-        ClassicEditor.create(document.querySelector("#editor")).catch((error) => {
-            console.error(error);
+                ['#editor', '#editor2', '#editor3', '#editor4'].forEach(function(sel) {
+            const el = document.querySelector(sel);
+            if (el) {
+                ClassicEditor.create(el).catch(function(error) {
+                    console.error(error);
+                });
+            }
         });
 
-        ClassicEditor.create(document.querySelector("#editor2")).catch((error) => {
-            console.error(error);
-        });
+                if ($('#mySelect').length) {
+            $('#mySelect').select2({
+                placeholder: "Select",
+                allowClear: true
+            });
+        }
+        if ($('#mySelect2').length) {
+            $('#mySelect2').select2({
+                placeholder: "Select",
+                allowClear: true
+            });
+        }
 
-        ClassicEditor.create(document.querySelector("#editor3")).catch((error) => {
-            console.error(error);
-        });
-
-        ClassicEditor.create(document.querySelector("#editor4")).catch((error) => {
-            console.error(error);
-        });
-
-        $('#mySelect').select2({
-            placeholder: "Select",
-            allowClear: true
-        });
-        $('#mySelect2').select2({
-            placeholder: "Select",
-            allowClear: true
-        });
+                window.initSelect2 = function (selector, options) {
+            const defaults = { placeholder: "Select", allowClear: true };
+            $(selector).each(function () {
+                if ($(this).length && !$(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2($.extend({}, defaults, options || {}));
+                }
+            });
+        };
     </script>
 
     <script src="~/js/inline-form-validation.js" asp-append-version="true"></script>
@@ -800,12 +809,41 @@
             init();
         })();
 
+        // ── Global accessor ──────────────────────────────────────────────
+        // Any page/script: window.getCompanyId() → integer company ID
+        // (same pattern as window.getSessionId() above). Backed by the
+        // same /Company/GetUserCurrentCompany call the topbar selector
+        // already makes, cached on window.__currentCompanyId so we don't
+        // fetch it twice.
+        window.fetchUserCurrentCompany = async function () {
+            try {
+                const resp = await fetch('/Company/GetUserCurrentCompany', { method: 'GET' });
+                const payload = await resp.json();
+                return payload.success ? (payload.data || 0) : 0;
+            } catch {
+                return 0;
+            }
+        };
+
+        window.getCompanyId = function () {
+            return parseInt(window.__currentCompanyId || '0', 10);
+        };
+
         (function () {
             const ddl = document.getElementById('ddlCompanySelection');
             const titleEl = document.getElementById('activeCompanyTitle');
             const btnSave = document.getElementById('btnSaveCompany');
 
-            if (!ddl || !titleEl || !btnSave) return;
+            // Even on pages without the topbar company-selection markup,
+            // still resolve and cache the current company id so that
+            // window.getCompanyId() works everywhere (e.g. for
+            // copySessionModal.js).
+            if (!ddl || !titleEl || !btnSave) {
+                window.fetchUserCurrentCompany().then(id => {
+                    window.__currentCompanyId = id || 0;
+                });
+                return;
+            }
 
             async function fetchCompanies() {
                 const resp = await fetch('/Company/GetAssignedCompanies', { method: 'GET' });
@@ -814,16 +852,6 @@
                     throw new Error(payload?.message || 'Failed to load companies');
                 }
                 return payload.data;
-            }
-
-            async function fetchUserCurrentCompany() {
-                try {
-                    const resp = await fetch('/Company/GetUserCurrentCompany', { method: 'GET' });
-                    const payload = await resp.json();
-                    return payload.success ? (payload.data || 0) : 0;
-                } catch {
-                    return 0;
-                }
             }
 
             function setLoadingState(message) {
@@ -869,8 +897,9 @@
                     setLoadingState('Loading…');
                     const [companies, currentCompanyId] = await Promise.all([
                         fetchCompanies(),
-                        fetchUserCurrentCompany()
+                        window.fetchUserCurrentCompany()
                     ]);
+                    window.__currentCompanyId = currentCompanyId || 0;
                     populateCompanies(companies);
                     selectDefaultCompany(companies, currentCompanyId);
                 } catch (e) {
@@ -896,6 +925,7 @@
                     if (!res || res.success !== true) {
                         throw new Error(res?.message || 'Could not set current company.');
                     }
+                    window.__currentCompanyId = selectedId;
                     window.location.reload();
                 } catch (e) {
                     console.error(e);
@@ -906,6 +936,14 @@
 
             init();
         })();
+
+         const input = document.getElementById("txtBackDaysAllow");
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "-" || e.key === "Minus") {
+                e.preventDefault();
+            }
+        });
     </script>
     <script>
         /**
@@ -955,7 +993,7 @@
 
 
     @RenderSection("Scripts", required: false)
-    
+
     <!-- Global Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
         <div id="globalToast" class="toast align-items-center border-0 text-white" role="alert" aria-live="assertive" aria-atomic="true">
@@ -996,7 +1034,7 @@
             const toastEl = document.getElementById('globalToast');
             const messageEl = document.getElementById('globalToastMessage');
             const iconEl = document.getElementById('globalToastIcon');
-            
+
             if (!toastEl || !messageEl) return;
 
             // Handle boolean type (compatibility with older showToast(msg, isSuccess))
@@ -1032,7 +1070,7 @@
             }
 
             messageEl.textContent = message;
-            
+
             const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 });
             toast.show();
         };
@@ -1139,20 +1177,20 @@
                     header.addEventListener('click', function() {
                         const rows = Array.from(tbody.querySelectorAll('tr'));
                         const validRows = rows.filter(row => !row.querySelector('td[colspan]'));
-                        
+
                         if (validRows.length <= 1) return;
 
                         const isAscending = header.dataset.order !== 'asc';
-                        
+
                         validRows.sort((a, b) => {
                             if (index >= a.cells.length || index >= b.cells.length) return 0;
-                            
+
                             let aCol = a.cells[index].innerText.trim();
                             let bCol = b.cells[index].innerText.trim();
-                            
+
                             const aSort = a.cells[index].getAttribute('data-sort');
                             const bSort = b.cells[index].getAttribute('data-sort');
-                            
+
                             if (aSort !== null && bSort !== null) {
                                 aCol = aSort;
                                 bCol = bSort;
@@ -1166,19 +1204,19 @@
                                 const bClean = bCol.replace(/[^\d.-]/g, '');
                                 const aNum = parseFloat(aClean);
                                 const bNum = parseFloat(bClean);
-                                
-                                if (aClean !== '' && bClean !== '' && !isNaN(aNum) && !isNaN(bNum) && 
+
+                                if (aClean !== '' && bClean !== '' && !isNaN(aNum) && !isNaN(bNum) &&
                                     /^-?\d+(\.\d+)?$/.test(aClean) && /^-?\d+(\.\d+)?$/.test(bClean)) {
                                     return isAscending ? aNum - bNum : bNum - aNum;
                                 }
                             }
-                            
+
                             return isAscending ? aCol.localeCompare(bCol, undefined, {numeric: true, sensitivity: 'base'}) : bCol.localeCompare(aCol, undefined, {numeric: true, sensitivity: 'base'});
                         });
-                        
+
                         validRows.forEach(row => tbody.appendChild(row));
                         header.dataset.order = isAscending ? 'asc' : 'desc';
-                        
+
                         headers.forEach((h) => {
                             const icon = h.querySelector('i');
                             if (icon) {

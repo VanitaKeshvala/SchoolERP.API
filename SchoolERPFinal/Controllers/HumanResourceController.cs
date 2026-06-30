@@ -707,8 +707,7 @@ namespace SchoolERP.Net.Controllers
                 if(res.Success)
                 {
                     int staffid = res.Data.Result;
-                    IFormFile photo;
-                    var photoResult = await SaveBase64PhotoAsync(
+                    var photoResult = await _photoService.SaveBase64PhotoAsync(
                         req.PhotoBase64,
                         req.PhotoDocName ?? "photo.jpg",
                         PhotoModule.Staff,
@@ -716,14 +715,11 @@ namespace SchoolERP.Net.Controllers
                     );
                     if (photoResult.Success) 
                     {
-                        var staffmodel = new HRStaffProfileRequest();
-                        staffmodel.StaffId = req.StaffID;
-                        staffmodel.PhotoDoc = photoResult.PhotoUrl;
-                        await _hrClient.UpdateProfileAsync(staffmodel);
+                        var model = new ProfileRequest();
+                        model.Id = req.StaffID;
+                        model.PhotoDoc = photoResult.PhotoUrl;
+                        await _hrClient.UpdateProfileAsync(model);
                     }
-                     
-
-
                 }
                     return Ok(new { success = res.Success, message = res.Message });
             }
@@ -740,71 +736,8 @@ namespace SchoolERP.Net.Controllers
         }
 
 
-        // ─────────────────────────────────────────────────────────
-        // POST  /UploadProfilePhoto
-        // ─────────────────────────────────────────────────────────
-        // Called from JS AFTER the main record is saved.
-        // JS already sends: photo (file), recordId (int), module (string)
-        // No JS or HTML changes needed — just wire this endpoint.
-        //
-        // Example JS call (already in your pages via fileToBase64 pattern):
-        //   formData.append('photo',    photoFile);
-        //   formData.append('recordId', savedId);
-        //   formData.append('module',   'Staff');   // Staff/Student/Employee/User
-        //   fetch('/UploadProfilePhoto', { method: 'POST', body: formData })
-        // ─────────────────────────────────────────────────────────
+       
 
-        /// <summary>
-        /// Converts base64 photo string (sent from JS) → IFormFile → saves to disk.
-        /// No JS or HTML changes needed — reuses existing base64 from request.
-        /// </summary>
-        protected async Task<PhotoUploadResult> SaveBase64PhotoAsync(
-            string base64String,
-            string originalFileName,
-            PhotoModule module,
-            int recordId)
-        {
-            try
-            {
-                // Strip data URL prefix if present
-                // e.g. "data:image/png;base64,iVBORw0..." → "iVBORw0..."
-                var base64Data = base64String.Contains(",")
-                    ? base64String.Split(',')[1]
-                    : base64String;
-
-                var bytes = Convert.FromBase64String(base64Data);
-
-                // Detect content type from file extension
-                var ext = Path.GetExtension(originalFileName).ToLower();
-                var contentType = ext switch
-                {
-                    ".jpg" => "image/jpeg",
-                    ".jpeg" => "image/jpeg",
-                    ".png" => "image/png",
-                    ".gif" => "image/gif",
-                    ".webp" => "image/webp",
-                    _ => "image/jpeg"
-                };
-
-                // Convert byte array → IFormFile
-                var stream = new MemoryStream(bytes);
-                IFormFile file = new FormFile(stream, 0, bytes.Length, "photo", originalFileName)
-                {
-                    Headers = new HeaderDictionary(),
-                    ContentType = contentType
-                };
-
-                // Use the common PhotoUploadService
-                return await _photoService.UploadAsync(file, module, recordId);
-            }
-            catch (Exception ex)
-            {
-                return new PhotoUploadResult
-                {
-                    Success = false,
-                    Message = $"Base64 photo conversion failed: {ex.Message}"
-                };
-            }
-        }
+        
     }
 }

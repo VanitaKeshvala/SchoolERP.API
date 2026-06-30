@@ -47,5 +47,9 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<StudentCategoryViewModel>> GetStudentCategoryByIdAsync(int id);
         Task<ApiResponse<StudentHouseViewModel>> GetStudentHouseByIdAsync(int id);
         Task<ApiResponse<StudentDisableReasonViewModel>> GetDisableReasonsByID(int id);
+
+        Task<ApiResponse<SpResult>> UpdateStudentProfileAsync(ProfileRequest req);
+
+        Task<ApiResponse<PagedResult<StudentHouseViewModel>>> GetStudentHouseListAsync(SubjectSearchRequest request);
     }
 }

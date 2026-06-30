@@ -1,4 +1,5 @@
 ﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -15,5 +16,7 @@ namespace SchoolERP.API.Interfaces
 
         List<StudentPromotionViewModel> GetStudentsForPromotion(int companyId, int sessionId, int classId, int sectionId);
         (bool success, string message) PromoteStudents(PromotionRequest req, int companyId, int userId);
+
+        Task<PagedResult<ClassTeacherViewModel>> GetAllClassTeachersWithPage(AcademicsSearchRequest req);
     }
 }

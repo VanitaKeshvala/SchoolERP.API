@@ -33,6 +33,12 @@ namespace SchoolERP.Shared.Models
                             .Where(x => int.TryParse(x.Trim(), out _))
                             .Select(x => int.Parse(x.Trim()))
                             .ToList();
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class MstClassUpsertRequest
@@ -46,6 +52,8 @@ namespace SchoolERP.Shared.Models
         public bool IsActive { get; set; } = true;
 
         public List<int> SectionIds { get; set; } = new List<int>();
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
 
     public class MstClassPageViewModel
@@ -53,6 +61,16 @@ namespace SchoolERP.Shared.Models
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
         public List<MstSectionViewModel> AvailableSections { get; set; } = new List<MstSectionViewModel>();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? SectionID { get; set; }
     }
 
     public class MstClassAddViewModel
@@ -61,5 +79,17 @@ namespace SchoolERP.Shared.Models
         public MstClassViewModel Classes { get; set; } = new MstClassViewModel();
         public MstClassViewModel? EditClasses { get; set; } = new MstClassViewModel();
         public List<MstSectionViewModel> AvailableSections { get; set; } = new List<MstSectionViewModel>();
+    }
+
+    public class ClassSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+        public int? SectionID { get; set; }
+        public string? ClassID { get; set; }
     }
 }

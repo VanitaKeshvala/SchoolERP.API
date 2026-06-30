@@ -13,9 +13,14 @@ namespace SchoolERP.Net.Services.Clients
         {
         }
 
-        public async Task<ApiResponse<List<MstSubjectViewModel>>> GetAllAsync(bool includeDeleted = false,int? sessionId=null)
+        //public async Task<ApiResponse<List<MstSubjectViewModel>>> GetAllAsync(SubjectSearchRequest request)
+        //{
+        //    return await GetAsync<List<MstSubjectViewModel>>($"api/SubjectApi/GetAll?includeDeleted={includeDeleted}&sessionId={sessionId}");
+        //}
+
+        public async Task<ApiResponse<PagedResult<MstSubjectViewModel>>> GetAllAsync(SubjectSearchRequest request)
         {
-            return await GetAsync<List<MstSubjectViewModel>>($"api/SubjectApi/GetAll?includeDeleted={includeDeleted}&sessionId={sessionId}");
+            return await PostAsync<PagedResult<MstSubjectViewModel>>("api/SubjectApi/GetAll", request);
         }
 
         public async Task<ApiResponse<MstSubjectViewModel>> GetByIDAsync(int id)
@@ -36,6 +41,11 @@ namespace SchoolERP.Net.Services.Clients
         public async Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request)
         {
             return await PostAsync<dynamic>($"api/SubjectApi/ToggleStatus", request);
+        }
+
+        public async Task<ApiResponse<List<Dropdowbinding>>> SubjectsDropdowBindAsync(DropdowRequest request)
+        {
+            return await PostAsync<List<Dropdowbinding>>("api/SubjectApi/SubjectsDropdowBind", request);
         }
     }
 }

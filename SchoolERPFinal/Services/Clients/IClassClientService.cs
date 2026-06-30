@@ -12,5 +12,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> UpsertAsync(MstClassUpsertRequest request);
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
         Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
+        Task<ApiResponse<PagedResult<MstClassViewModel>>> GetAllClassWithPageAsync(ClassSearchRequest request);
     }
 }

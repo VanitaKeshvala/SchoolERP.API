@@ -308,9 +308,14 @@ namespace SchoolERP.API.Controllers
         {
             try
             {
+                if(request.CompanyID==null && request.CompanyID == 0) 
+                {
+                    request.CompanyID = GetCompanyId();
+                }
+
                 var result = _studentService.UpsertStudentAdmission(
                     request,
-                    GetCompanyId(),
+                    request.CompanyID,
                     request.SessionId,
                     GetUserId());
 
@@ -490,6 +495,49 @@ namespace SchoolERP.API.Controllers
             {
                 throw;
             }
+        }
+
+
+        [HttpPost("UpdateStudentProfile")]
+        public IActionResult UpdateStudentProfile([FromBody] ProfileRequest req)
+        {
+            try
+            {
+                req.UserId = GetUserId();
+                var result = _studentService.UpdateStudentProfile(req);
+                return Ok(new { success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "Database Error: " + ex.Message });
+            }
+        }
+
+
+        [HttpPost("GetStudentHouseList")]
+        public async Task<IActionResult> GetStudentHouseList([FromBody] SubjectSearchRequest request)
+        {
+            try
+            {
+
+                int userId = GetUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (companyId == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<StudentHouseViewModel>>.SuccessResponse(new List<StudentHouseViewModel>()));
+
+                var data = await _studentService.GetStudentHouseList(request);
+                return Ok(ApiResponse<PagedResult<StudentHouseViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "Database Error: " + ex.Message });
+            }
+            
         }
     }
 }
