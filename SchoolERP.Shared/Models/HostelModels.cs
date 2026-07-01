@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.Design;
 
 namespace SchoolERP.Shared.Models
 {
@@ -32,6 +33,8 @@ namespace SchoolERP.Shared.Models
         public decimal SecurityAmount { get; set; }
         public DateTime? EffectiveFrom { get; set; }
         public DateTime? EffectiveTO { get; set; }
+
+        public string? RoomCoolingTypeName { get; set; }
 
     }
 
@@ -257,5 +260,17 @@ namespace SchoolERP.Shared.Models
         public List<HostelViewModel> Hostels { get; set; } = new();
         public List<RoomTypeViewModel> RoomTypes { get; set; } = new();
         public HostelRoomViewModel EditHostelRoom { get; set; } = new();
+    }
+
+    public class HostelRoomRateViewModel 
+    {
+        public int RateID { get; set; }
+        public int RoomTypeID { get; set; }
+        public decimal CostPerBed { get; set; }
+        public decimal SecurityAmount { get; set; }
+        public DateTime EffectiveFrom { get; set; }
+        public DateTime EffectiveTO { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 }

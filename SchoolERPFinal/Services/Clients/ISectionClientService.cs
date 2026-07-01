@@ -14,5 +14,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
         Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
         Task<ApiResponse<dynamic>> CopyToSessionAsync(SectionCopyRequest request);
+        Task<ApiResponse<PagedResult<MstSectionViewModel>>> GetAllSectionWithPagePageAsync(HostelTypeSearchRequest request);
     }
 }

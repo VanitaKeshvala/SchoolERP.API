@@ -255,6 +255,12 @@ $(document).ready(function () {
         paging: false,
         info: false
     });
+    // Call only if a Room Type is selected
+    var roomTypeId = $('#ddlRoomType').val();
+
+    if (roomTypeId) {
+        fachrecordforcust(roomTypeId);
+    }
 })
 
 
@@ -575,6 +581,7 @@ async function fachrecordforcust(roomTypeId) {
     if (!roomTypeId) {
         document.getElementById('txtBeds').value = '';
         document.getElementById('txtCost').value = '0';
+        document.getElementById('spnRoomType').value = '';
         return;
     }
 
@@ -594,6 +601,8 @@ async function fachrecordforcust(roomTypeId) {
         const bedCapacity = data.data.BedCapacity ?? data.data.bedCapacity ?? 1;
         const acNonAcFlag = data.data.ACNonACflag ?? data.data.acNonACflag ?? 'Non-AC';
         const rentPerBed = data.data.RentPerBed ?? data.data.rentPerBed ?? 0;
+        const roomTypeTitle = data.data.RentPerBed ?? data.data.roomTypeTitle ?? 0;
+        const roomCoolingTypeTitle = data.data.RentPerBed ?? data.data.roomCoolingTypeName ?? 0;
 
         // Auto-fill beds (read-only, comes from room type)
         const txtBeds = document.getElementById('txtBeds');
@@ -604,9 +613,17 @@ async function fachrecordforcust(roomTypeId) {
         const txtCost = document.getElementById('txtCost');
         txtCost.value = parseFloat(rentPerBed).toFixed(2);
 
-        // Optional: show AC/Non-AC badge near the room type dropdown
-        showAcBadge(acNonAcFlag);
 
+        // Auto-fill cost per bed (editable override allowed)
+        const txtCoolingRoomType = document.getElementById('spnRoomCoolingType');
+        txtCoolingRoomType.innerText = roomCoolingTypeTitle;
+
+        const txtRoomType = document.getElementById('spnRoomType');
+        txtRoomType.innerText = roomTypeTitle;
+        //spnRoomCoolingType
+        // Optional: show AC/Non-AC badge near the room type dropdown
+        //showAcBadge(acNonAcFlag);
+        loadRoomRates(roomTypeId);
     } catch (err) {
         console.error('fachrecordforcust error:', err);
         // Fallback — don't block the form, just clear auto-fill
@@ -614,6 +631,58 @@ async function fachrecordforcust(roomTypeId) {
     }
 }
 
+
+async function loadRoomRates(roomTypeId) {
+
+    //const roomTypeId = $('#ddlFilterRoolType').val();
+
+    if (!roomTypeId) {
+        $('#tblRateBody').html('');
+        return;
+    }
+
+    try {
+
+        const response = await fetch(`/Hostel/GetHostelRoomRateByID/${roomTypeId}`);
+
+        const result = await response.json();
+
+        if (!result.success) {
+            alert(result.message);
+            document.getElementById('divRate').classList.add('d-none');
+            return;
+        }
+        
+        bindRateTable(result.data);
+
+    }
+    catch (e) {
+        console.error(e);
+        alert('Unable to load room rates.');
+    }
+}
+function bindRateTable(data) {
+    //divRate   
+    document.getElementById('divRate').classList.remove('d-none');
+    let html = '';
+
+    data.forEach(function (item) {
+
+        html += `
+            <tr>
+                <td>${item.costPerBed}</td>
+                <td>${item.securityAmount}</td>
+                <td>${formatDate(item.effectiveFrom)}</td>
+                <td>${formatDate(item.effectiveTO)}</td>
+            </tr>
+        `;
+    });
+
+    $('#tblRateBody').html(html);
+    if (data.length === 1 && data[0].rateID === 0) {
+        document.getElementById('divRate').classList.add('d-none');
+    }
+}
 function showAcBadge(flag) {
     let badge = document.getElementById('acBadge');
     if (!badge) {
@@ -625,7 +694,13 @@ function showAcBadge(flag) {
     badge.textContent = flag;
     badge.className = 'badge ms-2 ' + (flag === 'AC' ? 'bg-info' : 'bg-secondary');
 }
+function formatDate(date) {
 
+    if (!date)
+        return '';
+
+    return new Date(date).toLocaleDateString('en-GB');
+}
 function showToast(msg, type = 'success') {
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `<div class="toast align-items-center text-bg-${type} border-0 show position-fixed bottom-0 end-0 m-3" role="alert" style="z-index:9999">

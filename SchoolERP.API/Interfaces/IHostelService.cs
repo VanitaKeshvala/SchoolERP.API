@@ -100,5 +100,6 @@ namespace SchoolERP.API.Interfaces
 
         Task<(bool Success, string Message)> CopyHotelToSession(CopyRequest req);
         Task<PagedResult<HostelRoomViewModel>> GetAllHostelRoomlWithPage(HotelSearchRequest req);
+        Task<List<HostelRoomRateViewModel>> GetHostelRoomRateByID(int id);
     }
 }

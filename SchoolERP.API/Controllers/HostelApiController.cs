@@ -417,5 +417,31 @@ namespace SchoolERP.API.Controllers
             }
 
         }
+
+        [HttpGet("GetHostelRoomRateByID/{id}")]
+        public async Task<IActionResult> GetHostelRoomRateByID(int id)
+        {
+            try
+            {
+                var data = await _hostelService.GetHostelRoomRateByID(id);
+
+                if (data == null || !data.Any())
+                {
+                    return NotFound(
+                        ApiResponse<List<HostelRoomRateViewModel>>
+                            .ErrorResponse("No Record Found."));
+                }
+
+                return Ok(
+                    ApiResponse<List<HostelRoomRateViewModel>>
+                        .SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(
+                    ApiResponse<List<HostelRoomRateViewModel>>
+                        .ErrorResponse(ex.Message));
+            }
+        }
     }
 }

@@ -68,6 +68,8 @@ builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IDashboardApiService, DashboardApiService>();
 builder.Services.AddScoped<IHostelTypeService, HostelTypeService>();
 builder.Services.AddScoped<IRoomCoolingTypeService, RoomCoolingTypeService>();
+builder.Services.AddScoped<IHolidayTypeService, HolidayTypeService>();
+builder.Services.AddScoped<IHolidayService, HolidayService>();
 
 // Configure API Clients
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7237/"; // Default fallback

@@ -772,5 +772,20 @@ namespace SchoolERP.Net.Controllers
 
             return File(r.Data.Attachment, contentType, fileName);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> InquiryFollowUp(int id) 
+        {
+            try
+            {
+                var model = new FOAdmissionInquiryViewModel();
+                var r = await _client.GetAdmissionInquiryByIDAsync(id);
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
     }
 }

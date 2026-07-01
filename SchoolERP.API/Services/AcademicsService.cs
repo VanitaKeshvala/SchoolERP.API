@@ -329,16 +329,18 @@ namespace SchoolERP.API.Services
                     parameters.Add("@NextStatus", student.NextStatus);
                     parameters.Add("@UserId", userId);
 
+
                     // Dapper auto-maps the SP result row → anonymous type; no foreach/DataTable needed
-                    var result = conn.QueryFirstOrDefault(
-                        "sp_Academics_Student_Promote_Single",
-                        parameters,
-                        commandType: CommandType.StoredProcedure);
+                    var result = conn.QueryFirstOrDefault<SpResult>(
+                   "sp_Academics_Student_Promote_Single",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
 
                     if (result != null && (int)result.Result > 0)
                         successCount++;
                     else
                         lastError = result?.Message ?? "Unknown error";
+
                 }
                 catch (Exception ex)
                 {

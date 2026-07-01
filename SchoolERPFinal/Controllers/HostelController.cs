@@ -492,6 +492,21 @@ namespace SchoolERP.Net.Controllers
         }
 
 
+        [HttpGet]
+        public async Task<IActionResult> GetHostelRoomRateByID(int id)
+        {
+            try
+            {
+                var res = await _client.GetHostelRoomRateByIDAsync(id);
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
+        }
+
         #region Hostel Type Section
         /// <summary>
         /// Shows the 'HostelType' management page where you can define the different grades or Hostel Type in the school.

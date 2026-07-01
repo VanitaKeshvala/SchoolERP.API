@@ -63,7 +63,7 @@
                                    class="form-control" id="txtFloorNumber" placeholder="e.g. 1,2,3, A-1">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">Allow extra bed <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">Allow Extra Bed <span class="text-danger">*</span></label>
                             <select id="ddlAllowExtraBed" asp-for="EditHostelRoom.AllowExtraBed" class="form-select">
                                 <option value="">-- Select Gender --</option>
                                 <option value="1">Yes</option>
@@ -71,20 +71,20 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">Max extra beds</label>
+                            <label class="form-label fw-bold">Max Extra Beds</label>
                             <input type="number"
                                    value="@Model.EditHostelRoom?.MaxExtraBeds"
                                    class="form-control" id="txtMaxExtraBeds" min="0" step="0.01">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">No. of Beds <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">No. Of Beds <span class="text-danger">*</span></label>
                             <input type="number"
                                    value="@Model.EditHostelRoom?.NoOfBed"
-                                class="form-control" id="txtBeds" required min="1">
+                                class="form-control" id="txtBeds" disabled  min="1">
                         </div>                        
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Cost Per Bed <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="txtCost" required min="0" step="0.01" value="0">
+                            <input type="number" class="form-control" disabled id="txtCost" required min="0" step="0.01" value="0">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Description</label>
@@ -98,6 +98,25 @@
                                 <input class="form-check-input" type="checkbox" id="chkActive" @(Model.EditHostelRoom?.IsActive ?? true ? "checked" : "")>
                                 <label class="form-check-label" for="chkActive">Active</label>
                             </div>
+                        </div>
+
+                        <div id="divRate" class="d-none">
+                            <div class="col-12 mt-2 mb-3"><div class="bg-light p-2 fw-bold text-primary border-start border-primary border-4">Room Type:- <span id="spnRoomType" class="bold"></span> and <span id="spnRoomCoolingType" class="bold"></span></div></div>
+                            <div class="table-responsive">
+                                <table class="table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Cost Per Bed</th>
+                                            <th>Security Amount</th>
+                                            <th>Effective From</th>
+                                            <th>Effective To</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tblRateBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                            
                         </div>
                     </div>
                 </form>

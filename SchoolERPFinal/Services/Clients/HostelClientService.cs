@@ -71,5 +71,8 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<PagedResult<HostelRoomViewModel>>("api/HostelApi/GetAllHostelRoomlWithPage", request);
         }
+
+        public Task<ApiResponse<List<HostelRoomRateViewModel>>> GetHostelRoomRateByIDAsync(int id)
+           => GetAsync<List<HostelRoomRateViewModel>>($"api/HostelApi/GetHostelRoomRateByID/{id}");
     }
 }

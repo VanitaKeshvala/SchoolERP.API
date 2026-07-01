@@ -6,12 +6,18 @@
     var currentUserId = int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
     var p = Model.Permissions;
 }
+<style>
+    .promot-student {
+        display: flex;
+        gap: 0.25rem;
+    }
+</style>
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
         <h6 class="fw-bold mb-0">Promote Students</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 d-none">
         <a href="#promote" class="btn btn-dark top-btn" id="btnOpenPromoteModal" onclick="openPromoteModal(event)"><i class="ti ti-pray me-1"></i> Promote</a>
         
     </div>
@@ -26,41 +32,92 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search students..." />
+                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 320px;" placeholder="Search students..." />
                     </div>
                     @* <input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." /> *@
-                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
-                        <div class="dropdown">
-                            <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                               data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
-                            </a>
-                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
-                                <form id="filterForm" method="post" action="/Academics/PromoteStudents">
-                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                        <h6 class="mb-0">Select Criteria</h6>
-                                        <div class="d-flex align-items-center justify-content-end me-2">
-                                            <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button>
+
+                    <div class="promot-student">
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" id="btnPromote" class="btn btn-primary border rounded btn-md text-white fs-14 align-items-center d-flex fw-normal"
+                                   data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <i class="ti ti-pray"></i>Promote
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="promote-students">
+                                    <form id="filterForm1" method="post" action="/Academics/PromoteStudents">
+                                        <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                            <h6 class="mb-0">Promote Students In Next Session</h6>
+                                            <div class="d-flex align-items-center justify-content-end me-2">
+                                                @* <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button> *@
+                                                <button class="btn btn-success" onclick="confirmPromotion()"><i class="ti ti-cloud me-1"></i> Save</button>
+                                                @* <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i>Close</button> *@
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="filter-body row">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
-                                            <select name="classId" id="FilterClassID" class="form-select form-control" onchange="onFilterClassChange()" required>
-                                                <option value="">Select</option>
-                                                @foreach (var c in Model.Classes)
-                                                {
-                                                    <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
-                                                }
-                                            </select>
+                                        <div class="filter-body row">
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label mb-1">Promote In Session<span class="text-danger">*</span></label>
+                                                <select id="NextSessionID" name="nextSessionId" class="form-select form-control">
+                                                    <option value="">Select</option>
+                                                    @foreach (var s in Model.Sessions)
+                                                    {
+                                                        <option value="@s.SessionId" selected="@(Model.NextSessionId == s.SessionId)">@s.SessionTitle</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
+                                                <select id="NextClassID" name="nextClassId" class="form-select form-control" onchange="onNextClassChange()">
+                                                    <option value="">Select</option>
+                                                    @foreach (var c in Model.Classes)
+                                                    {
+                                                        <option value="@c.ClassID" selected="@(Model.NextClassId == c.ClassID)">@c.ClassName</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
+                                                <select id="NextSectionID" name="nextSectionId" class="form-select form-control">
+                                                    <option value="">Select</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
-                                            <select name="sectionId" id="FilterSectionID" class="form-select form-control" required>
-                                                <option value="">Select</option>
-                                            </select>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                            <div class="dropdown">
+                                <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                                   data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                                </a>
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
+                                    <form id="filterForm" method="post" action="/Academics/PromoteStudents">
+                                        <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+                                            <h6 class="mb-0">Select Criteria</h6>
+                                            <div class="d-flex align-items-center justify-content-end me-2">
+                                                <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button>
+                                            </div>
                                         </div>
-                                        <div class="col-md-12">
+                                        <div class="filter-body row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
+                                                <select name="classId" id="FilterClassID" class="form-select form-control" onchange="onFilterClassChange()" required>
+                                                    <option value="">Select</option>
+                                                    @foreach (var c in Model.Classes)
+                                                    {
+                                                        <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
+                                                <select name="sectionId" id="FilterSectionID" class="form-select form-control" required>
+                                                    <option value="">Select</option>
+                                                </select>
+                                            </div>
+                                            @* <div class="col-md-12">
                                             <p class="text-primary mb-2">Promote Students In Next Session</p>
                                         </div>
                                         <div class="col-md-12 mb-3">
@@ -88,12 +145,16 @@
                                             <select id="NextSectionID" name="nextSectionId" class="form-select form-control">
                                                 <option value="">Select</option>
                                             </select>
+                                        </div> *@
                                         </div>
-                                    </div>
-                                </form>
+                                    </form>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
+
+                   
                 </div>
             </div>
         </div>
@@ -133,14 +194,14 @@
                                 foreach (var s in Model.Students)
                                 {
                                     <tr class="student-row" data-id="@s.StudentID">
-                                        <td><input type="checkbox" class="form-check-input student-checkbox"></td>
+                                        <td><input type="checkbox" onchange="selectItem(@s.StudentID,this)" class="form-check-input student-checkbox"></td>
                                         <td>@s.AdmissionNo</td>
                                         <td>@s.StudentName</td>
                                         <td>@s.FatherName</td>
                                         <td>@(s.DOB?.ToString("dd-MM-yyyy") ?? "-")</td>
                                         <td>
                                             <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="pass_@s.StudentID" id="p_@s.StudentID" value="Pass" checked>
+                                                <input type="radio" class="form-check-input"  name="pass_@s.StudentID" id="p_@s.StudentID" value="Pass" checked>
                                                 <label for="p_@s.StudentID">Pass</label>
                                             </div>
                                             <div class="form-check form-check-inline">
@@ -222,7 +283,9 @@
             }
         }
 
-        $(document).ready(function () {
+        $(document).ready(function () 
+        {
+            updatePromoteButton();
             const exportOpts = {
                 columns: [1, 2, 3, 4, 5, 6],
                 format: {
@@ -255,9 +318,12 @@
             $('.filter-dropdown').on('click', function (e) {
                 e.stopPropagation();
             });
-
+            
+            
             $('#selectAll').on('change', function () {
                 $('.student-checkbox').prop('checked', $(this).is(':checked'));
+                let checkedCount = $('.student-checkbox:checked').length;
+                $('#btnPromote').prop('disabled', checkedCount === 0);
             });
 
             const initialClassId = '@Model.SelectedClassId';
@@ -387,12 +453,22 @@
             $('#txtSearchInput').trigger('keyup');
             $('#filterForm').submit();
         }
-
+        function selectItem(id, row)
+        {
+                updatePromoteButton();
+        }
         function openPromoteModal(e) {
             const checkedCount = $('.student-checkbox:checked').length;
             if (checkedCount === 0) {
                 e.preventDefault();
-                alert('Please select at least one student.');
+                Swal.fire({
+                                icon: 'warning',
+                                title: 'No Data',
+                                text: 'Please select at least one student.',
+                                confirmButtonColor: '#3085d6'
+                            });
+                 
+                //alert('Please select at least one student.');
                 return;
             }
 
@@ -402,7 +478,15 @@
 
             if (!nextSession || !nextClass || !nextSection) {
                 e.preventDefault();
-                alert('Please select Promote In Session, Class, and Section in the filter dropdown.');
+                 Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Please select Promote In Session, Class, and Section in the filter dropdown.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-danger' },
+                    buttonsStyling: false
+                });
+                //alert('Please select Promote In Session, Class, and Section in the filter dropdown.');
                 return;
             }
             
@@ -410,11 +494,10 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('promote')).show();
         }
 
-        function confirmPromotion() {
+        async function confirmPromotion() {
             const nextSession = $('#NextSessionID').val();
             const nextClass = $('#NextClassID').val();
             const nextSection = $('#NextSectionID').val();
-
             const students = [];
             $('.student-checkbox:checked').each(function () {
                 const row = $(this).closest('tr');
@@ -424,8 +507,9 @@
                     Result: row.find(`input[name="pass_${studentId}"]:checked`).val(),
                     NextStatus: row.find(`input[name="cont_${studentId}"]:checked`).val()
                 });
+                
             });
-
+            
             const data = {
                 CurrentClassID: parseInt($('#FilterClassID').val()),
                 CurrentSectionID: parseInt($('#FilterSectionID').val()),
@@ -435,20 +519,53 @@
                 Students: students
             };
 
-            $.ajax({
-                url: '/Academics/SavePromotion',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function (res) {
-                    if (res.success) {
-                        alert(res.message);
-                        location.reload();
-                    } else {
-                        alert(res.message);
-                    }
-                }
-            });
+
+                 try {
+
+            const r = await fetch('/Academics/SavePromotion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            const res = await r.json();
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: 'Promotion student has been added successfully.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-success' },
+                    buttonsStyling: false
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: res.message || 'Failed to save promotion student.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-danger' },
+                    buttonsStyling: false
+                });
+            }
+
+        } catch (err) {
+            console.error(err);
+            IV.setNotice('classModalNotice', 'Could not save hostel.');
+        }
+        }
+
+                // Replace .prop('disabled') with a class-based approach for <a> tags
+
+        function updatePromoteButton() {
+            const checkedCount = $('.student-checkbox:checked').length;
+            const btn = $('#btnPromote');
+            if (checkedCount > 0) {
+                btn.removeClass('disabled pe-none opacity-50');
+            } else {
+                btn.addClass('disabled pe-none opacity-50');
+            }
         }
     </script>
 }

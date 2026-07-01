@@ -23,7 +23,7 @@ namespace SchoolERP.Net.Services.Clients
 
         public async Task<ApiResponse<PagedResult<HostelTypeModel>>> GetAllHostelTypeWithPageAsync(HostelTypeSearchRequest request)
         {
-            return await PostAsync<PagedResult<HostelTypeModel>>("api/HostelTypeAPI/GetAllHostelTypeWithPage", request);
+            return await PostAsync<PagedResult<HostelTypeModel>>("api/HostelTypeAPI/GetAllHolidayTypeWithPage", request);
         }
 
         public async Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids)

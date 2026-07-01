@@ -1,15 +1,16 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
+using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
 {
-    public class HostelTypeService: IHostelTypeService
+    public class HolidayTypeService: IHolidayTypeService
     {
         private readonly IConfiguration _configuration;
-        public HostelTypeService(IConfiguration configuration)
+        public HolidayTypeService(IConfiguration configuration)
         {
             _configuration = configuration;
         }
@@ -17,7 +18,7 @@ namespace SchoolERP.API.Services
         // ============================================================
         // UPSERT (CREATE / UPDATE)
         // ============================================================
-        public async Task<ApiResponse> UpsertHostelTypeAsync(HostelTypeUpsertRequest model)
+        public async Task<ApiResponse> UpsertHostelTypeAsync(HolidayTypeRequest model)
         {
             var response = new ApiResponse();
 
@@ -28,18 +29,17 @@ namespace SchoolERP.API.Services
 
                 var parameters = new DynamicParameters();
 
-                parameters.Add("@HOSTELTYPEID", model.HostelTypeID);
+                parameters.Add("@HOLIDAYTYPEID", model.HolidayTypeID);
                 parameters.Add("@COMPANYID", model.CompanyID);
                 parameters.Add("@SESSIONID", model.SessionID);
-                parameters.Add("@HOSTELTYPENAME", model.HostelTypeName);
-                parameters.Add("@GENDER", model.Gender);
-                parameters.Add("@DESCRIPTION", model.Description);
+                parameters.Add("@HOLIDAYTYPENAME", model.HolidayTypeName);
+                parameters.Add("@COLOURCODE", model.ColourCode);
                 parameters.Add("@ISACTIVE", model.IsActive);
                 parameters.Add("@USERID", model.UserID);
                 parameters.Add("@IPADDRESS", model.IPAddress);
 
                 var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                    "SP_MST_HOSTELTYPE_UPSERT",
+                    "SP_MST_HOLIDAYTYPE_UPSERT",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
@@ -63,7 +63,7 @@ namespace SchoolERP.API.Services
         // ============================================================
         // GET BY ID
         // ============================================================
-        public async Task<HostelTypeModel?> GetHostelTypeByIdAsync(int hostelTypeId)
+        public async Task<HolidayType?> GetHolidayTypeByIdAsync(int HolidayTypeId)
         {
             try
             {
@@ -71,10 +71,10 @@ namespace SchoolERP.API.Services
                 _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOSTELTYPEID", hostelTypeId);
+                parameters.Add("@HOLIDAYTYPEID", HolidayTypeId);
 
-                return await conn.QueryFirstOrDefaultAsync<HostelTypeModel>(
-                    "SP_TBL_MST_HOSTELTYPE_GETBYID",
+                return await conn.QueryFirstOrDefaultAsync<HolidayType>(
+                    "SP_TBL_MST_HOLIDAYTYPE_GETBYID",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -82,13 +82,13 @@ namespace SchoolERP.API.Services
             {
                 throw;
             }
-            
+
         }
 
         // ============================================================
         // GET ALL (BY COMPANY & SESSION)
         // ============================================================
-        public async Task<List<HostelTypeModel>> GetAllHostelTypesAsync(int companyId,int sessionId,bool includeDeleted = false)
+        public async Task<List<HolidayType>> GetAllHolidayTypeAsync(int companyId, int sessionId, bool includeDeleted = false)
         {
             try
             {
@@ -98,10 +98,10 @@ namespace SchoolERP.API.Services
                 var parameters = new DynamicParameters();
                 parameters.Add("@CompanyID", companyId);
                 parameters.Add("@SessionID", sessionId);
-                parameters.Add("@IncludeDeleted", includeDeleted);
+                parameters.Add("@INCLUDEDELETED", includeDeleted);
 
-                var result = conn.Query<HostelTypeModel>(
-                    "SP_TBL_MST_HOSTELTYPE_GETALL",
+                var result = conn.Query<HolidayType>(
+                    "SP_TBL_MST_HOLIDAYTYPE_GETALL",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 ).ToList();
@@ -119,11 +119,10 @@ namespace SchoolERP.API.Services
 
                 throw;
             }
-            
+
         }
 
-
-        public async Task<PagedResult<HostelTypeModel>> GetAllHostelTypeWithPage(HostelTypeSearchRequest req)
+        public async Task<PagedResult<HolidayType>> GetAllHolidayTypeWithPage(HostelTypeSearchRequest req)
         {
             try
             {
@@ -137,14 +136,15 @@ namespace SchoolERP.API.Services
                 }
 
 
-                param.Add("@CompanyID", req.CompanyID);
-                param.Add("@SessionID", req.SessionID);
-                param.Add("@SearchKeyword", req.SearchKeyword);
-                param.Add("@PageNumber", req.PageNumber);
-                param.Add("@PageSize", req.PageSize);
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SEARCHKEYWORD", req.SearchKeyword);
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+                param.Add("@INCLUDEDELETED", 0);
 
-                var result = (await conn.QueryAsync<HostelTypeModel>(
-                "SP_TBL_MST_HOSTELTYPE_GETALLWITHPAGEINDEX",
+                var result = (await conn.QueryAsync<HolidayType>(
+                "SP_TBL_MST_HOLIDAYTYPE_GETALLWITHPAGEINDEX",
                 param,
                 commandType: CommandType.StoredProcedure)).ToList();
 
@@ -154,7 +154,7 @@ namespace SchoolERP.API.Services
                 int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
                 int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
 
-                var userModel = new PagedResult<HostelTypeModel>
+                var userModel = new PagedResult<HolidayType>
                 {
                     Data = result,
                     TotalRecords = totalRecords,
@@ -164,7 +164,7 @@ namespace SchoolERP.API.Services
 
                 if (res == 0)
                 {
-                    userModel = new PagedResult<HostelTypeModel>
+                    userModel = new PagedResult<HolidayType>
                     {
                         Data = null,
                         TotalRecords = totalRecords,
@@ -188,7 +188,7 @@ namespace SchoolERP.API.Services
         /// <param name="HostelTypeId">HostelType ID.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) DeleteHostelType(List<int> ids, int userId)
+        public (bool success, string message) DeleteHolidayType(List<int> ids, int userId)
         {
             try
             {
@@ -203,10 +203,10 @@ namespace SchoolERP.API.Services
                 string hostelTypeID = string.Join(",", ids);
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOSTELTYPEID", hostelTypeID);
-                parameters.Add("@UserId", userId);
+                parameters.Add("@HOLIDAYTYPEID", hostelTypeID);
+                parameters.Add("@USERID", userId);
                 var result = conn.QueryFirstOrDefault<SpResult>(
-                   "SP_MST_HOSTELTYPE_DELETE",
+                   "SP_MST_HOLIDAYTYPE_DELETE",
                    parameters,
                    commandType: CommandType.StoredProcedure);
 
@@ -221,6 +221,7 @@ namespace SchoolERP.API.Services
             }
         }
 
+
         /// <summary>
         /// Activates or deactivates a class.
         /// </summary>
@@ -228,7 +229,7 @@ namespace SchoolERP.API.Services
         /// <param name="isActive">Status to set.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) ToggleHostelTypeStatus(StatusUpdateRequest request)
+        public (bool success, string message) ToggleHolidayTypeStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -236,12 +237,12 @@ namespace SchoolERP.API.Services
                     _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOLIDAYTYPEID", request.Ids);
+                parameters.Add("@HOSTELTYPEID", request.Ids);
                 parameters.Add("@IsActive", request.IsActive);
                 parameters.Add("@UserId", request.DoneBy);
 
                 var result = conn.QueryFirstOrDefault<SpResult>(
-                    "SP_MST_HOLIDAYTYPE_TOGGLESTATUS",
+                    "SP_MST_HOSTELTYPE_TOGGLESTATUS",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
@@ -256,8 +257,7 @@ namespace SchoolERP.API.Services
             }
         }
 
-
-        public async Task<(bool Success, string Message)> CopyHostelTypeToSession(CopyRequest req)
+        public async Task<(bool Success, string Message)> CopyHolidayTypeToSession(CopyRequest req)
         {
             try
             {
@@ -292,6 +292,5 @@ namespace SchoolERP.API.Services
             }
 
         }
-
     }
 }

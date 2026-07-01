@@ -18483,3 +18483,13 @@ Author URL: https://themeforest.net/user/dreamstechnologies
 .form-check-input:checked {
     background-color: var(--primary) !important;
 }
+.sticky-header-wrapper {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 55px;
+    z-index: 995;
+    background-color: var(--light);
+    padding-top: 10px;
+    padding-bottom: 2px;
+    margin-bottom: 10px;
+}

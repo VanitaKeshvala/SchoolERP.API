@@ -255,6 +255,46 @@ namespace SchoolERP.API.Services
             }
         }
 
-        
+
+        public async Task<PagedResult<MstSectionViewModel>> GetAllSectionWithPage(HostelTypeSearchRequest req)
+        {
+            try
+            {
+                // Sanitise pagination — same guard as the SP
+                if (req.PageNumber <= 0) req.PageNumber = 1;
+                if (req.PageSize <= 0) req.PageSize = 10;
+
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var param = new DynamicParameters();
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                using var multi = await conn.QueryMultipleAsync(
+                    "sp_Sections_GetAllPAGEINDEX", param,
+                    commandType: CommandType.StoredProcedure);
+
+                // Result set 1 — pagination meta from SP
+                var meta = await multi.ReadFirstOrDefaultAsync<PaginationMeta>();
+
+                // Result set 2 — actual section rows
+                var sections = (await multi.ReadAsync<MstSectionViewModel>()).ToList();
+
+                return new PagedResult<MstSectionViewModel>
+                {
+                    Data = sections,
+                    TotalRecords = meta.TotalPages,
+                    PageNumber = meta.PageNumber,
+                    PageSize = meta?.PageSize ?? req.PageSize
+                    //TotalPages = meta.TotalPages
+                };
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
     }
 }

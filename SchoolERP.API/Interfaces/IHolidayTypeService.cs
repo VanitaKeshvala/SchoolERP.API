@@ -1,0 +1,16 @@
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+
+namespace SchoolERP.API.Interfaces
+{
+    public interface IHolidayTypeService
+    {
+        Task<ApiResponse> UpsertHostelTypeAsync(HolidayTypeRequest model);
+        Task<HolidayType?> GetHolidayTypeByIdAsync(int HolidayTypeId);
+        Task<List<HolidayType>> GetAllHolidayTypeAsync(int companyId, int sessionId, bool includeDeleted = false);
+        Task<PagedResult<HolidayType>> GetAllHolidayTypeWithPage(HostelTypeSearchRequest req);
+        (bool success, string message) DeleteHolidayType(List<int> ids, int userId);
+        (bool success, string message) ToggleHolidayTypeStatus(StatusUpdateRequest request);
+        //(bool Success, string Message) CopyHolidayTypeToSession(CopyRequest req);
+    }
+}

@@ -31,7 +31,28 @@ namespace SchoolERP.Shared.Models
         public int? ModifiedBy { get; set; }
 
         public MstSectionViewModel? EditSections { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
+
+    public class PaginationMeta 
+    {
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+    }
+
+    public class SesctionPageIndexViewModel 
+    {
+        public List<MstSectionViewModel> Sesction = new List<MstSectionViewModel>();
+        public PaginationMeta PageIndex = new PaginationMeta();
+    }
+
 
     public class MstSectionUpsertRequest
     {
@@ -48,6 +69,16 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<MstSectionViewModel> Sections { get; set; } = new List<MstSectionViewModel>();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
 
     // ── Result model for copy SP ─────────────────────────────────────────────

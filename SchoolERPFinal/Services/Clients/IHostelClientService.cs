@@ -31,5 +31,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<PagedResult<HostelViewModel>>> GetAllHotelWithPageAsync(HotelSearchRequest request);
 
         Task<ApiResponse<PagedResult<HostelRoomViewModel>>> GetAllHostelRoomWithPageAsync(HotelSearchRequest request);
+        Task<ApiResponse<List<HostelRoomRateViewModel>>> GetHostelRoomRateByIDAsync(int id);
     }
 }

@@ -46,5 +46,7 @@ namespace SchoolERP.API.Interfaces
             int targetSessionId,
             int companyId,
             int userId);
+
+        Task<PagedResult<MstSectionViewModel>> GetAllSectionWithPage(HostelTypeSearchRequest req);
     }
 }

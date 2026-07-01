@@ -603,7 +603,7 @@ namespace SchoolERP.API.Services
             }
         }
 
-
+        
         public async Task<PagedResult<RoomTypeViewModel>> GetAllRoomTypeWithPage(ClassSearchRequest req)
         {
             try
@@ -855,6 +855,30 @@ namespace SchoolERP.API.Services
                 throw;
             }
 
+        }
+
+        public async Task<List<HostelRoomRateViewModel>> GetHostelRoomRateByID(int id)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@ROOMTYPEID", id);
+
+                var result = (await conn.QueryAsync<HostelRoomRateViewModel>(
+                "SP_tbl_Mst_Map_HostelRoom_Rate_GETRoomTypeBYID",
+                parameters,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
     }
 }

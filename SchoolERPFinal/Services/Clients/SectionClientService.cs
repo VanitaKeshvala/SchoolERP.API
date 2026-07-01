@@ -46,5 +46,10 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<dynamic>($"api/SectionApi/CopyToSession", request);
         }
+
+        public async Task<ApiResponse<PagedResult<MstSectionViewModel>>> GetAllSectionWithPagePageAsync(HostelTypeSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstSectionViewModel>>("api/SectionApi/GetAllSectionWithPage", request);
+        }
     }
 }

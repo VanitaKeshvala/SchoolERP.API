@@ -150,5 +150,26 @@ namespace SchoolERP.API.Controllers
                 return Ok(new { success = false, message = ex.Message });
             }
         }
+
+        // ------------------------------------------------------------
+        // POST : api/HostelType/GetAllHostelTypeWithPage
+        // ------------------------------------------------------------
+        [HttpPost("GetAllSectionWithPage")]
+        public async Task<IActionResult> GetAllSectionWithPage([FromBody] HostelTypeSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstSectionViewModel>>.SuccessResponse(new List<MstSectionViewModel>()));
+
+                var data = await _sectionService.GetAllSectionWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstSectionViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
     }
 }

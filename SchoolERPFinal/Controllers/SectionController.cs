@@ -6,6 +6,7 @@ using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SchoolERP.Net.Helpers;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -13,34 +14,83 @@ namespace SchoolERP.Net.Controllers
     {
         private readonly ISectionClientService _sectionClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
-        
+        private readonly ICompanyClientService _companyService;
+        private readonly ISessionClientService _sessionService;
         private const string MenuPath = "/Section";
 
-        public SectionController(ISectionClientService sectionClient, IUserMenuPermissionClientService menuPerm , PermissionHelper permHelper) : base(permHelper)
+        public SectionController(ISectionClientService sectionClient, IUserMenuPermissionClientService menuPerm ,
+            PermissionHelper permHelper, ICompanyClientService companyService, ISessionClientService sessionService) : base(permHelper)
         {
             _sectionClient = sectionClient;
             _menuPerm = menuPerm;
-            
+            _companyService = companyService;
+            _sessionService = sessionService;
         }
-
-        public async Task<IActionResult> Index()
+        private async Task<int> GetCompanyId()
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Section"
-           );
-            var sessionId = CurrentSessionId;
-            var response = await _sectionClient.GetAllAsync(false, sessionId);
-            if(response.Data != null) 
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
+        }
+        private async Task<int> GetSessionId()
+        {
+            if (CurrentSessionId == null)
             {
-                
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
             }
-            var model = new MstSectionPageViewModel
+            return CurrentSessionId;
+        }
+        public async Task<IActionResult> Index(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
+        {
+            try
             {
-                Sections = response.Success ? response.Data : new List<MstSectionViewModel>()
-            };
-            model.Permissions = perms;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Section"
+               );
+
+                var request = new HostelTypeSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? CurrentSessionId
+                };
+
+
+                var sectionResponse = _sectionClient.GetAllSectionWithPagePageAsync(request);
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(sectionResponse, sessionTask, companiesTask);
+
+                var pagedResult = await sectionResponse;
+
+                var model = new MstSectionPageViewModel
+                {
+                    Sections = pagedResult.Success ? pagedResult.Data.Data : new List<MstSectionViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         public async Task<IActionResult> Add(int? id)
