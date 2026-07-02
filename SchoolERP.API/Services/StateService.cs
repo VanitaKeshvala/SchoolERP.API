@@ -7,18 +7,19 @@ using System.Data;
 
 namespace SchoolERP.API.Services
 {
-    public class HolidayTypeService: IHolidayTypeService
+    public class StateService: IStateService
     {
         private readonly IConfiguration _configuration;
-        public HolidayTypeService(IConfiguration configuration)
+        public StateService(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
+       
         // ============================================================
         // UPSERT (CREATE / UPDATE)
         // ============================================================
-        public async Task<ApiResponse> UpsertHostelTypeAsync(HolidayTypeRequest model)
+        public async Task<ApiResponse> UpsertStateAsync(StateRequestModel model)
         {
             var response = new ApiResponse();
 
@@ -29,17 +30,18 @@ namespace SchoolERP.API.Services
 
                 var parameters = new DynamicParameters();
 
-                parameters.Add("@HOLIDAYTYPEID", model.HolidayTypeID);
+                parameters.Add("@StateId", model.StateId);
+                parameters.Add("@CountryId", model.CountryId);
                 parameters.Add("@COMPANYID", model.CompanyID);
                 parameters.Add("@SESSIONID", model.SessionID);
-                parameters.Add("@HOLIDAYTYPENAME", model.HolidayTypeName);
-                parameters.Add("@COLOURCODE", model.ColourCode);
+                parameters.Add("@StateName", model.StateName);
+                parameters.Add("@Description", model.Description);
                 parameters.Add("@ISACTIVE", model.IsActive);
                 parameters.Add("@USERID", model.UserID);
                 parameters.Add("@IPADDRESS", model.IPAddress);
 
                 var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
-                    "SP_MST_HOLIDAYTYPE_UPSERT",
+                    "SP_TBL_MST_STATE_UPSERT",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
@@ -63,7 +65,7 @@ namespace SchoolERP.API.Services
         // ============================================================
         // GET BY ID
         // ============================================================
-        public async Task<HolidayType?> GetHolidayTypeByIdAsync(int HolidayTypeId)
+        public async Task<StateModel> GetStateByIdAsync(int stateID)
         {
             try
             {
@@ -71,10 +73,10 @@ namespace SchoolERP.API.Services
                 _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOLIDAYTYPEID", HolidayTypeId);
+                parameters.Add("@STATEID ", stateID);
 
-                return await conn.QueryFirstOrDefaultAsync<HolidayType>(
-                    "SP_TBL_MST_HOLIDAYTYPE_GETBYID",
+                return await conn.QueryFirstOrDefaultAsync<StateModel>(
+                    "SP_TBL_MST_STATE_GETBYID",
                     parameters,
                     commandType: CommandType.StoredProcedure);
             }
@@ -88,7 +90,7 @@ namespace SchoolERP.API.Services
         // ============================================================
         // GET ALL (BY COMPANY & SESSION)
         // ============================================================
-        public async Task<List<HolidayType>> GetAllHolidayTypeAsync(int companyId, int sessionId, bool includeDeleted = false)
+        public async Task<List<StateModel>> GetAllStateAsync(int companyId, int sessionId, bool includeDeleted = false)
         {
             try
             {
@@ -100,8 +102,8 @@ namespace SchoolERP.API.Services
                 parameters.Add("@SessionID", sessionId);
                 parameters.Add("@INCLUDEDELETED", includeDeleted);
 
-                var result = conn.Query<HolidayType>(
-                    "SP_TBL_MST_HOLIDAYTYPE_GETALL",
+                var result = conn.Query<StateModel>(
+                    "SP_TBL_MST_STATE_GETALL",
                     parameters,
                     commandType: CommandType.StoredProcedure
                 ).ToList();
@@ -122,7 +124,7 @@ namespace SchoolERP.API.Services
 
         }
 
-        public async Task<PagedResult<HolidayType>> GetAllHolidayTypeWithPage(HostelTypeSearchRequest req)
+        public async Task<PagedResult<StateModel>> GetAllStateWithPage(HostelTypeSearchRequest req)
         {
             try
             {
@@ -143,8 +145,8 @@ namespace SchoolERP.API.Services
                 param.Add("@PAGESIZE", req.PageSize);
                 param.Add("@INCLUDEDELETED", 0);
 
-                var result = (await conn.QueryAsync<HolidayType>(
-                "SP_TBL_MST_HOLIDAYTYPE_GETALLWITHPAGEINDEX",
+                var result = (await conn.QueryAsync<StateModel>(
+                "SP_TBL_MST_STATE_GETALLWITHPAGEINDEX",
                 param,
                 commandType: CommandType.StoredProcedure)).ToList();
 
@@ -154,7 +156,7 @@ namespace SchoolERP.API.Services
                 int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
                 int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
 
-                var userModel = new PagedResult<HolidayType>
+                var userModel = new PagedResult<StateModel>
                 {
                     Data = result,
                     TotalRecords = totalRecords,
@@ -164,7 +166,7 @@ namespace SchoolERP.API.Services
 
                 if (res == 0)
                 {
-                    userModel = new PagedResult<HolidayType>
+                    userModel = new PagedResult<StateModel>
                     {
                         Data = null,
                         TotalRecords = totalRecords,
@@ -183,12 +185,12 @@ namespace SchoolERP.API.Services
         }
 
         /// <summary>
-        /// Deletes a Hostel Type record by its unique ID.
+        /// Deletes a State Type record by its unique ID.
         /// </summary>
-        /// <param name="HostelTypeId">HostelType ID.</param>
+        /// <param name="StateId">State ID.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) DeleteHolidayType(List<int> ids, int userId)
+        public (bool success, string message) DeleteState(List<int> ids, int userId)
         {
             try
             {
@@ -200,13 +202,13 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                string hostelTypeID = string.Join(",", ids);
+                string stateId = string.Join(",", ids);
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOLIDAYTYPEID", hostelTypeID);
+                parameters.Add("@STATEID ", stateId);
                 parameters.Add("@USERID", userId);
                 var result = conn.QueryFirstOrDefault<SpResult>(
-                   "SP_MST_HOLIDAYTYPE_DELETE",
+                   "SP_MST_STATE_DELETE",
                    parameters,
                    commandType: CommandType.StoredProcedure);
 
@@ -221,15 +223,14 @@ namespace SchoolERP.API.Services
             }
         }
 
-
         /// <summary>
-        /// Activates or deactivates a class.
+        /// Activates or deactivates a State.
         /// </summary>
-        /// <param name="classId">Class ID.</param>
+        /// <param name="StateId">State ID.</param>
         /// <param name="isActive">Status to set.</param>
         /// <param name="userId">Logged-in user ID.</param>
         /// <returns>Operation status and message.</returns>
-        public (bool success, string message) ToggleHolidayTypeStatus(StatusUpdateRequest request)
+        public (bool success, string message) ToggleStateStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -237,12 +238,12 @@ namespace SchoolERP.API.Services
                     _configuration.GetConnectionString("DefaultConnection"));
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@HOLIDAYTYPEID", request.Ids);
+                parameters.Add("@STATEID", request.Ids);
                 parameters.Add("@IsActive", request.IsActive);
                 parameters.Add("@UserId", request.DoneBy);
 
                 var result = conn.QueryFirstOrDefault<SpResult>(
-                    "SP_MST_HOLIDAYTYPE_TOGGLESTATUS",
+                    "SP_MST_STATE_TOGGLESTATUS",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
@@ -257,7 +258,7 @@ namespace SchoolERP.API.Services
             }
         }
 
-        public async Task<(bool Success, string Message)> CopyHolidayTypeToSession(CopyRequest req)
+        public async Task<(bool Success, string Message)> CopyStateToSession(CopyRequest req)
         {
             try
             {
@@ -271,7 +272,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@USERID", req.UserID);
 
                 var result = await conn.QueryFirstOrDefaultAsync<SpResult>(
-                    "SP_MST_HOLIDAYTYPE_COPYSESSION",
+                    "SP_MST_STATE_COPYSESSION",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
@@ -289,6 +290,43 @@ namespace SchoolERP.API.Services
                     Convert.ToInt32(model.Result) == 1,
                     Convert.ToString(model.Message) ?? string.Empty
                 );
+            }
+
+        }
+
+        // ============================================================
+        // GET ALL (BY COMPANY & SESSION)
+        // ============================================================
+        public async Task<List<StateModel>> GetAllStateByCountyAsync(int companyId, int sessionId,int countryId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@CompanyID", companyId);
+                parameters.Add("@SessionID", sessionId);
+                parameters.Add("@CountryId", countryId);
+
+                var result = conn.Query<StateModel>(
+                    "SP_TBL_MST_STATE_GETALLBYCOUNTYWISE",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+
+                // If SP returned no rows at all
+                if (!result.Any()) return null;
+
+                // If SP returned rows but RESULT != 1 (failure case)
+                if (result.First().Result != 1) return null;
+
+                return result;
+            }
+            catch (Exception)
+            {
+
+                throw;
             }
 
         }

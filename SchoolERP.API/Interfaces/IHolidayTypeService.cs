@@ -11,6 +11,6 @@ namespace SchoolERP.API.Interfaces
         Task<PagedResult<HolidayType>> GetAllHolidayTypeWithPage(HostelTypeSearchRequest req);
         (bool success, string message) DeleteHolidayType(List<int> ids, int userId);
         (bool success, string message) ToggleHolidayTypeStatus(StatusUpdateRequest request);
-        //(bool Success, string Message) CopyHolidayTypeToSession(CopyRequest req);
+        Task<(bool Success, string Message)> CopyHolidayTypeToSession(CopyRequest req);
     }
 }

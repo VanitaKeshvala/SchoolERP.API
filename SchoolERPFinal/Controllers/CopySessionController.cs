@@ -16,9 +16,15 @@ namespace SchoolERP.Net.Controllers
         private readonly IStudentInformationClientService _studentService;
         private readonly IHostelTypeClientService _hostelTypeService;
         private readonly IHostelClientService _hostelclient;
+        private readonly IHolidayTypeClientService _holidayTypeclient;
+        private readonly IHolidayClientService _holidayclient;
+        private readonly ICountryClientService _countryclient;
+        private readonly IStateClientService _statelient;
         public CopySessionController(
             ICopySessionServices copySession, ISubjectClientService subjectClient, IClassClientService classClient,
-            IStudentInformationClientService studentService, IHostelClientService hostelclient, IHostelTypeClientService hostelTypeService)
+            IStudentInformationClientService studentService, IHostelClientService hostelclient, 
+            IHostelTypeClientService hostelTypeService, IHolidayTypeClientService holidayTypeclient,
+            IHolidayClientService holidayclient, ICountryClientService countryclient, IStateClientService statelient)
         {
             _copySession = copySession;
             _subjectClient = subjectClient;
@@ -26,6 +32,10 @@ namespace SchoolERP.Net.Controllers
             _studentService = studentService;
             _hostelclient = hostelclient;
             _hostelTypeService = hostelTypeService;
+            _holidayTypeclient = holidayTypeclient;
+            _holidayclient = holidayclient;
+            _countryclient = countryclient;
+            _statelient = statelient;
         }
         private int GetUserId() => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
         
@@ -396,5 +406,200 @@ namespace SchoolERP.Net.Controllers
             }
         }
 
+        [HttpGet("HolidayType")]
+        public async Task<IActionResult> GetHolidayType(int sessionId, int companyId)
+        {
+            var data = await _holidayTypeclient.GetAllAsync(
+                companyId,
+                sessionId);
+
+            return Ok(new ApiResponse<List<HolidayType>>
+            {
+                Success = true,
+                Data = data.Data
+            });
+        }
+
+        // ── COPY Hostel TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// all Hostel Type from one session to another.
+        /// POST /CopySession/CopyHostels
+        /// </summary>
+        [HttpPost("CopyHolidayType")]
+        public async Task<IActionResult> CopyHolidayType([FromBody] CopyRequest request)
+        {
+            try
+            {
+                request.UserID = GetUserId();
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _copySession.CopyHolidayTypeAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = result.Message
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        [HttpGet("Holidays")]
+        public async Task<IActionResult> GetHolidays(int sessionId, int companyId)
+        {
+            var data = await _holidayclient.GetAllAsync(
+                companyId,
+                sessionId);
+
+            return Ok(new ApiResponse<List<HolidayModel>>
+            {
+                Success = true,
+                Data = data.Data
+            });
+        }
+
+        // ── COPY Hostel TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// all Hostel Type from one session to another.
+        /// POST /CopySession/CopyHostels
+        /// </summary>
+        [HttpPost("CopyHolidays")]
+        public async Task<IActionResult> CopyHolidays([FromBody] CopyRequest request)
+        {
+            try
+            {
+                request.UserID = GetUserId();
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _copySession.CopyHolidaysAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = result.Message
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        [HttpGet("Countrys")]
+        public async Task<IActionResult> GetCountrys(int sessionId, int companyId)
+        {
+            var data = await _countryclient.GetAllAsync(
+                companyId,
+                sessionId);
+
+            return Ok(new ApiResponse<List<CountryModel>>
+            {
+                Success = true,
+                Data = data.Data
+            });
+        }
+
+        // ── COPY Country TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// all Country Type from one session to another.
+        /// POST /CopySession/CopyCountrys
+        /// </summary>
+        [HttpPost("CopyCountrys")]
+        public async Task<IActionResult> CopyCountrys([FromBody] CopyRequest request)
+        {
+            try
+            {
+                request.UserID = GetUserId();
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _copySession.CopyCountrysAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = result.Message
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        [HttpGet("States")]
+        public async Task<IActionResult> GetStates(int sessionId, int companyId)
+        {
+            var data = await _statelient.GetAllAsync(
+                companyId,
+                sessionId);
+
+            return Ok(new ApiResponse<List<StateModel>>
+            {
+                Success = true,
+                Data = data.Data
+            });
+        }
+
+        // ── COPY Country TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// all Country Type from one session to another.
+        /// POST /CopySession/CopyCountrys
+        /// </summary>
+        [HttpPost("CopyStates")]
+        public async Task<IActionResult> CopyStates([FromBody] CopyRequest request)
+        {
+            try
+            {
+                request.UserID = GetUserId();
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _copySession.CopyStatesAsync(request);
+
+                if (result.Success)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = result.Message
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
     }
 }

@@ -111,8 +111,63 @@ const ENTITY_COLUMNS = {
             <td><span class="badge bg-${r.isActive ? 'success' : 'secondary'}-subtle
                 text-${r.isActive ? 'success' : 'secondary'}">
                 ${r.isActive ? 'Active' : 'Inactive'}</span></td>`
+    },
+    HolidayType: {
+        headers: ['Holiday Type', 'Color', 'Status'],
+        row: (r, i) => `
+            <td>${i + 1}</td>
+            <td>${r.holidayTypeName ?? '-'}</td>
+            <td><span class="badge bg-${r.isActive ? 'success' : 'secondary'}-subtle
+                text-${r.isActive ? 'success' : 'secondary'}">
+                ${r.isActive ? 'Active' : 'Inactive'}</span></td>`
+    }, 
+    Holidays: {
+        headers: ['Holiday Name', 'Holiday Type','No Of Holiday', 'Holiday From Date','Holiday To Date', 'Status'],
+        row: (r, i) => `
+            <td>${i + 1}</td>
+            <td>${r.holidayName ?? '-'}</td>
+            <td>${r.holidayTypeName ?? '-'}</td>
+            <td>${r.noOfDays ?? '-'}</td>
+            <td>${formatDate(r.fromDate)}</td>
+            <td>${formatDate(r.toDate)}</td>
+            <td><span class="badge bg-${r.isActive ? 'success' : 'secondary'}-subtle
+                text-${r.isActive ? 'success' : 'secondary'}">
+                ${r.isActive ? 'Active' : 'Inactive'}</span></td>`
+    }, 
+    Countrys: {
+        headers: ['Country Name', 'Description', 'Status'],
+        row: (r, i) => `
+            <td>${i + 1}</td>
+            <td>${r.countryName ?? '-'}</td>
+            <td>${r.description ?? '-'}</td>
+            <td><span class="badge bg-${r.isActive ? 'success' : 'secondary'}-subtle
+                text-${r.isActive ? 'success' : 'secondary'}">
+                ${r.isActive ? 'Active' : 'Inactive'}</span></td>`
+    }, 
+    States: {
+        headers: ['State Name','Country Name', 'Description', 'Status'],
+        row: (r, i) => `
+            <td>${i + 1}</td>
+            <td>${r.stateName ?? '-'}</td>
+            <td>${r.countryName ?? '-'}</td>
+            <td>${r.description ?? '-'}</td>
+            <td><span class="badge bg-${r.isActive ? 'success' : 'secondary'}-subtle
+                text-${r.isActive ? 'success' : 'secondary'}">
+                ${r.isActive ? 'Active' : 'Inactive'}</span></td>`
     }
 };
+
+function formatDate(date) {
+    if (!date) return '-';
+
+    const d = new Date(date);
+
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+
+    return `${day}-${month}-${year}`;
+}
 
 const apiBaseUrl = window.appConfig.apiBaseUrl;
 

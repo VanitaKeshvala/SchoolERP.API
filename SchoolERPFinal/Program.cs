@@ -264,7 +264,31 @@ builder.Services.AddHttpClient<IRoomCoolingTypeClientService, RoomCoolingTypeCli
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);
 });
-
+builder.Services.AddHttpClient<IHolidayTypeClientService, HolidayTypeClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IHolidayClientService, HolidayClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ICountryClientService, CountryClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IStateClientService, StateClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IWardensClientService, WardensClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
 builder.Services.AddHttpClient("SchoolERPApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

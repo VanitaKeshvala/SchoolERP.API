@@ -13,6 +13,7 @@ namespace SchoolERP.Shared.Models
         Employee,   // → wwwroot/Employee/Profile/{id}/
         User,        // → wwwroot/User/Profile/{id}/
         Parent,    // → wwwroot/Student/Profile/{id}/
+        Warden,
 
     }
 }

@@ -17,14 +17,24 @@ namespace SchoolERP.API.Controllers
         private readonly IClassService _classService;
         private readonly IHostelService _hostelService;
         private readonly IHostelTypeService _hostelTypeService;
+        private readonly IHolidayTypeService _holidayTypeService;
+        private readonly IHolidayService _holidayService;
+        private readonly ICountryService _countryService;
+        private readonly IStateService _stateService;
         public CopySessionAPIController(IStudentInformationService studentService,
-            ISubjectService subjectService, IClassService classService, IHostelService hostelService, IHostelTypeService hostelTypeService)
+            ISubjectService subjectService, IClassService classService, IHostelService hostelService,
+            IHostelTypeService hostelTypeService, IHolidayTypeService holidayTypeService, 
+            IHolidayService holidayService, ICountryService countryService, IStateService stateService)
         {
             _studentService = studentService;
             _subjectService = subjectService;
             _classService = classService;
             _hostelService = hostelService;
             _hostelTypeService = hostelTypeService;
+            _holidayTypeService = holidayTypeService;
+            _holidayService = holidayService;
+            _countryService = countryService;
+            _stateService = stateService;
         }
 
         [HttpGet("Student")]
@@ -235,6 +245,122 @@ namespace SchoolERP.API.Controllers
 
                 // ── Execute copy ──────────────────────────────────────────
                 var result = await _hostelTypeService.CopyHostelTypeToSession(request);
+
+                if (result.Success)
+                {
+                    return Ok(new { success = result.Success, message = result.Message });
+                }
+                else
+                {
+                    return Ok(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        // ── COPY Hostel Type TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// Copies selected (or all) Hostel Type from one session to another.
+        /// POST /CopySession/CopyHostelType
+        /// </summary>
+        [HttpPost("CopyHolidayType")]
+        public async Task<IActionResult> CopyHolidayType([FromBody] CopyRequest request)
+        {
+            try
+            {
+
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _holidayTypeService.CopyHolidayTypeToSession(request);
+
+                if (result.Success)
+                {
+                    return Ok(new { success = result.Success, message = result.Message });
+                }
+                else
+                {
+                    return Ok(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        // ── COPY Hostel Type TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// Copies selected (or all) Hostel Type from one session to another.
+        /// POST /CopySession/CopyHostelType
+        /// </summary>
+        [HttpPost("CopyHolidays")]
+        public async Task<IActionResult> CopyHolidays([FromBody] CopyRequest request)
+        {
+            try
+            {
+
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _holidayService.CopyHolidayToSession(request);
+
+                if (result.Success)
+                {
+                    return Ok(new { success = result.Success, message = result.Message });
+                }
+                else
+                {
+                    return Ok(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        // ── COPY Hostel Type TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// Copies selected (or all) Hostel Type from one session to another.
+        /// POST /CopySession/CopyHostelType
+        /// </summary>
+        [HttpPost("CopyCountrs")]
+        public async Task<IActionResult> CopyCountrs([FromBody] CopyRequest request)
+        {
+            try
+            {
+
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _countryService.CopyCountryToSession(request);
+
+                if (result.Success)
+                {
+                    return Ok(new { success = result.Success, message = result.Message });
+                }
+                else
+                {
+                    return Ok(new { success = false, message = result.Message });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = "An unexpected error occurred." });
+            }
+        }
+
+        // ── COPY States Type TO SESSION ──────────────────────────────────────
+        /// <summary>
+        /// Copies selected (or all) States Type from one session to another.
+        /// POST /CopySession/CopyStates
+        /// </summary>
+        [HttpPost("CopyStates")]
+        public async Task<IActionResult> CopyStates([FromBody] CopyRequest request)
+        {
+            try
+            {
+
+                // ── Execute copy ──────────────────────────────────────────
+                var result = await _stateService.CopyStateToSession(request);
 
                 if (result.Success)
                 {

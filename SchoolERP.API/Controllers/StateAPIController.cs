@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
 using SchoolERP.API.Services;
-using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
+using SchoolERP.Shared.Models;
 using System.Security.Claims;
 
 namespace SchoolERP.API.Controllers
@@ -11,15 +11,15 @@ namespace SchoolERP.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class HolidayAPIController : ControllerBase
+    public class StateAPIController : Controller
     {
-        private readonly IHolidayService _holidayService;
+        private readonly IStateService _stateService;
         private readonly IUserMenuPermissionService _menuPerm;
-        private const string MenuPath = "/Academics/Class";
+        private const string MenuPath = "/Country/Index";
 
-        public HolidayAPIController(IHolidayService holidayService, IUserMenuPermissionService menuPerm)
-        {
-            _holidayService = holidayService;
+        public StateAPIController(IStateService stateService, IUserMenuPermissionService menuPerm)
+        {            
+            _stateService = stateService;
             _menuPerm = menuPerm;
         }
         private int GetCurrentUserId()
@@ -27,13 +27,12 @@ namespace SchoolERP.API.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
         }
-
         // ------------------------------------------------------------
-        // POST : api/HolidayType/Save
+        // POST : api/Country/Save
         // INSERT OR UPDATE
         // ------------------------------------------------------------
         [HttpPost("Save")]
-        public async Task<IActionResult> Save([FromBody] HolidayRequestModel model)
+        public async Task<IActionResult> Save([FromBody] StateRequestModel model)
         {
             try
             {
@@ -44,18 +43,17 @@ namespace SchoolERP.API.Controllers
                 if (string.IsNullOrWhiteSpace(model.IPAddress))
                     model.IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
 
-                var response = await _holidayService.UpsertHolidayAsync(model);
+                var response = await _stateService.UpsertStateAsync(model);
                 return Ok(response);
             }
             catch (Exception ex)
             {
                 throw;
             }
-
         }
 
         // ------------------------------------------------------------
-        // GET : api/HolidayType/GetById/{id}
+        // GET : api/StateAPI/GetById/{id}
         // ------------------------------------------------------------
         [HttpGet("GetById/{id:int}")]
         public async Task<IActionResult> GetById(int id)
@@ -65,7 +63,7 @@ namespace SchoolERP.API.Controllers
                 if (id <= 0)
                     return BadRequest(new ApiResponse { Result = 0, Message = "Invalid ID." });
 
-                var response = await _holidayService.GetHolidayByIdAsync(id);
+                var response = await _stateService.GetStateByIdAsync(id);
                 return Ok(response);
             }
             catch (Exception)
@@ -76,7 +74,7 @@ namespace SchoolERP.API.Controllers
         }
 
         // ------------------------------------------------------------
-        // GET : api/HolidayType/GetAll?companyId=1&sessionId=1
+        // GET : api/StateAPI/GetAll?companyId=1&sessionId=1
         // ------------------------------------------------------------
         [HttpGet("GetAll")]
         public async Task<IActionResult> GetAll([FromQuery] int companyId, [FromQuery] int sessionId)
@@ -90,7 +88,7 @@ namespace SchoolERP.API.Controllers
                         Message = "Valid Company ID and Session ID are required."
                     });
 
-                var response = await _holidayService.GetAllHolidayAsync(companyId, sessionId, false);
+                var response = await _stateService.GetAllStateAsync(companyId, sessionId, false);
                 return Ok(response);
             }
             catch (Exception)
@@ -100,17 +98,17 @@ namespace SchoolERP.API.Controllers
         }
 
         // ------------------------------------------------------------
-        // POST : api/HolidayType/GetAllHolidayTypeWithPage
+        // POST : api/StateAPI/GetAllStateWithPage
         // ------------------------------------------------------------
-        [HttpPost("GetAllHolidayWithPage")]
-        public async Task<IActionResult> GetAllHolidayWithPage([FromBody] HostelTypeSearchRequest request)
+        [HttpPost("GetAllStateWithPage")]
+        public async Task<IActionResult> GetAllStateWithPage([FromBody] HostelTypeSearchRequest request)
         {
             try
             {
                 if (request.CompanyID == 0 || request.SessionID == 0)
-                    return Ok(ApiResponse<List<HolidayModel>>.SuccessResponse(new List<HolidayModel>()));
-                var data = await _holidayService.GetAllHolidayWithPage(request);
-                return Ok(ApiResponse<PagedResult<HolidayModel>>.SuccessResponse(data));
+                    return Ok(ApiResponse<List<StateModel>>.SuccessResponse(new List<StateModel>()));
+                var data = await _stateService.GetAllStateWithPage(request);
+                return Ok(ApiResponse<PagedResult<StateModel>>.SuccessResponse(data));
             }
             catch (Exception ex)
             {
@@ -127,7 +125,7 @@ namespace SchoolERP.API.Controllers
                     return Ok(new { success = false, message = "You do not have permission to delete classes." });
 
                 int userId = GetCurrentUserId();
-                var (success, message) = _holidayService.DeleteHoliday(ids, userId);
+                var (success, message) = _stateService.DeleteState(ids, userId);
                 return Ok(new { success, message });
             }
             catch (Exception ex)
@@ -146,8 +144,7 @@ namespace SchoolERP.API.Controllers
                     return Ok(new { success = false, message = "You do not have permission to change class status." });
 
                 int userId = GetCurrentUserId();
-                request.DoneBy = userId;
-                var (success, message) = _holidayService.ToggleHolidayStatus(request);
+                var (success, message) = _stateService.ToggleStateStatus(request);
                 return Ok(new { success, message });
             }
             catch (Exception ex)
@@ -155,6 +152,30 @@ namespace SchoolERP.API.Controllers
                 return Ok(new { success = false, message = ex.Message });
             }
 
+        }
+
+        // ------------------------------------------------------------
+        // GET : api/StateAPI/GetAll?companyId=1&sessionId=1
+        // ------------------------------------------------------------
+        [HttpGet("GetAllStateByCounty")]
+        public async Task<IActionResult> GetAllStateByCounty([FromQuery] int companyId, [FromQuery] int sessionId, [FromQuery] int countryId)
+        {
+            try
+            {
+                if (companyId <= 0 || sessionId <= 0)
+                    return BadRequest(new ApiResponse
+                    {
+                        Result = 0,
+                        Message = "Valid Company ID and Session ID are required."
+                    });
+
+                var response = await _stateService.GetAllStateByCountyAsync(companyId, sessionId, countryId);
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }

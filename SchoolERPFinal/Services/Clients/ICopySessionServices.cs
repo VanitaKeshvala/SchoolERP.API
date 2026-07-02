@@ -17,6 +17,10 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<SpResult>> CopyRoomTypesAsync(CopyRequest req);
         Task<ApiResponse<SpResult>> CopyHostelsAsync(CopyRequest req);
         Task<ApiResponse<SpResult>> CopyHostelTypeAsync(CopyRequest req);
+        Task<ApiResponse<SpResult>> CopyHolidaysAsync(CopyRequest req);
+        Task<ApiResponse<SpResult>> CopyHolidayTypeAsync(CopyRequest req);
+        Task<ApiResponse<SpResult>> CopyCountrysAsync(CopyRequest req);
+        Task<ApiResponse<SpResult>> CopyStatesAsync(CopyRequest req);
     }
 
     

@@ -36,5 +36,16 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<SpResult>> CopyHostelTypeAsync(CopyRequest req)
             => PostAsync<SpResult>("api/CopySessionAPI/CopyHostelType", req);
+        public Task<ApiResponse<SpResult>> CopyHolidaysAsync(CopyRequest req)
+           => PostAsync<SpResult>("api/CopySessionAPI/CopyHolidays", req);
+
+        public Task<ApiResponse<SpResult>> CopyHolidayTypeAsync(CopyRequest req)
+           => PostAsync<SpResult>("api/CopySessionAPI/CopyHolidayType", req);
+
+        public Task<ApiResponse<SpResult>> CopyCountrysAsync(CopyRequest req)
+          => PostAsync<SpResult>("api/CopySessionAPI/CopyCountrs", req);
+
+        public Task<ApiResponse<SpResult>> CopyStatesAsync(CopyRequest req)
+          => PostAsync<SpResult>("api/CopySessionAPI/CopyStates", req);
     }
 }

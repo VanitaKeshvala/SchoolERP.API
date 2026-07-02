@@ -6,20 +6,16 @@ using System.Threading.Tasks;
 
 namespace SchoolERP.Shared.Models
 {
-    public class HolidayModel
+    public class CountryModel
     {
         public int Result { get; set; }       // maps to RESULT
         public string Message { get; set; }   // maps to MESSAGE
+        public int CountryId { get; set; }
 
-        public int HolidayID { get; set; }
+        public string? CountryName { get; set; }
+        public string? Description { get; set; }
         public int? CompanyID { get; set; }
         public int? SessionID { get; set; }
-        public int? HolidayTypeID { get; set; }
-        public string? HolidayName { get; set; }
-        public string? HolidayTypeName { get; set; }
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
-        public int? NoOfDays { get; set; }
         public bool IsActive { get; set; }
         public bool IsDelete { get; set; }
         public int CreatedBy { get; set; }
@@ -33,30 +29,25 @@ namespace SchoolERP.Shared.Models
         public int PageSize { get; set; }   // ← PAGESIZE
         public int TotalPages { get; set; }   // ← TOTALPAGES
     }
-
-    public class HolidayRequestModel 
+    public class CountryRequestModel
     {
-        public int HolidayID { get; set; }
+        public int CountryId { get; set; }
+        public string? CountryName { get; set; }
+        public string? Description { get; set; }
         public int? CompanyID { get; set; }
         public int? SessionID { get; set; }
-        public int? HolidayTypeID { get; set; }
-        public string? HolidayName { get; set; }
-        public DateTime? FromDate { get; set; }
-        public DateTime? ToDate { get; set; }
         public bool IsActive { get; set; } = true;
         public bool IsDelete { get; set; } = false;
         public int UserID { get; set; }
         public string? IPAddress { get; set; }
-
     }
 
-    public class HolidayPageViewModel
+    public class CountryPageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
-        public List<HolidayModel> Holiday { get; set; } = new List<HolidayModel>();
+        public List<CountryModel> Country { get; set; } = new List<CountryModel>();
         public List<MstCompanyViewModel> Companies { get; set; } = new();
         public List<MstSessionViewModel> Sessions { get; set; } = new();
-        
 
         public int TotalRecords { get; set; }
         public int PageNumber { get; set; }
@@ -67,11 +58,10 @@ namespace SchoolERP.Shared.Models
         public int? SectionID { get; set; }
     }
 
-    public class HolidayAddViewModel
+    public class CountryAddViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
-        public HolidayModel Holiday{ get; set; } = new HolidayModel();
-        public HolidayModel? EditHoliday { get; set; } = new HolidayModel();
-        public List<HolidayType> HolidayTypeModel { get; set; } = new();
+        public CountryModel Country { get; set; } = new CountryModel();
+        public CountryModel? EditCountry { get; set; } = new CountryModel();
     }
 }

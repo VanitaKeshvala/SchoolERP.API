@@ -22,6 +22,20 @@ namespace SchoolERP.Shared.Models
         public string EndTime { get; set; } = string.Empty;
         public string? RoomNo { get; set; }
         public bool IsActive { get; set; }
+
+        
+        // Holiday fields — existing
+        public bool IsHoliday { get; set; }
+        public long? HolidayID { get; set; }
+        public string HolidayName { get; set; }
+        public DateTime? HolidayDate { get; set; }
+
+        // NEW — from TBL_MST_HOLIDAYTYPE + TBL_MST_HOLIDAY
+        public string HolidayTypeName { get; set; }
+        public string ColourCode { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public int? NoOfDays { get; set; }
     }
 
     public class TimeTableUpsertRequest

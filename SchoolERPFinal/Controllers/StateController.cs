@@ -1,20 +1,22 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
-using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
+using SchoolERP.Shared.Models;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class HolidayTypeController : BaseController
+    public class StateController : BaseController
     {
-        private readonly IHolidayTypeClientService _client;
+        private readonly ICountryClientService _client;
+        private readonly IStateClientService _stateclientService;
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
-        public HolidayTypeController(IHolidayTypeClientService client,
-            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper) : base(permHelper)
+        public StateController(ICountryClientService client,
+            ICompanyClientService companyService, ISessionClientService sessionService, IStateClientService stateclientService, PermissionHelper permHelper) : base(permHelper)
         {
             _client = client;
+            _stateclientService = stateclientService;
             _companyService = companyService;
             _sessionService = sessionService;
         }
@@ -32,6 +34,7 @@ namespace SchoolERP.Net.Controllers
             }
             return CurrentSessionId;
         }
+
         /// <summary>
         /// Shows the 'HostelType' management page where you can define the different grades or Hostel Type in the school.
         /// </summary>
@@ -45,7 +48,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/HolidayType/Index"
+                   "/Country/Index"
                );
 
                 var request = new HostelTypeSearchRequest
@@ -58,7 +61,7 @@ namespace SchoolERP.Net.Controllers
                 };
 
                 var sessionId = await GetSessionId();
-                var classesResponse = _client.GetAllHostelTypeWithPageAsync(request);
+                var classesResponse = _stateclientService.GetAllStateWithPageAsync(request);
 
                 var sessionTask = _sessionService.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
@@ -67,9 +70,9 @@ namespace SchoolERP.Net.Controllers
 
                 var pagedResult = await classesResponse;
 
-                var model = new HolidayTypePageViewModel
+                var model = new StatePageViewModel
                 {
-                    HolidayType = pagedResult.Success ? pagedResult.Data.Data : new List<HolidayType>(),
+                    State = pagedResult.Success ? pagedResult.Data.Data : new List<StateModel>(),
                     Companies = (await companiesTask).Data ?? new(),
                     Sessions = (await sessionTask).Data ?? new(),
                     TotalRecords = pagedResult.Data.TotalRecords,
@@ -94,23 +97,26 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/Hostel/HostelType"
+                   "/Country/Index"
                );
-                var model = new HolidayTypeAddViewModel();
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+                var model = new StateAddViewModel();
+                var countryModel = await _client.GetAllAsync(companyId,sessionId);
                 if (id.HasValue && id.Value > 0)
                 {
-                    var response = await _client.GetByIDAsync(id.Value);
+                    var response = await _stateclientService.GetByIDAsync(id.Value);
                     if (response.Success)
                     {
-                        model.HolidayTypes = response.Data;
-                        model.EditHolidayTypes = response.Data;
+                        model.State = response.Data;
+                        model.EditState = response.Data;
                     }
                 }
                 else
                 {
-                    model.EditHolidayTypes = null;
+                    model.EditState = null;
                 }
-
+                model.Country = countryModel.Data;
                 model.Permissions = perms;
                 return View(model);
             }
@@ -121,14 +127,14 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SaveHolidayType([FromBody] HolidayTypeRequest request)
+        public async Task<IActionResult> SaveState([FromBody] StateRequestModel request)
         {
             try
             {
-                var isCreate = request.HolidayTypeID <= 0;
+                var isCreate = request.CompanyID <= 0;
                 request.CompanyID = await GetCompanyId();
                 request.SessionID = await GetSessionId();
-                var response = await _client.UpsertHolidayTypeAsync(request);
+                var response = await _stateclientService.UpsertStateAsync(request);
                 return Json(new { success = response.Success, message = response.Message });
             }
             catch (Exception ex)
@@ -139,11 +145,11 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteHolidayType([FromBody] List<int> ids)
+        public async Task<IActionResult> DeleteState([FromBody] List<int> ids)
         {
             try
             {
-                var response = await _client.DeleteAsync(ids);
+                var response = await _stateclientService.DeleteAsync(ids);
                 return Json(new { success = response.Success, message = response.Message });
             }
             catch (Exception ex)
@@ -154,11 +160,11 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleHolidayType([FromBody] StatusUpdateRequest request)
+        public async Task<IActionResult> ToggleState([FromBody] StatusUpdateRequest request)
         {
             try
             {
-                var response = await _client.ToggleStatusAsync(request);
+                var response = await _stateclientService.ToggleStatusAsync(request);
                 return Json(new { success = response.Success, message = response.Message });
             }
             catch (Exception ex)
@@ -167,5 +173,6 @@ namespace SchoolERP.Net.Controllers
             }
 
         }
+
     }
 }

@@ -6,17 +6,19 @@ using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class HolidayTypeController : BaseController
+    public class HolidayController : BaseController
     {
-        private readonly IHolidayTypeClientService _client;
+        private readonly IHolidayClientService _client;
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
-        public HolidayTypeController(IHolidayTypeClientService client,
-            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper) : base(permHelper)
+        private readonly IHolidayTypeClientService _holidayTypeService;
+        public HolidayController(IHolidayClientService client,
+            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper, IHolidayTypeClientService holidayTypeService) : base(permHelper)
         {
             _client = client;
             _companyService = companyService;
             _sessionService = sessionService;
+            _holidayTypeService = holidayTypeService;
         }
         private async Task<int> GetCompanyId()
         {
@@ -32,9 +34,7 @@ namespace SchoolERP.Net.Controllers
             }
             return CurrentSessionId;
         }
-        /// <summary>
-        /// Shows the 'HostelType' management page where you can define the different grades or Hostel Type in the school.
-        /// </summary>
+
         public async Task<IActionResult> Index(int? pageIndex,
         int? pageSize,
         string? search,
@@ -58,7 +58,7 @@ namespace SchoolERP.Net.Controllers
                 };
 
                 var sessionId = await GetSessionId();
-                var classesResponse = _client.GetAllHostelTypeWithPageAsync(request);
+                var classesResponse = _client.GetAllHostelWithPageAsync(request);
 
                 var sessionTask = _sessionService.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
@@ -67,9 +67,9 @@ namespace SchoolERP.Net.Controllers
 
                 var pagedResult = await classesResponse;
 
-                var model = new HolidayTypePageViewModel
+                var model = new HolidayPageViewModel
                 {
-                    HolidayType = pagedResult.Success ? pagedResult.Data.Data : new List<HolidayType>(),
+                    Holiday = pagedResult.Success ? pagedResult.Data.Data : new List<HolidayModel>(),
                     Companies = (await companiesTask).Data ?? new(),
                     Sessions = (await sessionTask).Data ?? new(),
                     TotalRecords = pagedResult.Data.TotalRecords,
@@ -96,21 +96,25 @@ namespace SchoolERP.Net.Controllers
                 var perms = await GetPermissions(
                    "/Hostel/HostelType"
                );
-                var model = new HolidayTypeAddViewModel();
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+
+                var holidaytype = await _holidayTypeService.GetAllAsync(companyId,sessionId);
+                var model = new HolidayAddViewModel();
                 if (id.HasValue && id.Value > 0)
                 {
                     var response = await _client.GetByIDAsync(id.Value);
                     if (response.Success)
                     {
-                        model.HolidayTypes = response.Data;
-                        model.EditHolidayTypes = response.Data;
+                        model.Holiday = response.Data;
+                        model.EditHoliday = response.Data;
                     }
                 }
                 else
                 {
-                    model.EditHolidayTypes = null;
+                    model.EditHoliday = null;
                 }
-
+                model.HolidayTypeModel = holidaytype.Data;
                 model.Permissions = perms;
                 return View(model);
             }
@@ -121,14 +125,14 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> SaveHolidayType([FromBody] HolidayTypeRequest request)
+        public async Task<IActionResult> SaveHoliday([FromBody] HolidayRequestModel request)
         {
             try
             {
                 var isCreate = request.HolidayTypeID <= 0;
                 request.CompanyID = await GetCompanyId();
                 request.SessionID = await GetSessionId();
-                var response = await _client.UpsertHolidayTypeAsync(request);
+                var response = await _client.UpsertHolidayAsync(request);
                 return Json(new { success = response.Success, message = response.Message });
             }
             catch (Exception ex)
@@ -139,7 +143,7 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteHolidayType([FromBody] List<int> ids)
+        public async Task<IActionResult> DeleteHoliday([FromBody] List<int> ids)
         {
             try
             {
@@ -154,7 +158,7 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleHolidayType([FromBody] StatusUpdateRequest request)
+        public async Task<IActionResult> ToggleHoliday([FromBody] StatusUpdateRequest request)
         {
             try
             {

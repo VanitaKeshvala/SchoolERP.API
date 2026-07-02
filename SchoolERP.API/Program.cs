@@ -70,6 +70,9 @@ builder.Services.AddScoped<IHostelTypeService, HostelTypeService>();
 builder.Services.AddScoped<IRoomCoolingTypeService, RoomCoolingTypeService>();
 builder.Services.AddScoped<IHolidayTypeService, HolidayTypeService>();
 builder.Services.AddScoped<IHolidayService, HolidayService>();
+builder.Services.AddScoped<ICountryService, CountryService>();
+builder.Services.AddScoped<IStateService, StateService>();
+builder.Services.AddScoped<IWardensService, WardensService>();
 
 // Configure API Clients
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7237/"; // Default fallback
