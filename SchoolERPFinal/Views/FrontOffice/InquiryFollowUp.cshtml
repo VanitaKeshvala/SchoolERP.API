@@ -2,80 +2,219 @@
 @using System.Security.Claims
 @{
     ViewData["Title"] = "Inquiry Follow Up";
+
+    // ── Safe local variables (guards against nulls, avoids repeating ?? logic inline) ──
+    var followUps = Model.FollowUps;
+    //  adjust type name to match your actual item model
+
+    var studentName = string.IsNullOrWhiteSpace(Model.Name) ? "Untitled Inquiry" : Model.Name; // ⚠ confirm property name
+    var avatarLetter = studentName.Trim().Length > 0 ? studentName.Trim()[0].ToString().ToUpper() : "?";
+    var assignedTo = string.IsNullOrWhiteSpace(Model.AssignedToName) ? "Unassigned" : Model.AssignedToName; // ⚠ confirm property name
+    var status = string.IsNullOrWhiteSpace(Model.Status) ? "Active" : Model.Status; // ⚠ confirm property name
+
+    // ── Status → badge class map (covers the statuses this module actually uses) ──
+    var statusBadgeClass = status.Trim().ToLowerInvariant() switch
+    {
+        "active" => "badge-status badge-status-active",
+        "passive" => "badge-status badge-status-passive",
+        "inactive" => "badge-status badge-status-passive",
+        "converted" => "badge-status badge-status-converted",
+        "admitted" => "badge-status badge-status-converted",
+        "lost" => "badge-status badge-status-lost",
+        "rejected" => "badge-status badge-status-lost",
+        _ => "badge-status badge-status-passive"
+    };
+
+    var enquiryDateText = DateTime.Now.ToString("yyyy-MM-dd"); // ⚠ confirm property name
+    var nextFollowUpText = Model.NextFollowUpDate.HasValue ? Model.NextFollowUpDate.Value.ToString("yyyy-MM-dd") : "-";
+
+    var descriptionText = string.IsNullOrWhiteSpace(Model.Description) ? "No description provided." : Model.Description;
+    var noteText = string.IsNullOrWhiteSpace(Model.Note) ? "No note added." : Model.Note;
+
+    // Helper for friendly relative-date labels on each timeline entry
+    string RelativeDateLabel(DateTime d)
+    {
+        var days = (DateTime.Today - d.Date).Days;
+        if (days == 0) return "Today";
+        if (days == 1) return "Yesterday";
+        if (days > 1 && days < 7) return $"{days} days ago";
+        return d.ToString("MMM dd, yyyy");
+    }
 }
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Inquiry Follow Up</h6>
+    </div>
+    <a href="/FrontOffice/AdmissionInquiry" class="btn btn-secondary top-btn">
+        <i class="ti ti-arrow-left me-1"></i> Back
+    </a>
+</div>
 
 <div class="row">
     <div class="col-md-12">
         <div class="card shadow-tbl-outer mb-2">
-            <div class="card-body p-3">
-                <div class="row g-0">
-                    <div class="col-lg-7 p-4 border-end">
-                        <form id="followUpForm">
-                            <input type="hidden" name="InquiryID" id="FollowUpInquiryID" />
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Follow Up Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="FollowUpDate" id="FollowUpDate" class="form-control" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Next Follow Up Date <span class="text-danger">*</span></label>
-                                    <input type="date" name="NextFollowUpDate" id="FollowUpNextDate" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Response <span class="text-danger">*</span></label>
-                                    <textarea name="Response" id="FollowUpResponse" class="form-control" rows="3" required></textarea>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Note</label>
-                                    <textarea name="Note" id="FollowUpNote" class="form-control" rows="3"></textarea>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <button type="submit" class="btn btn-success px-4"><i class="ti ti-cloud me-1"></i> Save Follow Up</button>
-                            </div>
-                        </form>
+            <div class="row g-0">
 
-                        <div class="mt-4">
-                            <h6 class="fw-bold mb-3">Timeline</h6>
-                            <div id="followUpTimeline" class="timeline">
-                                @* @if (Model.followUps && d.followUps.length > 0) 
-                                {
-                                } *@
+                <!-- ── LEFT: Follow-up form + timeline ─────────────────────────── -->
+                <div class="col-lg-7 p-4 border-end">
+                    <form id="followUpForm" class="needs-validation" novalidate>
+                        <input type="hidden" name="InquiryID" id="FollowUpInquiryID" value="@Model.InquiryID" />
+
+                        <h6 class="fw-bold text-uppercase text-muted mb-3" style="font-size:.75rem; letter-spacing:.04em;">
+                            <i class="ti ti-calendar-event me-1"></i> New Follow Up
+                        </h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Follow Up Date <span class="text-danger">*</span></label>
+                                <input type="date" name="FollowUpDate" value="@Model.Date" id="FollowUpDate" class="form-control" required>
+                                <div class="invalid-feedback" id="errFollowUpDate"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Next Follow Up Date <span class="text-danger">*</span></label>
+                                <input type="date" name="NextFollowUpDate" value="@Model.NextFollowUpDate" id="FollowUpNextDate" class="form-control" required>
+                                <div class="invalid-feedback" id="errFollowUpNextDate"></div>
                             </div>
                         </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Response <span class="text-danger">*</span></label>
+                                <textarea name="Response" id="FollowUpResponse" class="form-control" rows="3"
+                                          placeholder="What did the parent/guardian say?" required></textarea>
+                                <div class="invalid-feedback" id="errFollowUpResponse">@Model.Description</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Note <span class="text-muted fw-normal">(optional)</span></label>
+                                <textarea name="Note" id="FollowUpNote" class="form-control" rows="3"
+                                          placeholder="Internal note, not shared with parent">@Model.Note</textarea>
+                            </div>
+                        </div>
+
+                        <div id="followUpFormNotice"></div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="ti ti-cloud-upload me-1"></i> Save Follow Up
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="fw-bold mb-0"><i class="ti ti-history me-1"></i> Timeline</h6>
+                        <span class="badge bg-light text-dark border" id="timelineCount">@followUps.Count entr@(followUps.Count == 1 ? "y" : "ies")</span>
                     </div>
 
-                    <div class="col-lg-5 p-4 bg-light">
-                        <div class="summary-sidebar">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div>
-                                    <h5 class="mb-0" id="SideName">Summary</h5>
-                                    <small class="text-muted" id="SideAssigned">Assigned: -</small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-primary" id="SideStatus">Active</span>
-                                </div>
-                            </div>
+                    <div id="followUpTimeline" class="timeline">
+                        @if (Model.FollowUps.Any())
+                        {
+                            var orderedFollowUps = Model.FollowUps.OrderByDescending(f => f.FollowUpDate).ToList();
+                            @for (int i = 0; i < orderedFollowUps.Count; i++)
+                            {
+                                var item = orderedFollowUps[i];
+                                var isLatest = i == 0;
+                                <div class="timeline-item @(isLatest ? "timeline-item-latest" : "")">
+                                    <span class="timeline-dot"><i class="ti ti-message-circle"></i></span>
 
-                            <div class="mt-4">
-                                <p class="mb-2"><strong>Phone:</strong> <span id="SidePhone">-</span></p>
-                                <p class="mb-2"><strong>Email:</strong> <span id="SideEmail">-</span></p>
-                                <p class="mb-2"><strong>Address:</strong> <span id="SideAddress">-</span></p>
-                                <p class="mb-2"><strong>Class:</strong> <span id="SideClass">-</span></p>
-                                <p class="mb-2"><strong>Source:</strong> <span id="SideSource">-</span></p>
-                                <p class="mb-2"><strong>Reference:</strong> <span id="SideReference">-</span></p>
-                                <p class="mb-2"><strong>Child Count:</strong> <span id="SideChild">-</span></p>
-                                <hr />
-                                <p class="mb-2"><strong>Enquiry Date:</strong> <span id="SideEnqDate">-</span></p>
-                                <p class="mb-2"><strong>Next Follow Up:</strong> <span id="SideNextDate">-</span></p>
-                                <p class="mb-2"><strong>Description:</strong> <br /><span id="SideDesc" class="small text-muted">-</span></p>
-                                <p class="mb-2"><strong>Note:</strong> <br /><span id="SideNote" class="small text-muted">-</span></p>
+                                    <div class="timeline-card">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="timeline-date-pill">@RelativeDateLabel(item.FollowUpDate)</span>
+                                                @if (isLatest)
+                                                {
+                                                    <span class="badge badge-latest">Latest</span>
+                                                }
+                                            </div>
+                                            <span class="timeline-next">
+                                                <i class="ti ti-arrow-forward-up me-1"></i>Next: @item.NextFollowUpDate.ToString("MMM dd, yyyy")
+                                            </span>
+                                        </div>
+
+                                        <div class="timeline-response">
+                                            @(string.IsNullOrWhiteSpace(item.Response) ? "-" : item.Response)
+                                        </div>
+
+                                        @if (!string.IsNullOrWhiteSpace(item.Note))
+                                        {
+                                            <div class="timeline-note">
+                                                <i class="ti ti-note me-1"></i>@item.Note
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div id="timelineEmptyState" class="text-center text-muted py-5">
+                                <i class="ti ti-message-2-off fs-1 d-block mb-2 opacity-50"></i>
+                                <div class="fw-semibold">No follow-ups yet</div>
+                                <small>Log the first one using the form above.</small>
                             </div>
-                        </div>
+                        }
                     </div>
                 </div>
+
+                <!-- ── RIGHT: Summary sidebar ──────────────────────────────────── -->
+                <div class="col-lg-5 p-4 bg-light">
+                    <div class="summary-sidebar">
+
+                        <!-- Identity block -->
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="summary-avatar">@avatarLetter</div>
+                            <div class="flex-grow-1">
+                                <h5 class="mb-0">@studentName</h5>
+                                <small class="text-muted"><i class="ti ti-user-circle me-1"></i>Assigned: @assignedTo</small>
+                            </div>
+                            <span class="@statusBadgeClass">@status</span>
+                        </div>
+
+                        <!-- Contact block -->
+                        <div class="summary-block mb-3">
+                            <div class="summary-block-title">Contact</div>
+                            <div class="summary-row"><i class="ti ti-phone"></i><span>@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</span></div>
+                            <div class="summary-row"><i class="ti ti-mail"></i><span>@(string.IsNullOrWhiteSpace(Model.Email) ? "-" : Model.Email)</span></div>
+                            <div class="summary-row"><i class="ti ti-map-pin"></i><span>@(string.IsNullOrWhiteSpace(Model.Address) ? "-" : Model.Address)</span></div>
+                        </div>
+
+                        <!-- Inquiry details block -->
+                        <div class="summary-block mb-3">
+                            <div class="summary-block-title">Inquiry Details</div>
+                            <div class="summary-row"><i class="ti ti-school"></i>Class: <span class="ms-1">@(string.IsNullOrWhiteSpace(Model.ClassName) ? "-" : Model.ClassName)</span></div>
+                            <div class="summary-row"><i class="ti ti-route"></i>Source: <span class="ms-1">@(string.IsNullOrWhiteSpace(Model.SourceName) ? "-" : Model.SourceName)</span></div>
+                            <div class="summary-row"><i class="ti ti-users"></i>Reference: <span class="ms-1">@(string.IsNullOrWhiteSpace(Model.ReferenceName) ? "-" : Model.ReferenceName)</span></div>
+                            <div class="summary-row"><i class="ti ti-baby-carriage"></i>Child Count: <span class="ms-1">@Model.NoOfChild</span></div>
+                        </div>
+
+                        <!-- Dates block -->
+                        <div class="summary-block mb-3">
+                            <div class="d-flex gap-2">
+                                <div class="date-chip flex-fill">
+                                    <div class="date-chip-label">Enquiry Date</div>
+                                    <div class="date-chip-value">@enquiryDateText</div>
+                                </div>
+                                <div class="date-chip flex-fill date-chip-highlight">
+                                    <div class="date-chip-label">Next Follow Up</div>
+                                    <div class="date-chip-value">@nextFollowUpText</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes block -->
+                        <div class="summary-block">
+                            <div class="summary-block-title">Description</div>
+                            <p class="small text-muted mb-3">@descriptionText</p>
+                            <div class="summary-block-title">Note</div>
+                            <p class="small text-muted mb-0">@noteText</p>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -85,26 +224,249 @@
     <script src="~/js/inline-form-validation.js"></script>
     <script src="~/assets/js/AdmissionInquiry.js"></script>
 }
+
 <style>
+    /* ══════════════════════════════════════════════════════════
+           Timeline — vertical thread with connecting line + markers
+           ══════════════════════════════════════════════════════════ */
     .timeline {
-        max-height: 300px;
+        position: relative;
+        max-height: 420px;
         overflow-y: auto;
-        padding-right: 5px;
+        padding: 4px 10px 4px 6px;
     }
+
+        /* slim, unobtrusive scrollbar */
+        .timeline::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .timeline::-webkit-scrollbar-thumb {
+            background: #d9d7e6;
+            border-radius: 10px;
+        }
+
+        .timeline::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
     .timeline-item {
-        border-left: 3px solid #0d6efd !important;
+        position: relative;
+        display: flex;
+        gap: 14px;
+        padding-left: 4px;
+        padding-bottom: 20px;
     }
 
-    .btn-apply {
-        background-color: #345a67;
-        color: white;
-    }
-
-        .btn-apply:hover {
-            background-color: #2a4852;
-            color: white;
+        /* the connecting vertical line */
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 34px;
+            bottom: -6px;
+            width: 2px;
+            background: linear-gradient(to bottom, #e3e1f0, #e3e1f0 90%, transparent);
         }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 2px;
+        }
+
+    .timeline-dot {
+        position: relative;
+        z-index: 1;
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #6f5bd0;
+        color: #6f5bd0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .95rem;
+        margin-top: 2px;
+    }
+
+    .timeline-item-latest .timeline-dot {
+        background: #6f5bd0;
+        color: #fff;
+        box-shadow: 0 0 0 4px #6f5bd01f;
+    }
+
+    .timeline-card {
+        flex: 1;
+        min-width: 0;
+        background: #fff;
+        border: 1px solid #ecebf3;
+        border-radius: 10px;
+        padding: 12px 14px;
+        transition: box-shadow .15s ease, border-color .15s ease;
+    }
+
+        .timeline-card:hover {
+            box-shadow: 0 4px 14px rgba(38, 33, 74, .07);
+            border-color: #ddd9f0;
+        }
+
+    .timeline-item-latest .timeline-card {
+        border-color: #d8d2f5;
+        background: #fbfaff;
+    }
+
+    .timeline-date-pill {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #6f5bd0;
+        background: #f1effb;
+        padding: 3px 9px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .badge-latest {
+        font-size: .65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        background: #e8f6ee;
+        color: #1c8a51;
+        padding: 3px 8px;
+        border-radius: 20px;
+    }
+
+    .timeline-next {
+        font-size: .75rem;
+        color: #9a97ad;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .timeline-response {
+        font-size: .875rem;
+        color: #2b2a35;
+        line-height: 1.45;
+    }
+
+    .timeline-note {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed #ecebf3;
+        font-size: .8rem;
+        color: #9a97ad;
+        font-style: italic;
+        line-height: 1.4;
+    }
+
+    /* ── Status badge ─────────────────────────────────────────── */
+    .badge-status {
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        padding: 5px 12px;
+        border-radius: 20px;
+        white-space: nowrap;
+    }
+
+    .badge-status-active {
+        background: #e8f6ee;
+        color: #1c8a51;
+    }
+
+    .badge-status-passive {
+        background: #f1f0f5;
+        color: #6b6880;
+    }
+
+    .badge-status-converted {
+        background: #eaf1ff;
+        color: #1d5fd6;
+    }
+
+    .badge-status-lost {
+        background: #fdeceb;
+        color: #d1453d;
+    }
+
+    /* ── Summary sidebar ─────────────────────────────────────── */
+    .summary-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #6f5bd0;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .summary-block {
+        background: #fff;
+        border: 1px solid #ecebf3;
+        border-radius: 10px;
+        padding: 14px 16px;
+    }
+
+    .summary-block-title {
+        font-size: .7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #9a97ad;
+        margin-bottom: 8px;
+    }
+
+    .summary-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: .875rem;
+        color: #2b2a35;
+        padding: 4px 0;
+    }
+
+        .summary-row i {
+            color: #6f5bd0;
+            font-size: 1rem;
+            width: 18px;
+            flex-shrink: 0;
+        }
+
+    .date-chip {
+        background: #fff;
+        border: 1px solid #ecebf3;
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+
+    .date-chip-highlight {
+        border-color: #6f5bd0;
+        background: #f4f2fc;
+    }
+
+    .date-chip-label {
+        font-size: .68rem;
+        color: #9a97ad;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .date-chip-value {
+        font-size: .85rem;
+        font-weight: 600;
+        color: #2b2a35;
+    }
 
     .bg-light {
         background-color: #f8f9fa !important;

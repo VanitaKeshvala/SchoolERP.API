@@ -1,5 +1,6 @@
-@model SchoolERP.Shared.Models.FOAdmissionInquiryPageViewModel
+﻿@model SchoolERP.Shared.Models.FOAdmissionInquiryPageViewModel
 @using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Admission Enquiry";
 
@@ -11,11 +12,52 @@
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
     var p = Model.Permissions;
-
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
 }
 <style>
     .dt-buttons {
         display: none !important;
+    }
+
+    .search-icon-input {
+        cursor: pointer;
+    }
+    /* ── Filter badge ────────────────────────────────── */
+    .filter-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 500;
+        background: #eef2ff;
+        color: #4361ee;
+        border: 1px solid #c7d2fe;
+        border-radius: 20px;
+        padding: 3px 10px;
+    }
+
+        .filter-badge i {
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+            .filter-badge i:hover {
+                color: #e63946;
+            }
+
+    .filter-dropdown {
+        overflow: visible !important;
+    }
+
+    .select2-container {
+        width: 100% !important;
+    }
+
+    .select2-container--open,
+    .select2-dropdown {
+        z-index: 999999 !important;
     }
 </style>
 
@@ -27,15 +69,15 @@
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
         {
-            <button onclick="resetInquiryForm()" class="btn btn-primary top-btn" data-bs-toggle="modal" data-bs-target="#addModal"><i class="ti ti-plus me-1"></i> Add</button>
+            <a href="/FrontOffice/AddAdmissionEnquiry" class="btn btn-primary top-btn"><i class="ti ti-plus me-1"></i> Add</a>
         }
         @if (p.CanEdit)
         {
-            <button onclick="editSelectedInquiry()" class="btn btn-info top-btn"><i class="ti ti-pencil me-1"></i> Edit</button>
+            <button onclick="editSelectedInquiry()" id="btnEdit" disabled class="btn btn-info top-btn"><i class="ti ti-pencil me-1"></i> Edit</button>
         }
         @if (p.CanDelete)
         {
-            <button onclick="deleteSelectedInquiry()" class="btn btn-danger top-btn"><i class="ti ti-trash me-1"></i> Delete</button>
+            <button onclick="deleteSelectedInquiry()" id="btnDelete" disabled class="btn btn-danger top-btn"><i class="ti ti-trash me-1"></i> Delete</button>
         }
         @if (p.CanPrint)
         {
@@ -45,7 +87,7 @@
         }
         @if (p.CanEdit)
         {
-            <button onclick="followUpSelectedInquiry()" class="btn btn-apply top-btn"><i class="ti ti-phone-ringing me-1"></i> Follow Up</button>
+            <button onclick="followUpSelectedInquiry()" id="btnFollowUP" disabled class="btn btn-dark top-btn"><i class="ti ti-phone-ringing me-1"></i> Follow Up</button>
         }
         @if (p.CanExport)
         {
@@ -68,84 +110,148 @@
 
 <!-- End Page Header -->
 <!-- start row -->
+
+
+
+
 <div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-tbl-outer mb-2">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <form id="filterForm" method="get">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
-                            <i class="fas fa-search search-icon-input"></i>
-                            <input type="text" class="form-control border-0 ps-2" id="tableSearch"
-                                   placeholder="Search..." style="min-width: 220px;">
-                        </div>
-                        <!--<input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." />-->
-                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
-                            <div class="dropdown">
-                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
-                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
-                                </a>
-                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
-                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                        <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                        <div class="d-flex align-items-center justify-content-end">
-                                            <button type="submit" class="btn text-primary fs-6">Filter</button>
-                                        </div>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Name, Phone..."
+                               style="min-width: 320px;" />
+                    </div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="AdmissionInquiry" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="" />
+                        <input type="hidden" name="fromDate" id="hdnfromDate" value="" />
+                        <input type="hidden" name="toDate" id="hdntoDate" value="" />
+                        <input type="hidden" name="sourceId" id="hdnsourceId" value="" />
+                        <input type="hidden" name="classId" id="hdnclassId" value="" />
+                        <input type="hidden" name="status" id="hdnstatus" value="" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
                                     </div>
-                                    <div class="filter-body pb-0 row p-3">
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Class</label>
-                                            <select name="classId" id="filterClass" class="form-select form-control select2">
-                                                <option value="0">All</option>
-                                                @foreach (var item in Model.Classes)
-                                                {
-                                                    <option value="@item.ClassID">@item.ClassName</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Source</label>
-                                            <select name="sourceId" id="filterSource" class="form-select form-control select2">
-                                                <option value="0">All</option>
-                                                @foreach (var item in Model.Sources)
-                                                {
-                                                    <option value="@item.SourceID">@item.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Enquiry From Date</label>
-                                            <input type="date" name="fromDate" id="filterFromDate" class="form-control">
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Enquiry To Date</label>
-                                            <input type="date" name="toDate" id="filterToDate" class="form-control">
-                                        </div>
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label mb-1">Status</label>
-                                            <select name="status" id="filterStatus" class="form-select form-control select2">
-                                                <option value="">All</option>
-                                                <option value="Active">Active</option>
-                                                <option value="Passive">Passive</option>
-                                                <option value="Dead">Dead</option>
-                                            </select>
-                                        </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Class</label>
+                                        <select name="classId" id="filterClass" class="form-select form-control select2">
+                                            <option value="0">All</option>
+                                            @foreach (var item in Model.Classes)
+                                            {
+                                                <option value="@item.ClassID">@item.ClassName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Source</label>
+                                        <select name="sourceId" id="filterSource" class="form-select form-control select2">
+                                            <option value="0">All</option>
+                                            @foreach (var item in Model.Sources)
+                                            {
+                                                <option value="@item.SourceID">@item.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Enquiry From Date</label>
+                                        <input type="date" name="fromDate" id="filterFromDate" class="form-control">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Enquiry To Date</label>
+                                        <input type="date" name="toDate" id="filterToDate" class="form-control">
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">Status</label>
+                                        <select name="status" id="filterStatus" class="form-select form-control select2">
+                                            <option value="">All</option>
+                                            <option value="Active">Active</option>
+                                            <option value="Passive">Passive</option>
+                                            <option value="Dead">Dead</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
-                </form>
+
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Active filter badges -->
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">
             <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
-                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
-                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
@@ -173,10 +279,11 @@
                         <tbody>
                             @foreach (var item in Model.Inquiries)
                             {
-                                <tr>
+                                <tr class="item-row">
                                     <td>
                                         <input type="checkbox" name="selectedInquiry"
                                                class="form-check-input student-checkbox"
+                                               onclick="selectItem(@item.InquiryID, this)"
                                                value="@item.InquiryID">
                                         
                                     <td>@item.Name</td>
@@ -196,6 +303,75 @@
                             }
                         </tbody>
                     </table>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>
@@ -321,6 +497,11 @@
 
 
 @section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+    </script>
     <script src="~/js/inline-form-validation.js"></script>
     <script src="~/assets/js/AdmissionInquiry.js"></script>
 }

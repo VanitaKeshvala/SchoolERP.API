@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
@@ -171,6 +172,31 @@ namespace SchoolERP.API.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        [HttpPost("GetAllLeaveApplicationsWithPage")]
+        public async Task<IActionResult> GetAllLeaveApplicationsWithPage([FromBody] StudentLeaveSearchRequest request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 )
+                    return Ok(ApiResponse<List<StudentLeaveViewModel>>.SuccessResponse(new List<StudentLeaveViewModel>()));
+
+                var data = await _studentLeaveService.GetAllLeaveApplicationsWithPage(request);
+                return Ok(ApiResponse<PagedResult<StudentLeaveViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

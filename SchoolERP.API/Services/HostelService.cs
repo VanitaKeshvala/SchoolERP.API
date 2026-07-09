@@ -113,10 +113,8 @@ namespace SchoolERP.API.Services
                 parameters.Add("@CompanyID", companyId);
                 parameters.Add("@SessionID", sessionId);
                 parameters.Add("@RoomTypeTitle", req.RoomTypeTitle);
+                parameters.Add("@DisplayLabel", req.DisplayLabel);
                 parameters.Add("@RoomTypeDescription", req.RoomTypeDescription);
-                parameters.Add("@BedCapacity", req.BedCapacity);
-                parameters.Add("@RoomCoolingTypeId", req.RoomCoolingTypeId);
-                parameters.Add("@RentPerBed", req.RentPerBed);
                 parameters.Add("@IsActive", req.IsActive);
                 parameters.Add("@UserId", userId);
 
@@ -125,29 +123,7 @@ namespace SchoolERP.API.Services
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
-                if (result?.Result == 1) 
-                {
-                    if(result?.RoomTypeID !=null && result?.RoomTypeID != 0) 
-                    {
-                        parameters = new DynamicParameters();
-                        parameters.Add("@RateID", 0);
-                        parameters.Add("@RoomTypeID", result?.RoomTypeID);
-                        parameters.Add("@CostPerBed", req.CostPerBed);
-                        parameters.Add("@SecurityAmount", req.SecurityAmount);
-                        parameters.Add("@EffectiveFrom", req.EffectiveFrom);
-                        parameters.Add("@EffectiveTo", req.EffectiveTO);
-                        parameters.Add("@CompanyID", companyId);
-                        parameters.Add("@SessionID", sessionId);
-                        parameters.Add("@IsActive", req.IsActive);
-                        parameters.Add("@UserId", userId);
-
-                        var roomresult = conn.QueryFirstOrDefault<SpRoomTypeResult>(
-                            "SP_MST_HOSTELROOMRATE_UPSERT",
-                            parameters,
-                            commandType: CommandType.StoredProcedure);
-
-                    }
-                }
+                
 
                 return (
                     result?.Result == 1,
@@ -237,6 +213,42 @@ namespace SchoolERP.API.Services
             }
         }
 
+
+        /// <summary>
+        /// Retrieves all room occupancy types for the specified Room Type wise like AC,Non/AC etc.
+        /// </summary>
+        public List<RoomTypeViewModel> GetAllRoomOccupancyByRoomTypesWise(int roomTypeId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                     _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@RoomTypeId", roomTypeId);
+
+                var result = conn.Query<RoomTypeViewModel>(
+                    "SP_MST_ROOMOCCUPANCYTYPEROOMTYPEWISE_GETALL",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+
+                // If SP returned no rows at all
+                if (!result.Any()) return null;
+
+                // If SP returned rows but RESULT != 1 (failure case)
+                if (result.First().Result != 1) return null;
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+        }
+
+
         // ─── HOSTEL ─────────────────────────────────────────────
 
         /// <summary>
@@ -317,6 +329,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@CompanyID", companyId);
                 parameters.Add("@SessionID", sessionId);
                 parameters.Add("@HostelName", req.HostelName);                
+                parameters.Add("@DisplayLabel", req.DisplayLabel);                
                 parameters.Add("@RoomTypeID", req.RoomTypeID);
                 parameters.Add("@HostelAddress", req.HostelAddress);
                 parameters.Add("@HostelIntake", req.HostelIntake);
@@ -325,10 +338,10 @@ namespace SchoolERP.API.Services
                 parameters.Add("@UserId", userId);
                 parameters.Add("@HostelCode", req.HostelCode);
                 parameters.Add("@HostelTypeID", req.HostelTypeID);
-                parameters.Add("@WardenName", req.WardenName);
-                parameters.Add("@WardenContact", req.WardenContact);
-                parameters.Add("@EmergencyContact", req.EmergencyContact);
-                parameters.Add("@HostelEmail", req.HostelEmail);
+                parameters.Add("@PostalCode", req.PostalCode);
+                parameters.Add("@CountryId", req.CountryId);
+                parameters.Add("@StateId", req.StateId);
+                parameters.Add("@CityId", req.CityId);
                 parameters.Add("@HostelRules", req.HostelRules);
                 var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Mst_Hostel_Upsert",
@@ -502,7 +515,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@HostelID", req.HostelID);
                 parameters.Add("@CompanyID", companyId);
                 parameters.Add("@SessionID", sessionId);
-                parameters.Add("@RoomTypeID", req.RoomTypeID);
+                parameters.Add("@RoomTypeID", req.RoomCoolingTypeId);
                 parameters.Add("@RoomTitle", req.RoomTitle);
                 parameters.Add("@NoOfBed", req.NoOfBed);
                 parameters.Add("@CostPerBed", req.CostPerBed);
@@ -512,10 +525,39 @@ namespace SchoolERP.API.Services
                 parameters.Add("@FloorNumber", req.FloorNumber);
                 parameters.Add("@AllowExtraBed", req.AllowExtraBed);
                 parameters.Add("@MaxExtraBeds", req.MaxExtraBeds);
-                var result = conn.QueryFirstOrDefault<SpResult>(
+                
+                var result = conn.QueryFirstOrDefault<SpHostelRoomResult>(
                     "sp_Mst_HostelRoom_Upsert",
                     parameters,
                     commandType: CommandType.StoredProcedure);
+
+
+                if (result?.Result == 1)
+                {
+                    if (result?.ROOMID != null && result?.ROOMID != 0)
+                    {
+                        parameters = new DynamicParameters();
+                        parameters.Add("@RateID", 0);
+                        parameters.Add("@RoomId", result?.ROOMID);
+                        parameters.Add("@RoomTypeID", req?.RoomTypeID);
+                        parameters.Add("@HostelID", req?.HostelID);
+                        parameters.Add("@RoomCoolingTypeId", req?.RoomCoolingTypeId);
+                        parameters.Add("@CostPerBed", req.CostPerBed);
+                        parameters.Add("@NoOfBeds", req.NoOfBed);
+                        parameters.Add("@SecurityAmount", req.SecurityAmount);
+                        parameters.Add("@EffectiveFrom", req.EffectiveFrom);
+                        parameters.Add("@CompanyID", companyId);
+                        parameters.Add("@SessionID", sessionId);
+                        parameters.Add("@IsActive", req.IsActive);
+                        parameters.Add("@UserId", userId);
+
+                        var roomresult = conn.QueryFirstOrDefault<SpRoomTypeResult>(
+                            "SP_MST_HOSTELROOMRATE_UPSERT",
+                            parameters,
+                            commandType: CommandType.StoredProcedure);
+
+                    }
+                }
 
                 return (
                     result?.Result == 1,
@@ -880,5 +922,74 @@ namespace SchoolERP.API.Services
             }
             
         }
+
+        public List<HostelSummary> GetHostelSummary(int hostelID)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                     _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@HostelID", hostelID);
+
+                var result = conn.Query<HostelSummary>(
+                    "SP_tbl_Mst_Hostel_GetHostelSummary",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+
+                // If SP returned no rows at all
+                if (!result.Any()) return null;
+
+                // If SP returned rows but RESULT != 1 (failure case)
+                if (result.First().Result != 1) return null;
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+
+        }
+
+        
+        public async Task<List<HostelReportResponse>> GetAllHostelReportWithPage(HotelReportSearchRequest request)
+        {
+            using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+            var param = new DynamicParameters();
+
+            param.Add("@Mode", string.IsNullOrWhiteSpace(request.Mode) ? "REPORT" : request.Mode);
+            param.Add("@CompanyID", request.CompanyID);
+            param.Add("@SessionID", request.SessionID);
+
+            param.Add("@HostelID", request.HostelID);
+            param.Add("@HostelTypeID", request.HostelTypeID);
+            param.Add("@RoomTypeID", request.RoomTypeID);
+            param.Add("@RoomCoolingTypeId", request.RoomCoolingTypeId);
+            param.Add("@RoomTitle", request.RoomTitle);
+            param.Add("@SearchText", request.SearchText);
+            param.Add("@IsActive", request.IsActive);
+
+            param.Add("@AsOnDate", request.AsOnDate);
+            param.Add("@RoomId", request.RoomId);
+
+            param.Add("@PageNumber", request.PageNumber <= 0 ? 1 : request.PageNumber);
+            param.Add("@PageSize", request.PageSize <= 0 ? 10 : request.PageSize);
+
+            await conn.OpenAsync();
+
+            var result = await conn.QueryAsync<HostelReportResponse>(
+                "usp_Hostel_Manage",
+                param,
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 60);
+
+            return result.ToList();
+        }
+
+      
     }
 }

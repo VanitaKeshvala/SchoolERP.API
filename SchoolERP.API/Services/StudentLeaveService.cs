@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -15,9 +16,11 @@ namespace SchoolERP.API.Services
     public class StudentLeaveService: IStudentLeaveService
     {
         private readonly IConfiguration _configuration;
-        public StudentLeaveService(IConfiguration configuration)
+        private readonly ILogger<FrontOfficeService> _logger;
+        public StudentLeaveService(IConfiguration configuration, ILogger<FrontOfficeService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
         /// <summary>
@@ -25,27 +28,36 @@ namespace SchoolERP.API.Services
         /// </summary>
         public List<StudentLeaveViewModel> GetLeaveApplications(int? classId, int? sectionId, int? status, int companyId)
         {
-            using var conn = new SqlConnection(
-                _configuration.GetConnectionString("DefaultConnection"));
+            try
+            {
+                using var conn = new SqlConnection(
+               _configuration.GetConnectionString("DefaultConnection"));
 
-            var parameters = new DynamicParameters();
-            parameters.Add("@Action", "LIST");
-            parameters.Add("@CompanyID", companyId);
+                var parameters = new DynamicParameters();
+                parameters.Add("@Action", "LIST");
+                parameters.Add("@CompanyID", companyId);
 
-            if (classId.HasValue && classId > 0)
-                parameters.Add("@ClassID", classId.Value);
+                if (classId.HasValue && classId > 0)
+                    parameters.Add("@ClassID", classId.Value);
 
-            if (sectionId.HasValue && sectionId > 0)
-                parameters.Add("@SectionID", sectionId.Value);
+                if (sectionId.HasValue && sectionId > 0)
+                    parameters.Add("@SectionID", sectionId.Value);
 
-            if (status.HasValue && status >= 0)
-                parameters.Add("@Status", status.Value);
+                if (status.HasValue && status >= 0)
+                    parameters.Add("@Status", status.Value);
 
-            return conn.Query<StudentLeaveViewModel>(
-                "sp_Student_LeaveApp_CRUD",
-                parameters,
-                commandType: CommandType.StoredProcedure)
-                .ToList();
+                return conn.Query<StudentLeaveViewModel>(
+                    "sp_Student_LeaveApp_CRUD",
+                    parameters,
+                    commandType: CommandType.StoredProcedure)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex,ex.Message);
+                return null;
+            }
+           
         }
         /// <summary>
         /// Updates the status of a student's leave application.
@@ -56,27 +68,36 @@ namespace SchoolERP.API.Services
             int companyId,
             int userId)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            var parameters = new DynamicParameters();
-            parameters.Add("@Action", "UPDATE_STATUS");
-            parameters.Add("@LeaveAppID", leaveAppId);
-            parameters.Add("@Status", status);
-            parameters.Add("@CompanyID", companyId);
-            parameters.Add("@UserID", userId);
+                var parameters = new DynamicParameters();
+                parameters.Add("@Action", "UPDATE_STATUS");
+                parameters.Add("@LeaveAppID", leaveAppId);
+                parameters.Add("@Status", status);
+                parameters.Add("@CompanyID", companyId);
+                parameters.Add("@UserID", userId);
 
-            var result = conn.QueryFirstOrDefault<dynamic>(
-                "sp_Student_LeaveApp_CRUD",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+                var result = conn.QueryFirstOrDefault<dynamic>(
+                    "sp_Student_LeaveApp_CRUD",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
 
-            if (result != null)
-            {
-                return (true, Convert.ToString(result.Message));
+                if (result != null)
+                {
+                    return (true, Convert.ToString(result.Message));
+                }
+
+                return (false, "Failed to update status");
             }
-
-            return (false, "Failed to update status");
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, ex.Message);
+                return (false, "Failed to update status");
+            }
+            
         }
         /// <summary>
         /// Creates a new leave application or updates an existing leave application.
@@ -86,39 +107,48 @@ namespace SchoolERP.API.Services
             int companyId,
             int userId)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            var parameters = new DynamicParameters();
+                var parameters = new DynamicParameters();
 
-            parameters.Add("@Action", "UPSERT");
-            parameters.Add("@LeaveAppID", req.LeaveAppID);
-            parameters.Add("@StudentID", req.StudentID);
-            parameters.Add("@FromDate", req.FromDate);
-            parameters.Add("@ToDate", req.ToDate);
-            parameters.Add("@ApplyDate", req.ApplyDate);
-            parameters.Add("@Reason", req.Reason);
-            parameters.Add("@Attachment", req.Attachment, DbType.Binary);
-            parameters.Add("@AttachmentType", req.AttachmentType);
-            parameters.Add("@AttachmentName", req.AttachmentName);
-            parameters.Add("@Status", req.Status);
-            parameters.Add("@CompanyID", companyId);
-            parameters.Add("@UserID", userId);
+                parameters.Add("@Action", "UPSERT");
+                parameters.Add("@LeaveAppID", req.LeaveAppID);
+                parameters.Add("@StudentID", req.StudentID);
+                parameters.Add("@FromDate", req.FromDate);
+                parameters.Add("@ToDate", req.ToDate);
+                parameters.Add("@ApplyDate", req.ApplyDate);
+                parameters.Add("@Reason", req.Reason);
+                parameters.Add("@Attachment", req.Attachment, DbType.Binary);
+                parameters.Add("@AttachmentType", req.AttachmentType);
+                parameters.Add("@AttachmentName", req.AttachmentName);
+                parameters.Add("@Status", req.Status);
+                parameters.Add("@CompanyID", companyId);
+                parameters.Add("@UserID", userId);
 
-            var result = conn.QueryFirstOrDefault<dynamic>(
-                "sp_Student_LeaveApp_CRUD",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+                var result = conn.QueryFirstOrDefault<dynamic>(
+                    "sp_Student_LeaveApp_CRUD",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
 
-            if (result != null)
-            {
-                return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message)
-                );
+                if (result != null)
+                {
+                    return (
+                        Convert.ToInt32(result.Result) == 1,
+                        Convert.ToString(result.Message)
+                    );
+                }
+
+                return (false, "Failed to save leave application");
             }
-
-            return (false, "Failed to save leave application");
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, ex.Message);
+                return (false, "Failed to update status");
+            }
+            
         }
         /// <summary>
         /// Retrieves the attachment file associated with a leave application.
@@ -126,29 +156,99 @@ namespace SchoolERP.API.Services
         public (byte[]? Bytes, string? FileName, string? ContentType)
             GetLeaveAttachment(int leaveAppId, int companyId)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            var parameters = new DynamicParameters();
-            parameters.Add("@Action", "GET_ATTACHMENT");
-            parameters.Add("@LeaveAppID", leaveAppId);
-            parameters.Add("@CompanyID", companyId);
+                var parameters = new DynamicParameters();
+                parameters.Add("@Action", "GET_ATTACHMENT");
+                parameters.Add("@LeaveAppID", leaveAppId);
+                parameters.Add("@CompanyID", companyId);
 
-            var result = conn.QueryFirstOrDefault<dynamic>(
-                "sp_Student_LeaveApp_CRUD",
-                parameters,
-                commandType: CommandType.StoredProcedure);
+                var result = conn.QueryFirstOrDefault<dynamic>(
+                    "sp_Student_LeaveApp_CRUD",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
 
-            if (result != null && result.Attachment != null)
+                if (result != null && result.Attachment != null)
+                {
+                    return (
+                        (byte[])result.Attachment,
+                        Convert.ToString(result.AttachmentName),
+                        Convert.ToString(result.AttachmentType)
+                    );
+                }
+
+                return (null, null, null);
+            }
+            catch (Exception ex)
             {
-                return (
-                    (byte[])result.Attachment,
-                    Convert.ToString(result.AttachmentName),
-                    Convert.ToString(result.AttachmentType)
-                );
+                _logger?.LogError(ex, ex.Message);
+                return (null, null, null);
+            }
+            
+        }
+
+        public async Task<PagedResult<StudentLeaveViewModel>> GetAllLeaveApplicationsWithPage(StudentLeaveSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@CLASSID", req.ClassID);
+                param.Add("@SECTIONID", req.SectionID);
+                param.Add("@STATUS", req.Status);
+                param.Add("@SEARCHKEYWORD", req.SearchKeyword);
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+
+                var result = (await conn.QueryAsync<StudentLeaveViewModel>(
+                "SP_STUDENT_LEAVEAPP_LIST_PAGED",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<StudentLeaveViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<StudentLeaveViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
 
-            return (null, null, null);
         }
     }
 }

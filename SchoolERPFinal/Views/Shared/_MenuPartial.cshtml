@@ -1,11 +1,12 @@
 ﻿@model List<MenuViewModel>
-
-
 @{
-    RenderMenus(null, 0);
+    string currentUrl = Context.Request.Path.Value;
+    RenderMenus(null, 1);
 }
 
-@functions
+
+    
+    @functions
 {
     // Implemented recursive dynamic menu rendering with parent-child hierarchy support.
 
@@ -18,65 +19,84 @@
     //  Added default icon fallback using null coalescing operator
     //  Supported dynamic URL navigation for leaf menus
 
-    void RenderMenus(int? parentId, int depth)
-    {
-        var menus = Model
-        .Where(x => x.ParentID == parentId)
-        .OrderBy(x => x.DisplayOrder);
-
-        foreach (var menu in menus)
+    void RenderMenus(int? parentId, int menuLevel)
         {
-            var children = Model.Any(x => x.ParentID == menu.MenuID);
+            var menus = Model
+                .Where(x => x.ParentID == parentId)
+                .OrderBy(x => x.DisplayOrder);
 
-            if (children)
+            foreach (var menu in menus)
             {
-                if (depth == 0)
+                var hasChildren = Model.Any(x => x.ParentID == menu.MenuID);
+
+                if (hasChildren)
                 {
-                    <li>
-                        <ul>
-                            <li class="submenu">
-                                <a href="javascript:void(0);">
-                                    <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
-                                    <span>@menu.MenuName</span>
-                                    <span class="menu-arrow inside-submenu"></span>
-                                </a>
-                                <ul>
-                                    @{
-                                        RenderMenus(menu.MenuID, depth + 1);
-                                    }
-                                </ul>
-                            </li>
-                        </ul>
-                    </li>
+                    if (menuLevel == 1)
+                    {
+                        // MASTER MENU (LEVEL 1) - has icon
+                        <li>
+                            <ul>
+                                <li class="submenu">
+                                    <a href="javascript:void(0);">
+                                        <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
+                                        <span>@menu.MenuName</span>
+                                        <span class="menu-arrow inside-submenu"></span>
+                                    </a>
+                                    <ul>
+                                        @{
+                                            RenderMenus(menu.MenuID, menuLevel + 1);
+                                        }
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    else if (menuLevel == 2)
+                    {
+                        // SUB MENU (LEVEL 2) - no icon
+                        <li class="submenu">
+                            <a href="javascript:void(0);">
+                                <span>@menu.MenuName</span>
+                                <span class="menu-arrow inside-submenu"></span>
+                            </a>
+                            <ul>
+                                @{
+                                    RenderMenus(menu.MenuID, menuLevel + 1);
+                                }
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        // SUB-SUB MENU (LEVEL 3+) - deeper nested class
+                        <li class="submenu submenu-two">
+                            <a href="javascript:void(0);">
+                                <span>@menu.MenuName</span>
+                                <span class="menu-arrow inside-submenu"></span>
+                            </a>
+                            <ul>
+                                @{
+                                    RenderMenus(menu.MenuID, menuLevel + 1);
+                                }
+                            </ul>
+                        </li>
+                    }
                 }
                 else
                 {
-                    <li class="submenu">
-                        <a href="javascript:void(0);">
-                            <span>@menu.MenuName</span>
-                            <span class="menu-arrow inside-submenu"></span>
-                        </a>
-                        <ul>
-                            @{
-                                RenderMenus(menu.MenuID, depth + 1);
+                    // LEAF NODE (final clickable link) - class depends on level too
+                    <li class="@(menuLevel >= 3 ? "submenu-two" : "")">
+                        <a href="@menu.MenuURL">
+                            @if (menuLevel == 1)
+                            {
+                                <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
                             }
-                        </ul>
+                            <span>@menu.MenuName</span>
+                        </a>
                     </li>
                 }
             }
-            else
-            {
-                <li>
-                    <a href="@menu.MenuURL">
-                        @if (depth == 0)
-                        {
-                            <i class="@(menu.MenuIcon ?? "ti ti-box")"></i>
-                        }
-                        <span>@menu.MenuName</span>
-                    </a>
-                </li>
-            }
         }
     }
-}
+
 

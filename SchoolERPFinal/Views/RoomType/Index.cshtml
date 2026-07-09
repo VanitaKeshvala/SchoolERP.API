@@ -9,7 +9,7 @@
 @using System.Text.Json
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Hostel Type Management";
+    ViewData["Title"] = "Room Type Management";
     int currentUserId = 0;
     if (User.Identity != null && User.Identity.IsAuthenticated)
     {
@@ -22,12 +22,12 @@
 
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">Hostel Type</h6>
+        <h6 class="fw-bold mb-0">Room Type</h6>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-1">
         @if (p.CanAdd)
         {
-            <a href="/RoomCoolingType/Add" class="btn btn-primary top-btn" id="btnAddClass">
+            <a href="/RoomType/Add" class="btn btn-primary top-btn" id="btnAddClass">
                 <i class="ti ti-plus me-1"></i>Add
             </a>
         }
@@ -95,6 +95,7 @@
                             <tr class="bg-light">
                                 <th class="ps-4" style="width: 50px;">Select</th>
                                 <th>Type</th>
+                                <th>Display Name</th>
                                 <th>Description</th>
                                 <th>Status</th>
                             </tr>
@@ -112,6 +113,7 @@
 
                                         </td>
                                         <td>@c.RoomCoolingTypeName</td>
+                                                <td>@c.DisplayLabel</td>
                                         <td>@c.Description</td>
                                         <td>
                                             @if (p.CanEdit)

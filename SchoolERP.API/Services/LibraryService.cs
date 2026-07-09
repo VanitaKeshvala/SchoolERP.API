@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 using System.Data;
 
 namespace SchoolERP.API.Services
@@ -69,7 +70,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Library_Book_CRUD",
                     new
                     {
@@ -91,7 +92,10 @@ namespace SchoolERP.API.Services
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return ((int)result.Result == 1, (string)result.Message);
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -136,24 +140,27 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Activates or deactivates a book.
         /// </summary>
-        public (bool Success, string Message) ToggleBookStatus(int id, int userId)
+        public (bool Success, string Message) ToggleBookStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
-                    "sp_Library_Book_CRUD",
-                    new
-                    {
-                        Action = "TOGGLESTATUS",
-                        BookID = id,
-                        UserID = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
 
-                return ((int)result.Result == 1, (string)result.Message);
+                var parameters = new DynamicParameters();
+                parameters.Add("@BOOKID", request.Ids);
+                parameters.Add("@IsActive", request.IsActive);
+                parameters.Add("@USERID", request.DoneBy);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "SP_LIBRARY_BOOK_TOGGLESTATUS",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -166,19 +173,19 @@ namespace SchoolERP.API.Services
         /// Retrieves library members based on member type and filters.
         /// </summary>
         public List<LibraryMemberViewModel> GetMemberList(
-            string memberType,
-            int companyId,
-            int? classId,
-            int? sectionId,
-            int? departmentId,
-            string? search)
+     string memberType,
+     int companyId,
+     int? classId,
+     int? sectionId,
+     int? departmentId,
+     string? search)
         {
             using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
             var action = memberType == "All" ? "LIST_ALL" : "LIST";
 
-            var result = conn.Query<dynamic>(
+            var result = conn.Query<LibraryMemberViewModel>(
                 "sp_Library_Member_CRUD",
                 new
                 {
@@ -191,32 +198,11 @@ namespace SchoolERP.API.Services
                     SearchTerm = search
                 },
                 commandType: CommandType.StoredProcedure)
-                .Select(row => new LibraryMemberViewModel
-                {
-                    LibraryMemberID = row.LibraryMemberID,
-                    StudentID = row.StudentID,
-                    StaffID = row.StaffID,
-                    LibraryCardNo = row.LibraryCardNo,
-                    AdmissionNo = row.AdmissionNo,
-                    Name = row.MemberName != null
-                            ? row.MemberName
-                            : memberType != "Staff"
-                                ? row.StudentName
-                                : row.StaffName,
-                    MemberType = row.MemberType ?? memberType,
-                    ClassName = row.ClassDepartment != null
-                                ? row.ClassDepartment
-                                : row.ClassName,
-                    FatherName = row.FatherName,
-                    DOB = row.DOB,
-                    Gender = row.Gender,
-                    MobileNo = row.MobileNo,
-                    RegisteredOn = row.RegisteredOn
-                })
                 .ToList();
 
             return result;
         }
+
         /// <summary>
         /// Searches students or staff available for library membership.
         /// </summary>
@@ -267,6 +253,7 @@ namespace SchoolERP.API.Services
                     new
                     {
                         Action = "SAVE",
+                        LibraryMemberID =req.LibraryMemberID,
                         MemberType = req.MemberType,
                         StudentID = req.StudentID,
                         StaffID = req.StaffID,
@@ -322,27 +309,32 @@ namespace SchoolERP.API.Services
             int id,
             int? studentId,
             int? staffId,
-            int userId)
+            int? companyId,
+            int userId, string? modeType)
         {
             try
             {
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Library_Member_CRUD",
                     new
                     {
                         Action = "DELETE",
+                        MemberType = modeType,
                         LibraryMemberID = id,
                         StudentID = studentId,
                         StaffID = staffId,
+                        CompanyId= companyId,
                         UserID = userId
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return ((int)result.Result == 1,
-                        result.Message?.ToString() ?? "");
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -385,7 +377,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Library_IssueReturn_CRUD",
                     new
                     {
@@ -399,8 +391,10 @@ namespace SchoolERP.API.Services
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return ((int)result.Result == 1,
-                        (string)result.Message);
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -424,7 +418,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Library_IssueReturn_CRUD",
                     new
                     {
@@ -436,8 +430,10 @@ namespace SchoolERP.API.Services
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return ((int)result.Result == 1,
-                        (string)result.Message);
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -451,20 +447,350 @@ namespace SchoolERP.API.Services
         /// <param name="memberId">Library Member ID.</param>
         /// <param name="companyId">Company ID.</param>
         /// <returns>Member details if found; otherwise null.</returns>
-        public MemberDetailsViewModel GetMemberDetails(int memberId, int companyId)
+        public MemberDetailsViewModel? GetMemberDetails(int memberId, int companyId)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            return conn.QueryFirstOrDefault<MemberDetailsViewModel>(
-                "sp_Library_IssueReturn_CRUD",
-                new
+                return conn.QueryFirstOrDefault<MemberDetailsViewModel>(
+                    "sp_Library_GetMemberDetails",
+                    new
+                    {
+                        LibraryMemberID = memberId,
+                        CompanyID = companyId
+                    },
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            
+        }
+
+        /// <summary>
+        /// Retrieves a paginated list of classes based on the specified search criteria.
+        /// Automatically resolves the current user's Company and Session if they are not provided.
+        /// </summary>
+        public async Task<PagedResult<BookViewModel>> GetAllLibraryWithPage(LibrarySearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
                 {
-                    Action = "GET_MEMBER_DETAILS",
-                    LibraryMemberID = memberId,
-                    CompanyID = companyId
-                },
-                commandType: CommandType.StoredProcedure);
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<BookViewModel>(
+                "SP_LIBRARY_BOOK_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<BookViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<BookViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<PagedResult<LibraryMemberViewModel>> GetAllStudentsMembershipWithPage(StudentsMembershipSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionId);
+                param.Add("@CLASSID", req.ClassId);
+                param.Add("@SECTIONID", req.SectionId);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<LibraryMemberViewModel>(
+                "SP_LIBRARY_MEMBER_STUDENT_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<LibraryMemberViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<LibraryMemberViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public LibraryMember? GetLibraryMemberByID(int libraryMemberID)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                return conn.QueryFirstOrDefault<LibraryMember>(
+                    "sp_LibraryMember_GetByID",
+                    new
+                    {
+                        LibraryMemberID = libraryMemberID
+                    },
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
+        }
+
+        public async Task<PagedResult<StaffLibraryMember>> GetAllStaffMembershipWithPage(StaffLibraryMemberSearchModel req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageIndex == 0 && req.PageSize == 0)
+                {
+                    req.PageIndex = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@DEPARTMENTID", req.DepartmentID);
+                param.Add("@SEARCHTERM", req.SearchTerm);
+                param.Add("@PAGEINDEX", req.PageIndex);
+                param.Add("@PAGESIZE", req.PageSize);
+
+                var result = (await conn.QueryAsync<StaffLibraryMember>(
+                "SP_LIBRARY_MEMBER_STAFF_LIST",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<StaffLibraryMember>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<StaffLibraryMember>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+
+        public async Task<PagedResult<IssueReturnViewModel>> GetAllIssuedBooksWithPageIndex(IssueBookSearchModel req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 5;
+                }
+
+
+                param.Add("@LibraryMemberID", req.LibraryMemberID);
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SearchKeyword", req.SearchkeyWord);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<IssueReturnViewModel>(
+                "sp_Library_GetAllIssuedBooksWithPageIndex",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<IssueReturnViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<IssueReturnViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<PagedResult<LibraryMemberViewModel>> GetAllLibraryMemberWithPageIndex(MemberSearchModel req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SearchKeyword", req.SearchkeyWord);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<LibraryMemberViewModel>(
+                "SP_LIBRARY_MEMBER_LIST_PAGED",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<LibraryMemberViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<LibraryMemberViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

@@ -284,15 +284,10 @@ async function saveRecord() {
     const data = {
         roomTypeID: roomTypeId || 0,
         roomTypeTitle: document.getElementById('txtTitle').value.trim(),
+        displayLabel: document.getElementById('txtDisplayLabel').value.trim(),
         roomTypeDescription: document.getElementById('txtDescription').value.trim() || null,
         isActive: document.getElementById('chkActive').checked,
-        bedCapacity: bedCapacity||0,
-        rentPerBed: document.getElementById('txtRentPerBed').value.trim() || 0,
-        roomCoolingTypeId: document.getElementById('ddlACNonAC').value.trim() || 0,
-        costPerBed: document.getElementById('txtRentPerBed').value.trim() || null,
-        securityAmount: document.getElementById('txtSecurityAmount').value.trim() || null,
-        effectiveFrom: document.getElementById('txtEffectiveFrom').value.trim() || null,
-        effectiveTO: document.getElementById('txtEffectiveTo').value.trim() || null,
+        bedCapacity: bedCapacity||0
     };
 
 

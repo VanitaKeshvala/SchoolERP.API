@@ -5,7 +5,55 @@
     ViewData["Title"] = "Add Hostel";
     var p = Model.Permissions;
 }
+<style>
+    #txtPinCode {
+        width: 100%;
+    }
 
+    .pincode-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%; /* match input width exactly */
+        box-sizing: border-box; /* include border/padding in width calc */
+        z-index: 1055;
+        max-height: 220px;
+        overflow-y: auto;
+        margin-top: 4px;
+        padding: 4px;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    }
+
+        .pincode-dropdown .list-group-item {
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+            .pincode-dropdown .list-group-item:hover,
+            .pincode-dropdown .list-group-item.active {
+                background-color: #f0f4ff;
+                color: #0d6efd;
+            }
+
+            .pincode-dropdown .list-group-item strong {
+                color: #212529;
+                font-weight: 600;
+            }
+
+            .pincode-dropdown .list-group-item small {
+                display: block;
+                color: #6c757d;
+                font-size: 0.78rem;
+            }
+</style>
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
@@ -30,13 +78,19 @@
                 <form id="hostelForm">
                     <input type="hidden" id="hdnHostelID" value="@Model.EditHostel?.HostelID">
                     <div class="row row-gap-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Hostel Name <span class="text-danger">*</span></label>
                             <input type="text"
                                    value="@Model.EditHostel?.HostelName"
                                 class="form-control" id="txtHostelName" required>
                         </div>
-                        <div class="col-md-6">
+                         <div class="col-md-4">
+                            <label class="form-label fw-bold">Display Name</label>
+                            <input type="text"
+                                   value="@Model.EditHostel?.DisplayLabel"
+                                   class="form-control" id="txtDisplayLabel">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Hostel Type <span class="text-danger">*</span></label>
                             <select class="form-select select2" id="ddlHostelType" required style="width: 100%;">
                                 <option value="">-- Select --</option>
@@ -46,8 +100,8 @@
                                 }
                             </select>
                         </div>
-                        <div class="d-block col-md-6">
-                            <label class="form-label fw-bold">Room Type <span class="text-danger">*</span></label>
+                        <div class="d-block col-md-3 d-none">
+                            <label class="form-label fw-bold">Room Intake Capacity <span class="text-danger">*</span></label>
                             <select class="form-select select2" id="ddlRoomType" style="width: 100%;">
                                 <option value="">-- Select --</option>
                                 @foreach (var rt in Model.RoomTypes.Where(x => x.IsActive))
@@ -56,13 +110,13 @@
                                 }
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Hostel Code</label>
                             <input type="text"
                                    value="@Model.EditHostel?.HostelCode"
                                    class="form-control" id="txtHostelCode">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Intake Capacity <span class="text-danger">*</span></label>
                             <input type="number"
                                    value="@Model.EditHostel?.HostelIntake"
@@ -74,7 +128,41 @@
                                    value="@Model.EditHostel?.HostelAddress"
                                 class="form-control" id="txtAddress">
                         </div>
-                        
+                        <div class="col-md-3 position-relative">
+                            <label class="form-label fw-bold">Pin Code</label>
+                            <input type="text"
+                                   value="@Model.EditHostel?.PostalCode"
+                                   class="form-control" id="txtPinCode"
+                                   autocomplete="off" />
+                            <ul id="pinCodeSuggestions" class="pincode-dropdown list-group">
+                            </ul>
+                        </div>
+                        <div class="d-block col-md-3 mb-3">
+                            <label class="form-label fw-bold">Country Name</label>
+                            <select class="form-select select2" id="ddlCountry" style="width: 100%;">
+                                <option value="">-- Select --</option>
+                                @foreach (var rt in Model.Country.Where(x => x.IsActive))
+                                {
+                                    <option value="@rt.CountryId" selected="@(Model.EditHostel?.CountryId == rt.CountryId)">@rt.CountryName</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="d-block col-md-3 mb-3">
+                            <input type="hidden" id="hdnSelectedStateId" value="@Model.EditHostel?.StateId" />
+                            <input type="hidden" id="hdnSelectedCityId" value="@Model.EditHostel?.CityId" />
+                            <label class="form-label fw-bold">State Name</label>
+                            <select class="form-select select2" id="ddlState" style="width: 100%;">
+                                <option value="">-- Select Country First --</option>
+                            </select>
+                        </div>
+
+                        <div class="d-block col-md-3 mb-3">
+                            <label class="form-label fw-bold">City Name</label>
+                            <select class="form-select select2" id="ddlCity" style="width: 100%;">
+                                <option value="">-- Select Country First --</option>
+                            </select>
+                        </div>
                         <div class="col-md-12">
                             <label class="form-label fw-bold">Description</label>
                             <textarea class="form-control" id="txtDescription" rows="3">@Model.EditHostel?.HostelDescription</textarea>

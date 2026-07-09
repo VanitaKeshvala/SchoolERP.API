@@ -1,3 +1,4 @@
+using SchoolERP.Shared.Models.Common;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -7,6 +8,9 @@ namespace SchoolERP.Shared.Models
     // ─── PURPOSE ────────────────────────────────────────────────
     public class MstFOPurposeViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int PurposeID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -14,10 +18,17 @@ namespace SchoolERP.Shared.Models
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class MstFOPurposeUpsertRequest
     {
+        
         public int PurposeID { get; set; }
 
         [Required(ErrorMessage = "Purpose name is required")]
@@ -26,11 +37,15 @@ namespace SchoolERP.Shared.Models
 
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     // ─── COMPLAINT TYPE ─────────────────────────────────────────
     public class MstFOComplaintTypeViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
         public int ComplaintTypeID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -38,6 +53,11 @@ namespace SchoolERP.Shared.Models
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class MstFOComplaintTypeUpsertRequest
@@ -50,11 +70,16 @@ namespace SchoolERP.Shared.Models
 
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
+
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     // ─── SOURCE ─────────────────────────────────────────────────
     public class MstFOSourceViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
         public int SourceID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -62,6 +87,11 @@ namespace SchoolERP.Shared.Models
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class MstFOSourceUpsertRequest
@@ -74,11 +104,16 @@ namespace SchoolERP.Shared.Models
 
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
+
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     // ─── REFERENCE ──────────────────────────────────────────────
     public class MstFOReferenceViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
         public int ReferenceID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -86,6 +121,11 @@ namespace SchoolERP.Shared.Models
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class MstFOReferenceUpsertRequest
@@ -98,11 +138,17 @@ namespace SchoolERP.Shared.Models
 
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
+
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     // ─── COMPLAINT ──────────────────────────────────────────────
     public class FOComplaintViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int ComplaintID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -125,6 +171,24 @@ namespace SchoolERP.Shared.Models
         
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
+    }
+
+    public class ComplaintSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+        public int? ComplaintTypeID { get; set; }
+        public int? SourceID { get; set; }
     }
 
     public class FOComplaintUpsertRequest
@@ -168,6 +232,9 @@ namespace SchoolERP.Shared.Models
     // ─── POSTAL RECEIVE ────────────────────────────────────────
     public class FOPostalReceiveViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int PostalReceiveID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -177,11 +244,17 @@ namespace SchoolERP.Shared.Models
         public string? Address { get; set; }
         public string? Note { get; set; }
         public DateTime Date { get; set; }
-        public byte[]? Attachment { get; set; }
+        public string? Attachment { get; set; }
         public string? FileName { get; set; }
         public string? FileType { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class FOPostalReceiveUpsertRequest
@@ -203,16 +276,31 @@ namespace SchoolERP.Shared.Models
 
         [Required(ErrorMessage = "Date is required")]
         public DateTime Date { get; set; }
-
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
         public byte[]? Attachment { get; set; }
         public string? FileName { get; set; }
         public string? FileType { get; set; }
         public bool IsActive { get; set; } = true;
     }
 
+    public class UpsertPostalReceiveResponse
+    {
+        public SpPostalReceive Result { get; set; }
+    }
+    public class FOPostalReceiveAttachmentUpsertRequest
+    {
+        public int PostalReceiveID { get; set; }
+        public string? Attachment { get; set; }
+        public string? FileName { get; set; }
+        public string? FileType { get; set; }
+    }
     // ─── POSTAL DISPATCH ───────────────────────────────────────
     public class FOPostalDispatchViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int PostalDispatchID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -222,11 +310,17 @@ namespace SchoolERP.Shared.Models
         public string? Address { get; set; }
         public string? Note { get; set; }
         public DateTime Date { get; set; }
-        public byte[]? Attachment { get; set; }
+        public string? Attachment { get; set; }
         public string? FileName { get; set; }
         public string? FileType { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class FOPostalDispatchUpsertRequest
@@ -255,9 +349,33 @@ namespace SchoolERP.Shared.Models
         public bool IsActive { get; set; } = true;
     }
 
+    public class FOPostalDispatchSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+    }
+
+
+    public class FOPostalDispatchAttachmentUpsertRequest
+    {
+        public int PostalDispatchID { get; set; }
+        public string? Attachment { get; set; }
+        public string? FileName { get; set; }
+        public string? FileType { get; set; }
+    }
+    public class UpsertPostalDispatchResponse
+    {
+        public SpPostalDispatch Result { get; set; }
+    }
     // ─── PHONE CALL LOG ───────────────────────────────────────
     public class FOPhoneCallLogViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
         public int PhoneCallLogID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -271,6 +389,12 @@ namespace SchoolERP.Shared.Models
         public string? CallType { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class FOPhoneCallLogUpsertRequest
@@ -293,11 +417,27 @@ namespace SchoolERP.Shared.Models
         public string? Note { get; set; }
         public string? CallType { get; set; }
         public bool IsActive { get; set; } = true;
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+    }
+
+    public class FOPhoneCallLogSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+        public string? CallType { get; set; }
     }
 
     // ─── VISITOR BOOK ──────────────────────────────────────────
     public class FOVisitorBookViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int VisitorBookID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -311,7 +451,7 @@ namespace SchoolERP.Shared.Models
         public string? InTime { get; set; }
         public string? OutTime { get; set; }
         public string? Note { get; set; }
-        public byte[]? Attachment { get; set; }
+        public string? Attachment { get; set; }
         public string? FileName { get; set; }
         public string? FileType { get; set; }
         public bool IsActive { get; set; }
@@ -322,6 +462,25 @@ namespace SchoolERP.Shared.Models
         public int? StaffID { get; set; }
         public string? StudentName { get; set; }
         public string? StaffName { get; set; }
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
+    }
+
+
+    public class FOVisitorBookSerchRequest 
+    {
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public int? StudentID { get; set; }
+        public int? StaffID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? Purposes { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
     }
 
     public class FOVisitorBookUpsertRequest
@@ -353,14 +512,27 @@ namespace SchoolERP.Shared.Models
         public string? OutTime { get; set; }
 
         public string? Note { get; set; }
-        public byte[]? Attachment { get; set; }
+        public string? Attachment { get; set; }
         public string? FileName { get; set; }
         public string? FileType { get; set; }
-        public bool IsActive { get; set; } = true;
+        public bool? IsActive { get; set; }
 
         public string? MeetingWith { get; set; }
         public int? StudentID { get; set; }
         public int? StaffID { get; set; }
+    }
+
+
+    public class FOVisitorBookAttachmentUpsertRequest
+    {
+        public int VisitorBookID { get; set; }
+        public string? Attachment { get; set; }
+        public string? FileName { get; set; }
+        public string? FileType { get; set; }
+    }
+    public class UpsertVisitorResponse
+    {
+        public SpVisitorResult Result { get; set; }
     }
 
     // ─── ADMISSION INQUIRY ──────────────────────────────────────
@@ -392,6 +564,12 @@ namespace SchoolERP.Shared.Models
         public DateTime? LastFollowUpDate { get; set; }
 
         public List<FOInquiryFollowUpViewModel> FollowUps { get; set; } = new();
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class FOAdmissionInquiryUpsertRequest
@@ -466,10 +644,54 @@ namespace SchoolERP.Shared.Models
         public List<MstFOReferenceViewModel> References { get; set; } = new();
     }
 
+    // ─── PAGE VIEW MODEL ────────────────────────────────────────
+    public class PurposesPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstFOPurposeViewModel> Purposes { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+    public class PurposesAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public MstFOPurposeViewModel Purposes { get; set; } = new();
+        public MstFOPurposeViewModel EditPurposes { get; set; } = new();
+    }
+
     public class FOComplaintPageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<FOComplaintViewModel> Complaints { get; set; } = new();
+        public List<MstFOComplaintTypeViewModel> ComplaintTypes { get; set; } = new();
+        public List<MstFOSourceViewModel> Sources { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? ComplaintTypeID { get; set; }
+        public int? SourceID { get; set; }
+    }
+
+    public class FOComplaintAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOComplaintViewModel Complaints { get; set; } = new();
+        public FOComplaintViewModel EditComplaints { get; set; } = new();
         public List<MstFOComplaintTypeViewModel> ComplaintTypes { get; set; } = new();
         public List<MstFOSourceViewModel> Sources { get; set; } = new();
     }
@@ -478,18 +700,70 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<FOPostalReceiveViewModel> Items { get; set; } = new();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+
+
+    public class FOPostalReceiveAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOPostalReceiveViewModel Items { get; set; } = new();
+        public FOPostalReceiveViewModel EditItems { get; set; } = new();
     }
 
     public class FOPostalDispatchPageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<FOPostalDispatchViewModel> Items { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+
+    public class FOPostalDispatchAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOPostalDispatchViewModel Items { get; set; } = new();
+        public FOPostalDispatchViewModel EditItems { get; set; } = new();
     }
 
     public class FOPhoneCallLogPageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<FOPhoneCallLogViewModel> Items { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public string? CallType { get; set; }
+    }
+
+    public class FOPhoneCallLogAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOPhoneCallLogViewModel Items { get; set; } = new();
+        public FOPhoneCallLogViewModel EditItems { get; set; } = new();
     }
 
     public class FOVisitorBookPageViewModel
@@ -499,6 +773,18 @@ namespace SchoolERP.Shared.Models
         public List<MstFOPurposeViewModel> Purposes { get; set; } = new();
         public List<MstClassViewModel> Classes { get; set; } = new();
         public List<HRStaffViewModel> Staff { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? StaffId { get; set; }
+        public int? StudentId { get; set; }
     }
 
     public class FOAdmissionInquiryPageViewModel
@@ -509,5 +795,125 @@ namespace SchoolERP.Shared.Models
         public List<MstFOSourceViewModel> Sources { get; set; } = new();
         public List<MstFOReferenceViewModel> References { get; set; } = new();
         public List<HRStaffViewModel> Staff { get; set; } = new();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? SectionID { get; set; }
+    }
+
+    public class AddAdmissionInquiryPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOAdmissionInquiryViewModel Inquiries { get; set; } = new();
+        public FOAdmissionInquiryViewModel EditInquiries { get; set; } = new();
+        public List<MstClassViewModel> Classes { get; set; } = new();
+        public List<MstFOSourceViewModel> Sources { get; set; } = new();
+        public List<MstFOReferenceViewModel> References { get; set; } = new();
+        public List<HRStaffViewModel> Staff { get; set; } = new();
+    }
+
+    public class EnquirySearchRequest
+    {
+        public int? CompanyID { get; set; }
+
+        public int? SessionID { get; set; }
+
+        public DateTime? FromDate { get; set; }
+
+        public DateTime? ToDate { get; set; }
+
+        public int? SourceID { get; set; } = 0;
+
+        public int? ClassID { get; set; } = 0;
+
+        public string? Status { get; set; }
+
+        public string? SearchKeyword { get; set; }
+
+        public int? PageNumber { get; set; } = 1;
+
+        public int? PageSize { get; set; } = 10;
+    }
+
+    public class AddVisitorBookPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public FOVisitorBookViewModel Visitors { get; set; } = new();
+        public FOVisitorBookViewModel EditVisitors { get; set; } = new();
+        public List<MstFOPurposeViewModel> Purposes { get; set; } = new();
+        public List<MstClassViewModel> Classes { get; set; } = new();
+        public List<HRStaffViewModel> Staff { get; set; } = new();
+    }
+
+
+    public class ComplaintTypePageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstFOComplaintTypeViewModel> ComplaintType { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+    public class ComplaintTypeAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public MstFOComplaintTypeViewModel ComplaintType { get; set; } = new();
+        public MstFOComplaintTypeViewModel EditComplaintType { get; set; } = new();
+    }
+
+    public class SourcePageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstFOSourceViewModel> Source { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+    public class SourceAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public MstFOSourceViewModel Source { get; set; } = new();
+        public MstFOSourceViewModel EditSource { get; set; } = new();
+    }
+
+    public class ReferencePageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstFOReferenceViewModel> Reference { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+    public class ReferenceAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public MstFOReferenceViewModel Reference { get; set; } = new();
+        public MstFOReferenceViewModel EditReference { get; set; } = new();
     }
 }

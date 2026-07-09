@@ -289,6 +289,20 @@ builder.Services.AddHttpClient<IWardensClientService, WardensClientService>(clie
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);
 });
+builder.Services.AddHttpClient<ICityClientService, CityClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IPostalCodeClienService, PostalCodeClienService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+}); builder.Services.AddHttpClient<IWeeklyHolidaysSettingClientService, WeeklyHolidaysSettingClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+}); 
 builder.Services.AddHttpClient("SchoolERPApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

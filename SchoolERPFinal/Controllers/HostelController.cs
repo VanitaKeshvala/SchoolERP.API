@@ -7,6 +7,7 @@ using SchoolERP.Net.Helpers;
 using SchoolERP.Shared.Models.Common;
 using static System.Collections.Specialized.BitVector32;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.ComponentModel.Design;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -17,15 +18,30 @@ namespace SchoolERP.Net.Controllers
         private readonly ISessionClientService _sessionService;
         private readonly IHostelTypeClientService _hostelTypeService;
         private readonly IRoomCoolingTypeClientService _roomCoolingTypeService;
+        private readonly IPostalCodeClienService _postalCodeService;
+        private readonly ICityClientService _cityService;
+        private readonly IStateClientService _stateService;
+        private readonly ICountryClientService _countryService;
+        private readonly IRoomCoolingTypeClientService _roomCoolinTypeService;
 
         public HostelController(IHostelClientService client,
-            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper, IHostelTypeClientService hostelTypeService, IRoomCoolingTypeClientService roomCoolingTypeService) : base(permHelper)
+            ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper,
+            IHostelTypeClientService hostelTypeService, 
+            IRoomCoolingTypeClientService roomCoolingTypeService, IPostalCodeClienService postalCodeService,
+            ICityClientService cityClientService,
+            IStateClientService stateClientService,
+            ICountryClientService countryClientService, IRoomCoolingTypeClientService roomCoolinTypeService) : base(permHelper)
         {
             _client = client;
             _companyService = companyService;
             _sessionService = sessionService;
             _hostelTypeService = hostelTypeService;
             _roomCoolingTypeService = roomCoolingTypeService;
+            _postalCodeService = postalCodeService;
+            _cityService = cityClientService;
+            _stateService = stateClientService;
+            _countryService = countryClientService;
+            _roomCoolinTypeService = roomCoolinTypeService;
         }
         private async Task<int> GetCompanyId()
         {
@@ -426,7 +442,9 @@ namespace SchoolERP.Net.Controllers
                 var sessionId = await GetSessionId();
                 var model = new HostelAddViewModel();
 
-
+                var country = await _countryService.GetAllAsync( await GetCompanyId(), sessionId);
+                var state = await _stateService.GetAllAsync( await GetCompanyId(), sessionId);
+                var city = await _cityService.GetAllAsync( await GetCompanyId(), sessionId);
                 var resRoomType = await _client.GetAllRoomTypesAsync(false, sessionId);
                 var resHostelRoom = await _hostelTypeService.GetAllAsync(await GetCompanyId(), sessionId);
                 model.HostelTypes = resHostelRoom.Data?? new List<HostelTypeModel>();
@@ -443,6 +461,9 @@ namespace SchoolERP.Net.Controllers
                 {
                     model.EditHostel = null;
                 }
+                model.Country = country.Data;
+                model.State = state.Data;
+                model.City = city.Data.Data;
                 model.RoomTypes = resRoomType.Data?? new List<RoomTypeViewModel>();
                 model.Permissions = perms;
                 return View(model);
@@ -465,8 +486,9 @@ namespace SchoolERP.Net.Controllers
                 var model = new HostelRoomAddViewModel();
 
 
-                var resHostel = await _client.GetAllHostelsAsync(false, sessionId);
-                var resRoomType = await _client.GetAllRoomTypesAsync(false, sessionId);
+                var resHostel = await _client.GetAllHostelsAsync(false, sessionId, await GetCompanyId());
+                var resRoomType = await _roomCoolinTypeService.GetAllAsync(await GetCompanyId(),sessionId);
+                var resRoomOccupancyType= await _client.GetAllRoomTypesAsync(false, sessionId);
                 if (id.HasValue && id.Value > 0)
                 {
                     var response = await _client.GetHostelRoomByIDAsync(id.Value);
@@ -481,7 +503,8 @@ namespace SchoolERP.Net.Controllers
                     model.EditHostelRoom = null;
                 }
                 model.Hostels = resHostel.Success ? resHostel.Data : new List<HostelViewModel>();
-                model.RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomTypeViewModel>();
+                model.RoomTypes = resRoomType.Success ? resRoomType.Data : new List<RoomCoolingType>();
+                model.RoomOccupancyTypes = resRoomOccupancyType.Success ? resRoomOccupancyType.Data : new List<RoomTypeViewModel>();
                 model.Permissions = perms;
                 return View(model);
             }
@@ -644,6 +667,196 @@ namespace SchoolERP.Net.Controllers
             }
             
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> SearchPostalCode(string term)
+        {
+            try
+            {
+                var response = await _postalCodeService.SearchPostalCodeAsync(term);
+                return Json(new { success = response.Success, data = response.Data });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAllRoomOccupancy(int roomTypeId)
+        {
+            try
+            {
+                var response = await _client.GetAllRoomOccupancyByRoomTypesWiseAsync(roomTypeId);
+                return Json(new { success = response.Success, data = response.Data });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetHostelSummary(int hostelId)
+        {
+            try
+            {
+                var response = await _client.GetHostelSummary(hostelId);
+                return Json(new { success = response.Success, data = response.Data });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
         #endregion
+
+
+        // ------------------------------------------------------------------
+        // GET /Hostel/HostelManageReport
+        // Initial page render — browser navigation, filters come from
+        // query string (or none at all on first load).
+        // ------------------------------------------------------------------
+        //[HttpGet]
+        //public async Task<IActionResult> HostelManageReportokd([FromQuery] HotelReportSearchRequest request)
+        //{
+        //    request ??= new HotelReportSearchRequest();
+        //    request.Mode = string.IsNullOrWhiteSpace(request.Mode) ? "REPORT" : request.Mode.ToUpperInvariant();
+        //    request.PageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+        //    request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+        //    request.CompanyID = request.CompanyID > 0 ? request.CompanyID : await GetCompanyId();
+        //    request.SessionID = request.SessionID > 0 ? request.SessionID : await GetSessionId();
+
+        //    var perms = await GetPermissions("/Academics/Class");
+        //    var sessionTask = await _sessionService.GetAllAsync();
+        //    var companiesTask = await _companyService.GetAllAsync();
+        //    var hostel = await _client.GetAllHostelsAsync(false, request.SessionID, request.CompanyID);
+        //    var hostelTypes = await _hostelTypeService.GetAllAsync(request.CompanyID, request.SessionID);
+        //    var roomTypes = await _client.GetAllRoomTypesAsync(false, request.SessionID, request.CompanyID);
+        //    var roomCoolingTypes = await _roomCoolingTypeService.GetAllAsync(request.CompanyID, request.SessionID);
+        //    var data = _client.GetAllHostelReportWithPageAsync(request);
+
+        //    await Task.WhenAll(data);
+
+        //    var pagedResult = await data;
+
+        //    var vm = new HostelManageReportPageViewModel
+        //    {
+        //        Items = pagedResult.Success ? pagedResult.Data.Data : new List<HostelReportResponse>(),
+        //        Permissions = perms,
+        //        Companies = companiesTask.Data,
+        //        Sessions = sessionTask.Data,
+        //        Hostels = hostel.Data,
+        //        HostelTypes = hostelTypes.Data,
+        //        RoomTypes = roomTypes.Data,
+        //        RoomCoolingTypes = roomCoolingTypes.Data,
+        //        SearchRequest = request,
+        //        TotalRecords = pagedResult.Data.TotalRecords
+        //        //PageNumber = pagedResult.Data.PageNumber,
+        //        //PageSize = pagedResult.Data.PageSize
+        //    };
+
+            
+
+        //    return View(vm); // looks for Views/Hostel/HostelManageReport.cshtml
+        //}
+
+
+        // ------------------------------------------------------------------
+        // GET /Hostel/HostelManage
+        // Initial page render — dropdown data + first page of grid data.
+        // ------------------------------------------------------------------
+        [HttpGet]
+        public async Task<IActionResult> HostelManageReport(HotelReportSearchRequest request)
+        {
+            request ??= new HotelReportSearchRequest();
+            request.Mode = string.IsNullOrWhiteSpace(request.Mode) ? "REPORT" : request.Mode.ToUpperInvariant();
+            request.PageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+            request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+            request.CompanyID = request.CompanyID > 0 ? request.CompanyID : await GetCompanyId();
+            request.SessionID = request.SessionID > 0 ? request.SessionID : await GetSessionId();
+            var perms = await GetPermissions("/Academics/Class");
+            var sessionTask = await _sessionService.GetAllAsync();
+            var companiesTask = await _companyService.GetAllAsync();
+            var hostel = await _client.GetAllHostelsAsync(false, request.SessionID, request.CompanyID);
+            var hostelTypes = await _hostelTypeService.GetAllAsync(request.CompanyID, request.SessionID);
+            var roomTypes = await _client.GetAllRoomTypesAsync(false, request.SessionID, request.CompanyID);
+            var roomCoolingTypes = await _roomCoolingTypeService.GetAllAsync(request.CompanyID, request.SessionID);
+            var data = await _client.GetAllHostelReportWithPageAsync(request);
+            var vm = new HostelManageReportPageViewModel
+            {
+                Permissions = perms,
+                Companies = companiesTask.Data,
+                Sessions = sessionTask.Data,
+                Hostels = hostel.Data,
+                HostelTypes = hostelTypes.Data,
+                RoomTypes = roomTypes.Data,
+                RoomCoolingTypes = roomCoolingTypes.Data,
+                SearchRequest = request,
+
+                // NOTE: adjust the property name below (TOTALRECORDS / TotalRecords / whatever
+                // your GetAllHostelReportWithPageAsync row DTO actually exposes) to match your
+                // real model. This is the piece that was commented out before, and the view's
+                // pagination math (Model.TotalRecords / Model.PageSize) depends on it.
+                TotalRecords = data.Data?.FirstOrDefault()?.TOTALRECORDS ?? 0,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize,
+                CompanyId=request.CompanyID,
+                SessionId=request.SessionID
+            };
+
+            
+            vm.Items = data.Data;
+            //vm.TotalRecords = data.Data.FirstOrDefault()?.TOTALRECORDS ?? 0;
+
+            return View(vm);
+        }
+
+        // ------------------------------------------------------------------
+        // POST /Hostel/GetHostelManageReport
+        // AJAX grid data source — called on filter/search/mode/page change.
+        // ------------------------------------------------------------------
+        [HttpPost]
+        public async Task<IActionResult> GetHostelManageReport([FromBody] HotelReportSearchRequest request)
+        {
+            try
+            {
+                if (request == null)
+                    return Json(new { success = false, message = "Invalid request." });
+
+                request.Mode = string.IsNullOrWhiteSpace(request.Mode) ? "REPORT" : request.Mode.ToUpperInvariant();
+                request.PageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+                request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+                request.CompanyID = request.CompanyID > 0 ? request.CompanyID : await GetCompanyId();
+                request.SessionID = request.SessionID > 0 ? request.SessionID : await GetSessionId();
+
+                var apiResult = await _client.GetAllHostelReportWithPageAsync(request);
+
+                // Unwrap defensively — never let a null link in the chain reach JSON serialization.
+                var rows = apiResult?.Data ?? new List<HostelReportResponse>();
+                //var totalRecords = rows.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                //var totalPages = rows.FirstOrDefault()?.TotalPages
+                //                  ?? (request.PageSize > 0 ? (int)Math.Ceiling((double)totalRecords / request.PageSize) : 0);
+
+                return Json(new
+                {
+                    success = true,
+                    mode = request.Mode,
+                    data = rows,
+                    //totalRecords,
+                    //totalPages,
+                    pageNumber = request.PageNumber,
+                    pageSize = request.PageSize
+                });
+            }
+            catch (Exception ex)
+            {
+                // _logger.LogError(ex, "Error loading hostel manage report");
+                return Json(new { success = false, message = "Failed to load report data." });
+            }
+        }
+
+
     }
 }

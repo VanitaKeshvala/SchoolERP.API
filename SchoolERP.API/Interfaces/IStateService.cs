@@ -13,5 +13,6 @@ namespace SchoolERP.API.Interfaces
         (bool success, string message) ToggleStateStatus(StatusUpdateRequest request);
         Task<(bool Success, string Message)> CopyStateToSession(CopyRequest req);
         Task<List<StateModel>> GetAllStateByCountyAsync(int companyId, int sessionId, int countryId);
+        
     }
 }

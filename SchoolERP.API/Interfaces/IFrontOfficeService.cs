@@ -1,4 +1,5 @@
 ﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -32,7 +33,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a visit purpose's active status on or off.
         /// </summary>
-        (bool success, string message) TogglePurposeStatus(int id, bool isActive, int userId);
+        (bool success, string message) TogglePurposeStatus(StatusUpdateRequest request);
 
         // --- Complaint Type ---
 
@@ -59,7 +60,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a complaint type's active status on or off.
         /// </summary>
-        (bool success, string message) ToggleComplaintTypeStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleComplaintTypeStatus(StatusUpdateRequest request);
 
         // --- Source ---
 
@@ -86,7 +87,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns an inquiry source's active status on or off.
         /// </summary>
-        (bool success, string message) ToggleSourceStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleSourceStatus(StatusUpdateRequest request);
 
         // --- Reference ---
 
@@ -113,7 +114,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Turns a reference's active status on or off.
         /// </summary>
-        (bool success, string message) ToggleReferenceStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleReferenceStatus(StatusUpdateRequest request);
 
         // --- Complaint ---
 
@@ -140,7 +141,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Updates whether a complaint record is currently active or archived.
         /// </summary>
-        (bool success, string message) ToggleComplaintStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleComplaintStatus(StatusUpdateRequest request);
 
         // --- Postal Receive ---
 
@@ -157,7 +158,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Adds a new incoming postal record or updates an existing one, including sender details and optional attachments.
         /// </summary>
-        (bool success, string message) UpsertPostalReceive(FOPostalReceiveUpsertRequest req, int companyId, int sessionId, int userId);
+        SpPostalReceive UpsertPostalReceive(FOPostalReceiveUpsertRequest req, int companyId, int sessionId, int userId);
 
         /// <summary>
         /// Removes an incoming postal record from the system.
@@ -167,7 +168,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Updates whether an incoming postal record is currently active or archived.
         /// </summary>
-        (bool success, string message) TogglePostalReceiveStatus(int id, bool isActive, int userId);
+        (bool success, string message) TogglePostalReceiveStatus(StatusUpdateRequest request);
 
         // --- Postal Dispatch ---
 
@@ -175,7 +176,7 @@ namespace SchoolERP.API.Interfaces
         /// Retrieves a list of all outgoing postal records from the database.
         /// </summary>
         List<FOPostalDispatchViewModel> GetAllPostalDispatches(int companyId, int sessionId, bool includeDeleted = false);
-
+        Task<PagedResult<FOPostalDispatchViewModel>> GetAllPostalDispatchesWithPageIndex(FOPostalDispatchSearchRequest req);
         /// <summary>
         /// Finds and returns the details of a specific outgoing postal record using its unique ID.
         /// </summary>
@@ -184,7 +185,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Adds a new outgoing postal record or updates an existing one, including recipient details and optional attachments.
         /// </summary>
-        (bool success, string message) UpsertPostalDispatch(FOPostalDispatchUpsertRequest req, int companyId, int sessionId, int userId);
+        SpPostalDispatch UpsertPostalDispatch(FOPostalDispatchUpsertRequest req, int companyId, int sessionId, int userId);
 
         /// <summary>
         /// Removes an outgoing postal record from the system.
@@ -194,15 +195,16 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Updates whether an outgoing postal record is currently active or archived.
         /// </summary>
-        (bool success, string message) TogglePostalDispatchStatus(int id, bool isActive, int userId);
-
+        (bool success, string message) TogglePostalDispatchStatus(StatusUpdateRequest request);
+        (bool success, string message) UpsertPostalDispatchAttachmentFile(
+     FOPostalDispatchAttachmentUpsertRequest req, int userId);
         // --- Phone Call Log ---
 
         /// <summary>
         /// Retrieves a list of all phone call records from the database.
         /// </summary>
         List<FOPhoneCallLogViewModel> GetAllPhoneCallLogs(int companyId, int sessionId, bool includeDeleted = false);
-
+        Task<PagedResult<FOPhoneCallLogViewModel>> GetAllPhoneCallLogsWithPage(FOPhoneCallLogSearchRequest req);
         /// <summary>
         /// Finds and returns the details of a specific phone call record using its unique ID.
         /// </summary>
@@ -221,7 +223,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Updates whether a phone call record is currently active or archived.
         /// </summary>
-        (bool success, string message) TogglePhoneCallLogStatus(int id, bool isActive, int userId);
+        (bool success, string message) TogglePhoneCallLogStatus(StatusUpdateRequest request);
 
         // --- Visitor Book ---
 
@@ -231,6 +233,10 @@ namespace SchoolERP.API.Interfaces
         List<FOVisitorBookViewModel> GetAllVisitors(int companyId, int sessionId, bool includeDeleted = false);
 
         /// <summary>
+        /// Retrieves a list of all visitor book entries from the database using pageindex.
+        /// </summary>
+        Task<PagedResult<FOVisitorBookViewModel>> GetAllVisitorsWithPageIndex(FOVisitorBookSerchRequest req);
+        /// <summary>
         /// Finds and returns the details of a specific visitor book entry using its unique ID.
         /// </summary>
         FOVisitorBookViewModel? GetVisitorByID(int id);
@@ -238,7 +244,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Adds a new visitor book entry or updates an existing one, including visitor details and optional attachments.
         /// </summary>
-        (bool success, string message) UpsertVisitor(FOVisitorBookUpsertRequest req, int companyId, int sessionId, int userId);
+        SpVisitorResult UpsertVisitor(FOVisitorBookUpsertRequest req, int companyId, int sessionId, int userId);
 
         /// <summary>
         /// Removes a visitor book record from the system.
@@ -248,7 +254,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Updates whether a visitor book record is currently active or archived.
         /// </summary>
-        (bool success, string message) ToggleVisitorStatus(int id, bool isActive, int userId);
+        (bool success, string message) ToggleVisitorStatus(StatusUpdateRequest request);
 
         // --- Admission Inquiry ---
 
@@ -276,5 +282,25 @@ namespace SchoolERP.API.Interfaces
         /// Saves a new follow-up for an inquiry.
         /// </summary>
         (bool success, string message) SaveInquiryFollowUp(FOInquiryFollowUpSaveRequest req, int userId);
+
+        /// <summary>
+        /// Retrieves a list of all admission inquiries from the database based on filters.
+        /// </summary>
+        List<FOAdmissionInquiryViewModel> GetAllAdmissionInquiriesWithPageIndex(EnquirySearchRequest req);
+        public (bool success, string message) UpsertVisitorAttachmentFile(
+        FOVisitorBookAttachmentUpsertRequest req,int userId);
+
+        Task<PagedResult<FOPostalReceiveViewModel>> GetAllPostalReceiveWithPage(ClassSearchRequest req);
+
+        (bool success, string message) UpsertPostalReceiveAttachmentFile(
+   FOPostalReceiveAttachmentUpsertRequest req, int userId);
+
+        Task<PagedResult<FOComplaintViewModel>> GetAllComplaintsWithPage(ComplaintSearchRequest req);
+
+        Task<PagedResult<MstFOPurposeViewModel>> GetAllPurposesWithPage(ClassSearchRequest req);
+
+        Task<PagedResult<MstFOComplaintTypeViewModel>> GetAllComplaintTypesWithPage(ClassSearchRequest req);
+        Task<PagedResult<MstFOSourceViewModel>> GetAllSourceWithPage(ClassSearchRequest req);
+        Task<PagedResult<MstFOReferenceViewModel>> GetAllReferenceWithPage(ClassSearchRequest req);
     }
 }

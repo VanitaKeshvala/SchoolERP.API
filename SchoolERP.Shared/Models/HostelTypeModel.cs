@@ -38,6 +38,7 @@ namespace SchoolERP.Shared.Models
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
         public string HostelTypeName { get; set; }
+        public string DisplayLabel { get; set; }
         public string Gender { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; } = true;
@@ -105,6 +106,7 @@ namespace SchoolERP.Shared.Models
         public int SessionID { get; set; }
 
         public string HostelTypeName { get; set; }
+        public string DisplayLabel { get; set; }
 
         public string? Gender { get; set; }
 

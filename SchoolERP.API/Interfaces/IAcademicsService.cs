@@ -18,5 +18,6 @@ namespace SchoolERP.API.Interfaces
         (bool success, string message) PromoteStudents(PromotionRequest req, int companyId, int userId);
 
         Task<PagedResult<ClassTeacherViewModel>> GetAllClassTeachersWithPage(AcademicsSearchRequest req);
+        Task<PagedResult<StudentPromotionViewModel>> GetForPromotionPageIndex(SearchPromotedStudent req);
     }
 }

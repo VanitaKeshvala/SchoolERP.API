@@ -124,9 +124,23 @@ namespace SchoolERP.Shared.Models
         public int? SessionId { get; set; }
         public int? SectionID { get; set; }
     }
-
+    public class PromotionSummary
+    {
+        public int Result { get; set; }
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPages { get; set; }
+        public int? NextClassId { get; set; }
+        public string? NextClassName { get; set; }
+        public int? NextSessionId { get; set; }
+        public string? NextSessionTitle { get; set; }
+    }
     public class StudentPromotionViewModel
     {
+        public int STUDENTRESULT { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int StudentID { get; set; }
         public string AdmissionNo { get; set; } = string.Empty;
         public string StudentName { get; set; } = string.Empty;
@@ -134,6 +148,17 @@ namespace SchoolERP.Shared.Models
         public DateTime? DOB { get; set; }
         public string Result { get; set; } = "Pass"; // Pass, Fail
         public string NextStatus { get; set; } = "Continue"; // Continue, Leave
+        public string NextClassName { get; set; } = "Continue"; // Continue, Leave
+        public int NEXTCLASSID { get; set; } // Continue, Leave
+        public int NEXTSESSIONID { get; set; } // Continue, Leave
+        public string NEXTSESSIONTITLE { get; set; }// Continue, Leave NEXTSESSIONID	NEXTSESSIONTITLE
+
+
+        // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class PromotionRequest
@@ -159,7 +184,16 @@ namespace SchoolERP.Shared.Models
         public List<StudentPromotionViewModel> Students { get; set; } = new();
         public List<MstClassViewModel> Classes { get; set; } = new();
         public List<MstSessionViewModel> Sessions { get; set; } = new();
-        
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? SectionID { get; set; }
+
         // Filter values
         public int? SelectedClassId { get; set; }
         public int? SelectedSectionId { get; set; }
@@ -189,5 +223,15 @@ namespace SchoolERP.Shared.Models
         public string? SectionID { get; set; }
         public string? ClassIDs { get; set; }
     }
-
+    public class SearchPromotedStudent 
+    {
+        public int? CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int? PageSize { get; set; }
+        public int? UserId { get; set; }
+        public int? SectionID { get; set; }
+        public int? ClassID { get; set; }
+    }
 }

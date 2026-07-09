@@ -132,6 +132,7 @@ namespace SchoolERP.API.Controllers
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
         }
 
+
         [HttpPost("GetAllClassWithPage")]
         public async Task<IActionResult> GetAllClassWithPage([FromBody] ClassSearchRequest request)
         {

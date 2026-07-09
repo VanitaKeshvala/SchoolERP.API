@@ -58,6 +58,47 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<HRDepartmentViewModel> Items { get; set; } = new();
+        public List<BookViewModel> ItemsBooks { get; set; } = new();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstClassViewModel> Classs { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+    }
+
+    public class HRDepartmentAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public BookViewModel ItemsBooks { get; set; } = new();
+        public BookViewModel EditBooks { get; set; } = new();
+    }
+
+    public class HRStudentsMembershipPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<LibraryMemberViewModel> Items { get; set; } = new();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstClassViewModel> Classes { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? ClassId { get; set; }
+        public int? SectionId { get; set; }
+    }
+
+    public class HRStudentsMembershipAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public LibraryMember EditItem { get; set; }
+        public int? StudentId { get; set; }
+        public int? StaffId { get; set; }
+
     }
 
     public class HRLeaveTypeViewModel
@@ -539,4 +580,6 @@ namespace SchoolERP.Shared.Models
         public string? GuardianPhoto { get; set; }
         public int UserId { get; set; }
     }
+
+    
 }

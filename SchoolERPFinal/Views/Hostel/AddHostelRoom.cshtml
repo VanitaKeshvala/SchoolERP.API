@@ -30,24 +30,31 @@
                 <form id="roomForm">
                     <input type="hidden" id="hdnRoomId" value="@Model.EditHostelRoom?.RoomId??0">
                     <div class="row row-gap-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold">Hostel <span class="text-danger">*</span></label>
                             <select class="form-select" id="ddlHostel" required style="width: 100%;">
-                                <option value="">-- Select --</option>
+                                <option value="">-- Select -- </option>
                                 @foreach (var h in Model.Hostels.Where(x => x.IsActive))
                                 {
-                                    <option value="@h.HostelID" selected="@(Model.EditHostelRoom?.HostelID == h.HostelID)">@h.HostelName</option>
+                                    <option value="@h.HostelID" selected="@(Model.EditHostelRoom?.HostelID == h.HostelID)">@h.HostelName (@h.HostelTypeName)</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Room Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="ddlRoomType" onchange="fachrecordforcust(this.value)" required style="width: 100%;">
-                                <option value="">-- Select --</option>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Room Type @Model.EditHostelRoom?.RoomCoolingTypeId<span class="text-danger">*</span></label>
+                            <select class="form-select" id="ddlRoomType" onchange="bindRoomOccupancyType(this.value)" required style="width: 100%;">
+                                
                                 @foreach (var rt in Model.RoomTypes.Where(x => x.IsActive))
                                 {
-                                    <option value="@rt.RoomTypeID" selected="@(Model.EditHostelRoom?.RoomTypeID == rt.RoomTypeID)">@rt.RoomTypeTitle</option>
+                                    <option value="@rt.RoomCoolingTypeId" selected="@(Model.EditHostelRoom?.RoomTypeID == rt.RoomCoolingTypeId)">@rt.RoomCoolingTypeName</option>
                                 }
+                            </select>
+                        </div>
+                        <div class="d-block col-md-4">
+                            <input type="hidden" id="hdnRoomTypeID" value="@Model.EditHostelRoom?.RoomCoolingTypeId"/>
+                            <label class="form-label fw-bold">Room Occupancy Type <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlRoomOccupancyType" onchange="fachrecordforcust(this.value)" style="width: 100%;">
+                                
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -63,9 +70,9 @@
                                    class="form-control" id="txtFloorNumber" placeholder="e.g. 1,2,3, A-1">
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label fw-bold">Allow Extra Bed <span class="text-danger">*</span></label>
+                            <label class="form-label fw-bold">Allow Extra Bed</label>
                             <select id="ddlAllowExtraBed" asp-for="EditHostelRoom.AllowExtraBed" class="form-select">
-                                <option value="">-- Select Gender --</option>
+                                <option value="">-- Select Allow Extra Bed --</option>
                                 <option value="1">Yes</option>
                                 <option value="0">No</option>
                             </select>
@@ -80,15 +87,27 @@
                             <label class="form-label fw-bold">No. Of Beds <span class="text-danger">*</span></label>
                             <input type="number"
                                    value="@Model.EditHostelRoom?.NoOfBed"
-                                class="form-control" id="txtBeds" disabled  min="1">
+                                class="form-control" id="txtBeds"  min="1">
                         </div>                        
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Cost Per Bed <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" disabled id="txtCost" required min="0" step="0.01" value="0">
+                            <input type="number" class="form-control" id="txtCost" value="@Model.EditHostelRoom?.CostPerBed" required min="0" step="0.01" value="0">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Security Deposit</label>
+                            <input type="text"
+                                   value="@Model.EditHostelRoom?.SecurityAmount"
+                                   class="form-control" id="txtSecurityAmount">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Effective From</label>
+                            <input type="date"
+                                   value="@(Model.EditHostelRoom?.EffectiveFrom?.ToString("yyyy-MM-dd"))"
+                                   class="form-control" id="txtEffectiveFrom">
+                        </div>
+                        <div class="col-md-12">
                             <label class="form-label fw-bold">Description</label>
-                            <textarea class="form-control" id="txtDescription" rows="1">@Model.EditHostelRoom?.RoomDescription</textarea>
+                            <textarea class="form-control" id="txtDescription" rows="3">@Model.EditHostelRoom?.RoomDescription</textarea>
                         </div>
                         <div>
                             <label class="text-primary" id="acBadge"></label>
@@ -120,6 +139,96 @@
                         </div>
                     </div>
                 </form>
+
+                <!-- ============================================================ -->
+                <!-- LIVE RATE PREVIEW — insert this right after the </div> that   -->
+                <!-- closes id="divRate" (still inside the <form id="roomForm">)   -->
+                <!-- ============================================================ -->
+                <div class="col-md-12 mt-3" id="divInvoicePreview">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary bg-opacity-10 border-0 d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-primary"><i class="ti ti-receipt me-2"></i>Estimated Rate Preview</h6>
+                                <small class="text-muted">Live preview — updates as you fill the fields above</small>
+                            </div>
+                            <span class="badge rounded-pill px-3 py-2 bg-secondary bg-opacity-25 text-secondary" id="prevEffectiveBadge">No date set</span>
+                        </div>
+                        <div class="card-body pt-3">
+
+                            <div class="row g-3 pb-3 mb-3 border-bottom">
+                                <!-- Hostel column -->
+                                <div class="col-md-6 d-flex align-items-start">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:36px;height:36px;">
+                                        <i class="ti ti-building text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-muted" style="font-size:12px;">Hostel</div>
+                                        <div class="fw-bold mb-2" id="prevHostelName">-</div>
+
+                                        <div class="d-flex flex-wrap gap-1" id="divHostelSummary">
+                                            
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Room type column -->
+                                <div class="col-md-3 d-flex align-items-start">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:36px;height:36px;">
+                                        <i class="ti ti-door text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size:12px;">Room type</div>
+                                        <div class="fw-bold" id="prevRoomType">-</div>
+                                    </div>
+                                </div>
+
+                                <!-- Occupancy type column -->
+                                <div class="col-md-3 d-flex align-items-start">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width:36px;height:36px;">
+                                        <i class="ti ti-bed text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted" style="font-size:12px;">Occupancy type</div>
+                                        <div class="fw-bold" id="prevOccupancyType">-</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="lineItemsWrap">
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div>
+                                        <div class="fw-medium">Rent per bed</div>
+                                        <div class="text-muted" style="font-size:12px;" id="prevBaseRentDetail">Rs 0.00 x 0 beds</div>
+                                    </div>
+                                    <div class="fw-bold" id="prevBaseRentAmount">Rs 0.00</div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom d-none" id="rowExtraBed">
+                                    <div>
+                                        <div class="fw-medium">Extra bed charge</div>
+                                        <div class="text-muted" style="font-size:12px;" id="prevExtraBedDetail">if all extra beds used</div>
+                                    </div>
+                                    <div class="fw-bold" id="prevExtraBedAmount">Rs 0.00</div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div>
+                                        <div class="fw-medium">Security amount</div>
+                                        <div class="text-muted" style="font-size:12px;">Charged one time</div>
+                                    </div>
+                                    <div class="fw-bold" id="prevSecurityAmount">Rs 0.00</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center bg-primary bg-opacity-10 rounded-3 px-3 py-3 mt-3">
+                                <div>
+                                    <div class="fw-bold text-primary">Estimated total</div>
+                                    <div class="text-muted" style="font-size:12px;"><i class="ti ti-calendar me-1"></i>Effective from <span id="prevEffectiveFrom">-</span></div>
+                                </div>
+                                <div class="fw-bold fs-4 text-primary" id="prevTotalAmount">Rs 0.00</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

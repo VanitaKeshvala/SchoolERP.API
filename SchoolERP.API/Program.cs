@@ -73,6 +73,9 @@ builder.Services.AddScoped<IHolidayService, HolidayService>();
 builder.Services.AddScoped<ICountryService, CountryService>();
 builder.Services.AddScoped<IStateService, StateService>();
 builder.Services.AddScoped<IWardensService, WardensService>();
+builder.Services.AddScoped<ICityService, CityService>();
+builder.Services.AddScoped<IPostalCodeService, PostalCodeService>();
+builder.Services.AddScoped<IWeeklyHolidaysSettingService, WeeklyHolidaysSettingService>();
 
 // Configure API Clients
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7237/"; // Default fallback

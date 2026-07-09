@@ -61,5 +61,10 @@ namespace SchoolERP.Net.Services.Clients
                 "api/Attendance/SaveBulkAttendance",
                 request);
         }
+
+        public async Task<ApiResponse<PagedResult<StudentLeaveViewModel>>> GetAllLeaveApplicationsWithPageAsync(StudentLeaveSearchRequest request)
+        {
+            return await PostAsync<PagedResult<StudentLeaveViewModel>>($"api/StudentLeaveApi/GetAllLeaveApplicationsWithPage", request);
+        }
     }
 }

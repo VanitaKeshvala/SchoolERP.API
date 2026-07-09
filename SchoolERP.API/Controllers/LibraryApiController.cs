@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
@@ -115,11 +116,11 @@ namespace SchoolERP.API.Controllers
         /// Returns success status and operation message.
         /// </returns>
         [HttpPost("ToggleBookStatus")]
-        public IActionResult ToggleBookStatus(int id)
+        public IActionResult ToggleBookStatus([FromBody] StatusUpdateRequest request)
         {
             var userId = GetUserId();
-
-            var result = _libraryService.ToggleBookStatus(id, userId);
+            request.DoneBy = userId;
+            var result = _libraryService.ToggleBookStatus(request);
 
             return Ok(new ApiResponse<bool>
             {
@@ -334,11 +335,11 @@ namespace SchoolERP.API.Controllers
         /// <param name="request">Book return information.</param>
         /// <returns>A response indicating whether the return was recorded successfully.</returns>
         [HttpPost("ReturnBook")]
-        public IActionResult ReturnBook(int issueId, DateTime returnDate)
+        public IActionResult ReturnBook([FromBody] ReturnBookIssue req)
         {
             var result = _libraryService.ReturnBook(
-                issueId,
-                returnDate,
+                req.issueId,
+                req.returnDate,
                 GetCompanyId(),
                 GetUserId());
 
@@ -380,7 +381,7 @@ namespace SchoolERP.API.Controllers
         public IActionResult DeleteMemberEx(
             int id,
             int? studentId,
-            int? staffId)
+            int? staffId, string? modeType)
         {
             try
             {
@@ -390,7 +391,8 @@ namespace SchoolERP.API.Controllers
                     id,
                     studentId,
                     staffId,
-                    userId);
+                    GetCompanyId(),
+                    userId, modeType);
 
                 return Ok(new ApiResponse<object>
                 {
@@ -406,6 +408,153 @@ namespace SchoolERP.API.Controllers
                     Message = ex.Message
                 });
             }
+        }
+
+
+        /// <summary>
+        /// Retrieves a paginated list of Libary based on the specified search criteria.
+        /// Automatically resolves the current user's Company if they are not provided.
+        /// </summary>
+        [HttpPost("GetAllLibraryWithPage")]
+        public async Task<IActionResult> GetAllLibraryWithPage([FromBody] LibrarySearchRequest request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<BookViewModel>>.SuccessResponse(new List<BookViewModel>()));
+
+                var data = await _libraryService.GetAllLibraryWithPage(request);
+                return Ok(ApiResponse<PagedResult<BookViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllStudentsMembershipWithPage")]
+        public async Task<IActionResult> GetAllStudentsMembershipWithPage([FromBody] StudentsMembershipSearchRequest request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<LibraryMemberViewModel>>.SuccessResponse(new List<LibraryMemberViewModel>()));
+
+                var data = await _libraryService.GetAllStudentsMembershipWithPage(request);
+                return Ok(ApiResponse<PagedResult<LibraryMemberViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibraryMemberByID/{id}")]
+        public IActionResult GetLibraryMemberByID(int id)
+        {
+            try
+            {
+                var data = _libraryService.GetLibraryMemberByID(id);
+                if (data == null) return NotFound(ApiResponse<LibraryMember>.ErrorResponse("Class not found"));
+                return Ok(ApiResponse<LibraryMember>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message }); 
+            }
+            
+        }
+
+        [HttpPost("GetAllStaffMembershipWithPage")]
+        public async Task<IActionResult> GetAllStaffMembershipWithPage([FromBody] StaffLibraryMemberSearchModel request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<StaffLibraryMember>>.SuccessResponse(new List<StaffLibraryMember>()));
+
+                var data = await _libraryService.GetAllStaffMembershipWithPage(request);
+                return Ok(ApiResponse<PagedResult<StaffLibraryMember>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+
+        [HttpPost("GetAllIssuedBooksWithPageIndex")]
+        public async Task<IActionResult> GetAllIssuedBooksWithPageIndex([FromBody] IssueBookSearchModel request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<IssueReturnViewModel>>.SuccessResponse(new List<IssueReturnViewModel>()));
+
+                var data = await _libraryService.GetAllIssuedBooksWithPageIndex(request);
+                return Ok(ApiResponse<PagedResult<IssueReturnViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllLibraryMemberWithPageIndex")]
+        public async Task<IActionResult> GetAllLibraryMemberWithPageIndex([FromBody] MemberSearchModel request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<LibraryMemberViewModel>>.SuccessResponse(new List<LibraryMemberViewModel>()));
+
+                var data = await _libraryService.GetAllLibraryMemberWithPageIndex(request);
+                return Ok(ApiResponse<PagedResult<LibraryMemberViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
         }
     }
 }

@@ -91,7 +91,7 @@ async function editSelected() {
     try {
 
         if (window.selectedClassId) {
-            location.href = `/RoomCoolingType/Add/${window.selectedClassId}`;
+            location.href = `/RoomType/Add/${window.selectedClassId}`;
         }
 
     } catch (err) {
@@ -129,7 +129,7 @@ async function deleteSelected() {
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
-                url: '/RoomCoolingType/Delete',
+                url: '/RoomType/Delete',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(selectedIds),
@@ -161,14 +161,15 @@ async function saveItem() {
     }
     clearModalValidation();
 
-    const name = document.getElementById('txtHostelTypeName').value.trim();
+    const name = document.getElementById('txtRoomTypeName').value.trim();
     if (!name) {
-        IV.setFieldError('txtHostelTypeName', 'errTxtHostelTypeName', 'Hostel Type name is required.');
+        IV.setFieldError('txtRoomTypeName', 'errTxtHostelTypeName', 'Hostel Type name is required.');
         return;
     }
 
     const selectedGender = $('.ddlGender').val();
     const description = $('#txtDescription').val();
+    const displayLabel = $('#txtDisplayLabel').val();
     // ✅ Fix 3: isActive null guard
     const isActiveEl = document.getElementById('isActive');
     const isActive = isActiveEl ? isActiveEl.checked : false;
@@ -176,13 +177,14 @@ async function saveItem() {
     const data = {
         roomCoolingTypeId: cid,
         roomCoolingTypeName: name,
+        displayLabel: displayLabel,
         description: description,
         isActive: isActive
     };
 
     try {
 
-        const r = await fetch('/RoomCoolingType/Save', {
+        const r = await fetch('/RoomType/Save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -197,7 +199,7 @@ async function saveItem() {
                 customClass: { confirmButton: 'btn btn-success' },
                 buttonsStyling: false
             }).then(() => {
-                window.location.href = '/RoomCoolingType/Index';
+                window.location.href = '/RoomType/Index';
             });
         } else {
             Swal.fire({
@@ -282,7 +284,7 @@ async function toggleStatus(id, isActive) {
             if (result.isConfirmed) {
                 $.ajax({
                     // ✅ fixed typo bluk → bulk
-                    url: '/RoomCoolingType/ToggleStatusChange',
+                    url: '/RoomType/ToggleStatusChange',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(request),

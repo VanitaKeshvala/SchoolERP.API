@@ -136,20 +136,6 @@
                             <div class="filter-body pb-0">
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label mb-1">Session</label>
-                                        <select class="form-select form-control select2"
-                                                id="ddlFilterSessions"
-                                                data-placeholder="Select session">
-                                            <option value="">All</option>
-                                            @foreach (var ut in Model.Sessions)
-                                            {
-                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
-                                                    @ut.SessionTitle
-                                                </option>
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
                                                 id="ddlFilterCompany"
@@ -163,6 +149,21 @@
                                             }
                                         </select>
                                     </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                   
                                     <div class="col-md-12 mb-3">
                                         <label class="form-label mb-1">Section</label>
                                         <select class="form-select form-control select2"
@@ -213,6 +214,8 @@
                             <tr class="bg-light">
                                 <th class="ps-4" style="width: 50px;">Select</th>
                                 <th>Class Name</th>
+                                <th>Display Label</th>
+                                <th>Promotion Order</th>
                                 <th>Sections</th>                                
                                 <th>Created On</th>
                                 <th>Status</th>
@@ -231,6 +234,8 @@
 
                                         </td>
                                         <td>@c.ClassName</td>
+                                        <td>@c.DisplayLabel</td>
+                                        <td>@c.SequenceOrder</td>
                                         <td>@c.SectionNames</td>
                                         <td>@c.CreatedOn.ToString("dd MMM yyyy")</td>
                                         <td>

@@ -38,14 +38,21 @@
                     
                     <div class="row">
                         
-                        <div class="col-md-5 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Class Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="txtClassName"
                                    value="@Model.EditClasses?.ClassName"
                             placeholder="e.g. 1st Class" autocomplete="off">
                             <div class="invalid-feedback" id="errTxtClassName"></div>
                         </div>
-                        <div class="col-md-5 mb-">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Display Label <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtDisplayLabel"
+                                   value="@Model.EditClasses?.DisplayLabel"
+                                   placeholder="e.g. 1st Class" autocomplete="off">
+                            <div class="invalid-feedback" id="errTxtDisplayLabel"></div>
+                        </div>
+                        <div class="col-md-8 mb-3">
                             <label class="form-label fw-semibold">Assign Sections <span class="text-danger">*</span></label>
                             <select id="ddlSections" class="form-control select2" multiple data-placeholder="Select Sections">
                                 @if (Model.AvailableSections != null)
@@ -70,7 +77,26 @@
                             </select>
                             <div class="invalid-feedback" id="errDdlSections"></div>
                         </div>
-                        <div class="col-md-2 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Promotion Order<span class="text-danger">*</span></label>
+                            <select id="ddlSequenceOrder" name="ClassID" class="form-select">
+                                <option value="">-- Select Class --</option>
+
+                                @for (int i = 1; i <= 12; i++)
+                                {
+                                    if (Model.EditClasses?.SequenceOrder == i)
+                                    {
+                                        <option value="@i" selected>Class @i</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@i">Class @i</option>
+                                    }
+                                }
+                            </select>
+                            <div class="invalid-feedback" id="errtxtSequenceOrder"></div>
+                        </div>
+                        <div class="col-md-2 mb-3 mt-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="isActive"
                                 @(Model.EditClasses?.IsActive ?? true ? "checked" : "")>                               

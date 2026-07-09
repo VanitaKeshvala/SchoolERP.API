@@ -33,6 +33,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@COMPANYID", model.CompanyID);
                 parameters.Add("@SESSIONID", model.SessionID);
                 parameters.Add("@RoomCoolingTypeName", model.RoomCoolingTypeName);
+                parameters.Add("@DisplayLabel", model.DisplayLabel);
                 parameters.Add("@Description", model.Description);
                 parameters.Add("@ISACTIVE", model.IsActive);
                 parameters.Add("@USERID", model.UserID);

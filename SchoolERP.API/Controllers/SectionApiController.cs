@@ -29,10 +29,10 @@ namespace SchoolERP.API.Controllers
 
 
         [HttpGet("GetAll")]
-        public IActionResult GetAll(bool includeDeleted = false, int sessionId=0)
+        public IActionResult GetAll(bool includeDeleted = false, int sessionId=0,int companyId=0)
         {
             int userId = GetCurrentUserId();
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+            //int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
             //int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
 
             if (companyId == 0 || sessionId == 0)

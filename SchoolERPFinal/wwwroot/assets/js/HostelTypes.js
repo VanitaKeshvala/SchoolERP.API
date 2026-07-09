@@ -372,7 +372,7 @@ async function saveItem() {
         IV.setFieldError('txtHostelTypeName', 'errTxtHostelTypeName', 'Hostel Type name is required.');
         return;
     }
-
+    const displayLabel = $("#txtDisplayLabel").val();
     const selectedGender = $('.ddlGender').val();
     const description = $('#txtDescription').val();
     // ✅ Fix 3: isActive null guard
@@ -382,6 +382,7 @@ async function saveItem() {
     const data = {
         hostelTypeID: cid,
         hostelTypeName: name,
+        displayLabel: displayLabel,
         gender: selectedGender,
         description: description,
         isActive: isActive

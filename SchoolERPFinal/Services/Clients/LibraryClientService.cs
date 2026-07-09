@@ -72,11 +72,9 @@ namespace SchoolERP.Net.Services.Clients
         /// API response containing operation result.
         /// </returns>
        
-        public async Task<ApiResponse<bool>> ToggleBookStatusAsync(int id)
+        public async Task<ApiResponse<bool>> ToggleBookStatusAsync(StatusUpdateRequest request)
         {
-            return await PostAsync<bool>(
-                $"api/LibraryApi/ToggleBookStatus?id={id}",
-                null);
+            return await PostAsync<bool>($"api/LibraryApi/ToggleBookStatus", request);
         }
 
         /// <summary>
@@ -195,17 +193,9 @@ namespace SchoolERP.Net.Services.Clients
             /// </summary>
             /// <param name="request">Return book information.</param>
             /// <returns>A response indicating whether the return operation succeeded.</returns>
-            public async Task<ApiResponse<bool>> ReturnBook(
-            int issueId,
-            DateTime returnDate)
+            public async Task<ApiResponse<bool>> ReturnBook(ReturnBookIssue req)
             {
-                return await PostAsync<bool>(
-                    "api/LibraryApi/ReturnBook",
-                    new
-                    {
-                        issueId,
-                        returnDate
-                    });
+                return await PostAsync<bool>($"api/LibraryApi/ReturnBook", req);
             }
 
             /// <summary>
@@ -233,11 +223,44 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteMemberExAsync(
             int id,
             int? studentId,
-            int? staffId)
+            int? staffId, string? modeType)
         {
             return DeleteAsync<dynamic>(
-                $"api/LibraryApi/DeleteMemberEx?id={id}&studentId={studentId}&staffId={staffId}");
+                $"api/LibraryApi/DeleteMemberEx?id={id}&studentId={studentId}&staffId={staffId}&modeType={modeType}");
         }
 
+        /// <summary>
+        /// Retrieves a paginated list of classes based on the specified search criteria.
+        /// Automatically resolves the current user's Company and Session if they are not provided.
+        /// </summary>
+        public async Task<ApiResponse<PagedResult<BookViewModel>>> GetAllLibraryWithPageAsync(LibrarySearchRequest request)
+        {
+            return await PostAsync<PagedResult<BookViewModel>>("api/LibraryApi/GetAllLibraryWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllStudentsMembershipWithPageAsync(StudentsMembershipSearchRequest request)
+        {
+            return await PostAsync<PagedResult<LibraryMemberViewModel>>("api/LibraryApi/GetAllStudentsMembershipWithPage", request);
+        }
+
+        public async Task<ApiResponse<LibraryMember>> GetLibraryMemberByID(int id)
+        {
+            return await GetAsync<LibraryMember>($"api/LibraryApi/GetLibraryMemberByID/{id}");
+        }
+
+        public async Task<ApiResponse<PagedResult<StaffLibraryMember>>> GetAllStaffMembershipWithPageAsync(StaffLibraryMemberSearchModel request)
+        {
+            return await PostAsync<PagedResult<StaffLibraryMember>>($"api/LibraryApi/GetAllStaffMembershipWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<IssueReturnViewModel>>> GetAllIssuedBooksWithPageIndexAsync(IssueBookSearchModel request)
+        {
+            return await PostAsync<PagedResult<IssueReturnViewModel>>($"api/LibraryApi/GetAllIssuedBooksWithPageIndex", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllLibraryMemberWithPageIndexAsync(MemberSearchModel request)
+        {
+            return await PostAsync<PagedResult<LibraryMemberViewModel>>($"api/LibraryApi/GetAllLibraryMemberWithPageIndex", request);
+        }
     }
 }

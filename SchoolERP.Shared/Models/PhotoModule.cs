@@ -14,6 +14,8 @@ namespace SchoolERP.Shared.Models
         User,        // → wwwroot/User/Profile/{id}/
         Parent,    // → wwwroot/Student/Profile/{id}/
         Warden,
-
+        VisitorBook,
+        PostalDispatch,
+        PostalReceive,
     }
 }

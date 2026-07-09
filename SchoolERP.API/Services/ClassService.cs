@@ -108,6 +108,8 @@ namespace SchoolERP.API.Services
                 parameters.Add("@IsActive", request.IsActive);
                 parameters.Add("@UserId", userId);
                 parameters.Add("@SectionIds", sectionIds);
+                parameters.Add("@SequenceOrder", request.SequenceOrder);
+                parameters.Add("@DisplayLabel", request.DisplayLabel);
 
                 var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_Class_Upsert",

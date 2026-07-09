@@ -1,5 +1,6 @@
 @model SchoolERP.Shared.Models.HRDepartmentPageViewModel
 @using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Library Books";
     int currentUserId = 0;
@@ -9,6 +10,9 @@
         if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
     }
     var p = Model.Permissions;
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
 }
 <style>
     .dt-buttons {
@@ -19,14 +23,14 @@
 <!-- Page Header -->
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">Book Catalog</h6>
+        <h6 class="fw-bold mb-0">Book List</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
         {
-            <button class="btn btn-primary d-inline-flex align-items-center top-btn" onclick="openAddModal()">
+            <a href="/Library/AddBooks" class="btn btn-primary d-inline-flex align-items-center top-btn">
                 <i class="ti ti-plus me-1"></i>Add
-            </button>
+            </a>
         }
         @if (p.CanEdit)
         {
@@ -40,11 +44,26 @@
                 <i class="ti ti-trash me-1"></i>Delete
             </button>
         }
+        @if (p.CanEdit)
+        {
+            <button id="btnActive" class="btn btn-success top-btn" disabled onclick="toggleStatus(0,true)">
+                <i class="ti ti-circle-check"></i> Active
+            </button>
+            <button id="btnInactive" class="btn btn-danger top-btn" disabled onclick="toggleStatus(0,false)">
+                <i class="ti ti-circle-x"></i> Inactive
+            </button>
+        }
         @if (p.CanPrint)
         {
             <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
                 <i class="ti ti-printer me-1"></i>Print
             </button>
+        }
+        @if (p.CanAdd)
+        {
+            <a href="/Library/ImportBook" class="btn btn-warning btn-sm top-btn">
+                <i class="ti ti-file-import me-1"></i>Import
+            </a>
         }
         @if (p.CanExport)
         {
@@ -66,21 +85,95 @@
 
 <!-- start row -->
 <div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-tbl-outer mb-2">
+
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
-                               placeholder="Search by title, author, or book no..." style="min-width: 220px;" onkeyup="loadData()">
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by class, section..."
+                               style="min-width: 320px;" />
                     </div>
-                    @* <input type="text" id="txtSearch" class="form-control w-25" placeholder="Search by title, author, or book no..." onkeyup="loadData()" /> *@
-                    <div class="small text-muted">Showing all entries</div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="Books" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
+                        <input type="hidden" name="sectionID" id="hdnSectionID" value="" />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">                                   
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Active filter badges -->
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <div class="col-xl-12">
         <div class="card shadow-tbl overflow-auto">
@@ -102,10 +195,122 @@
                                 <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody id="listBody">
-                            
+                        <tbody>
+                            @if (Model.ItemsBooks != null)
+                            {
+                                @foreach (var c in Model.ItemsBooks)
+                                {
+                                    <tr class="item-row" style="cursor: pointer;">
+                                        <td class="ps-4 text-center">
+                                            <input type="checkbox" name="selectedClass"
+                                                   class="form-check-input student-checkbox" onclick="selectItem(@c.BookID, this)"
+                                                   value="@c.BookID">
+                                        </td>
+                                        <td>@c.BookTitle</td>
+                                        <td>@c.BookNo</td>
+                                        <td>@c.Author</td>
+                                        <td>@c.Publisher</td>
+                                        <td>@c.RackNo</td>
+                                        <td>@c.TotalQty</td>
+                                        <td>@c.AvailableQty</td>
+                                        <td>@c.BookPrice</td>
+                                        <td>@c.PostDate?.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (p.CanEdit)
+                                            {
+                                                <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                    <input class="form-check-input class-status-switch" type="checkbox" @(c.IsActive ? "checked" : "") onchange="toggleStatus(@c.BookID, this.checked)">
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span>
+                                            }
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <span class="text-muted">No records found.</span>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
+                        
                     </table>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -119,9 +324,7 @@
             <div class="modal-header d-flex justify-content-between align-items-center">
                 <h5 class="modal-title" id="modalTitle">Add Book</h5>
                 <div>
-                    <a href="/Library/ImportBook" class="btn btn-warning btn-sm">
-                        <i class="ti ti-file-import me-1"></i>Import
-                    </a>
+                    
                     <button class="btn btn-success btn-sm" onclick="saveData()">
                         <i class="ti ti-cloud me-1"></i>Save
                     </button>
@@ -187,230 +390,6 @@
 
 @section Scripts {
     <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
-    <script>
-
-        function triggerExport(index) {
-        if ($.fn.DataTable.isDataTable('#tblBooks')) {
-                const table = $('#tblBooks').DataTable();
-            table.button(index).trigger();
-        }
-    }
-        function initializeDataTable() {
-
-            if ($.fn.DataTable.isDataTable('#tblBooks')) {
-                $('#tblBooks').DataTable().destroy();
-            }
-
-            $('#tblBooks').DataTable({
-                destroy: true,
-                dom: 'Bfrtip',
-                buttons: [
-                    { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
-                    { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
-                    { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
-                    { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } },
-                    { extend: 'print', exportOptions: { columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] } }
-                ],
-                searching: false,
-                paging: false,
-                info: false,
-                ordering: false,
-                language: {
-                    emptyTable: "No books found in catalog."
-                }
-            });
-        }
-
-$(document).ready(function () {
-           
-})
-
-
-        let selectedId = 0;
-
-        $(document).ready(function () {
-            loadData();
-        });
-
-        function loadData() {
-            const search = $('#txtSearch').val();
-            selectedId = 0;
-            $('#btnEdit, #btnDelete').prop('disabled', true);
-
-            $.get('/Library/GetBookList', { search }, function (res) {
-                let html = '';
-                if (res.success && res.data.length > 0) {
-                    res.data.forEach(item => {
-                        html += `
-                            <tr onclick="selectRow(${item.bookID}, this)" style="cursor:pointer">
-                                <td class="ps-3"><input type="checkbox" name="rowSelect" class="form-check-input student-checkbox" value="${item.bookID}"></td>
-                                <td>${item.bookTitle}</td>
-                                <td>${item.bookNo || '-'}</td>
-                                <td>${item.author || '-'}</td>
-                                <td>${item.publisher || '-'}</td>
-                                <td>${item.rackNo || '-'}</td>
-                                <td class="text-center">${item.totalQty}</td>
-                                <td class="text-center"><span class="badge bg-success-transparent">${item.availableQty}</span></td>
-                                <td>₹${item.bookPrice.toFixed(2)}</td>
-                                <td>${item.postDate ? new Date(item.postDate).toLocaleDateString('en-GB') : '-'}</td>
-                                <td>
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" ${item.isActive ? 'checked' : ''} onchange="toggleStatus(${item.bookID})">
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                } 
-                $('#listBody').html(html);
-                initializeDataTable();
-            });
-        }
-
-        function selectRow(id, element) {
-            selectedId = id;
-            $(element).addClass('bg-light').siblings().removeClass('bg-light');
-            //$(element).find('input[type="radio"]').prop('checked', true);
-            $('#btnEdit, #btnDelete').prop('disabled', false);
-                    let checkedCount = $('.student-checkbox:checked').length;
-        $('#btnDelete').prop('disabled', checkedCount === 0);
-        // Edit sirf 1 record select hone par
-        $('#btnEdit').prop('disabled', checkedCount !== 1);
-        }
-
-        function openAddModal() {
-            $('#hdnId').val(0);
-            $('#upsertForm')[0].reset();
-            $('#txtQty').val(1);
-            $('#txtPrice').val(0.00);
-            $('#modalTitle').text('Add Book');
-            $('#upsertModal').modal('show');
-        }
-
-        function editSelected() {
-            if (selectedId <= 0) return;
-            $.get('/Library/GetBook', { id: selectedId }, function (res) {
-                if (res.success) {
-                    $('#hdnId').val(res.data.bookID);
-                    $('#txtTitle').val(res.data.bookTitle);
-                    $('#txtNo').val(res.data.bookNo);
-                    $('#txtISBN').val(res.data.isbnNo);
-                    $('#txtPublisher').val(res.data.publisher);
-                    $('#txtAuthor').val(res.data.author);
-                    $('#txtSubject').val(res.data.subject);
-                    $('#txtRack').val(res.data.rackNo);
-                    $('#txtQty').val(res.data.totalQty);
-                    $('#txtPrice').val(res.data.bookPrice);
-                    if (res.data.postDate) {
-                        $('#txtDate').val(new Date(res.data.postDate).toLocaleDateString('en-CA'));
-                    }
-                    $('#txtDescription').val(res.data.description);
-                    
-                    $('#modalTitle').text('Edit Book');
-                    $('#upsertModal').modal('show');
-                }
-            });
-        }
-
-        function saveData() {
-            const title = $('#txtTitle').val().trim();
-            const qty = $('#txtQty').val();
-
-            if (!title || !qty) {
-                showToast('Book Title and Quantity are required', 'warning');
-                return;
-            }
-
-            const data = {
-                bookID: parseInt($('#hdnId').val()),
-                bookTitle: title,
-                bookNo: $('#txtNo').val().trim(),
-                isbnNo: $('#txtISBN').val().trim(),
-                publisher: $('#txtPublisher').val().trim(),
-                author: $('#txtAuthor').val().trim(),
-                subject: $('#txtSubject').val().trim(),
-                rackNo: $('#txtRack').val().trim(),
-                totalQty: parseInt(qty),
-                bookPrice: parseFloat($('#txtPrice').val()),
-                postDate: $('#txtDate').val(),
-                description: $('#txtDescription').val().trim()
-            };
-
-            $.ajax({
-                url: '/Library/UpsertBook',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function (res) {
-                    if (res.success) {
-                        showToast(res.message, 'success');
-                        $('#upsertModal').modal('hide');
-                        loadData();
-                        initializeDataTable();
-                    } else {
-                        Swal.fire('Error!', res.message, 'error');
-                    }
-                }
-            });
-        }
-
-        function deleteSelected() {
-            if (selectedId <= 0) return;
-
-                    let selectedIds = [];
-         $('.student-checkbox:checked').each(function () {
-                  selectedIds.push(parseInt($(this).val()));
-              });
-         if (selectedIds.length === 0) {
-                  alert("Please select at least one student.");
-                  return;
-              }
-          Swal.fire({
-              title: 'Are you sure?',
-              text: "You are about to delete this student record. This action cannot be undone!",
-              icon: 'warning',
-              showCancelButton: true,
-              confirmButtonColor: '#d33',
-              cancelButtonColor: '#3085d6',
-              confirmButtonText: 'Yes, delete it!',
-              customClass: {
-                  confirmButton: 'btn btn-danger me-2',
-                  cancelButton: 'btn btn-secondary'
-              },
-              buttonsStyling: false
-          }).then((result) => {
-              if (result.isConfirmed) {
-                  $.ajax({
-                      url: '/Library/DeleteBook',
-                      type: 'POST',
-                      contentType: 'application/json',
-                      data: JSON.stringify(selectedIds),
-                      success: function (res) {
-                          if (res.success) {
-                              Swal.fire('Deleted!', 'Student record has been deleted.', 'success')
-                                  .then(() => location.reload());
-                          } else {
-                              Swal.fire('Error!', res.message || 'Failed to delete student.', 'error');
-                          }
-                      },
-                      error: function () {
-                          Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                      }
-                  });
-              }
-          });
-        }
-
-        function toggleStatus(id) {
-            $.post('/Library/ToggleStatus', { id: id }, function (res) {
-                if (res.success) {
-                    showToast(res.message, 'success');
-                } else {
-                    Swal.fire('Error!', res.message, 'error');
-                    loadData();
-                    initializeDataTable();
-                }
-            });
-        }
+    <script src="~/assets/js/Books.js">        
     </script>
 }

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using System.Linq;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Net.Helpers;
+using static System.Collections.Specialized.BitVector32;
+using SchoolERP.Shared.Models.Common;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -48,17 +51,87 @@ namespace SchoolERP.Net.Controllers
         }
 
         #region Books
-        public async Task<IActionResult> Books()
+        public async Task<IActionResult> Books(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Library/Books"
-           );
-            var model = new HRDepartmentPageViewModel
+            try
             {
-            };
-            model.Permissions = perms;
-            return View(model);
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/Books"
+               );
+
+                var request = new LibrarySearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId()
+                };
+
+
+                var sessionId = await GetSessionId();
+                var libraryResponse = _service.GetAllLibraryWithPageAsync(request);
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(libraryResponse,  companiesTask);
+
+                var pagedResult = await libraryResponse;
+
+                var model = new HRDepartmentPageViewModel
+                {
+                    ItemsBooks = pagedResult.Success ? pagedResult.Data.Data : new List<BookViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        public async Task<IActionResult> AddBooks(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/Books"
+               );
+                var sessionId = await GetSessionId();
+                var model = new HRDepartmentAddPageViewModel();
+
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _service.GetBookByIdAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.ItemsBooks = response.Data;
+                        model.EditBooks = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditBooks = null;
+                }
+
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         [HttpGet]
@@ -93,35 +166,214 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleStatus(int id)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            var res =await _service.ToggleBookStatusAsync(id);
-            return Json(new { success = res.Success, message = res.Message });
+            try
+            {
+                var res = await _service.ToggleBookStatusAsync(request);
+                return Json(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
         #endregion
 
         #region Membership
-        public async Task<IActionResult> AddStudents()
+        public async Task<IActionResult> AddStudents(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionId,
+        int? sectionId,
+        int? classId)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Library/AddStudents"
-           );
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddStudents"
+               );
 
-            var model = new HRDepartmentPageViewModel { };
-            model.Permissions = perms;
-            var companyId = await GetCompanyId();
-            var sessionId = await GetSessionId();
-            ViewBag.Classes =(await _classService.GetAllAsync()).Data;
-            return View(model);
+
+                var request = new StudentsMembershipSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionId = sessionId ?? await GetSessionId(),
+                    SectionId = sectionId ?? null,
+                    ClassId=classId??null
+                };
+
+
+                var models = new HRStudentsMembershipPageViewModel { };
+
+                var studentMemberResponse = _service.GetAllStudentsMembershipWithPageAsync(request);
+
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                var classResponse = await _classService.GetAllAsync(false, await GetSessionId());
+
+
+                await Task.WhenAll(studentMemberResponse, sessionTask, companiesTask);
+
+                var pagedResult = await studentMemberResponse;
+
+
+                var model = new HRStudentsMembershipPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<LibraryMemberViewModel>(),
+                    Classes = classResponse.Success ? classResponse.Data : new List<MstClassViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SectionId = sectionId,
+                    ClassId=classId
+                };
+
+                model.Permissions = perms;
+                //var companyId = await GetCompanyId();
+               // var sessionId = await GetSessionId();
+                //ViewBag.Classes = (await _classService.GetAllAsync(false, sessionId)).Data;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+           
         }
 
-        public async Task<IActionResult> AddStaff()
+
+
+        public async Task<IActionResult> AddLibraryStudentsMembership(int? id, int? studentId)
         {
-            var companyId = await GetCompanyId();
-            var sessionId = await GetSessionId();
-            ViewBag.Departments = (await _hrService.GetAllDepartmentsAsync()).Data;
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddLibraryStudentsMembership"
+               );
+                var model = new HRStudentsMembershipAddViewModel();
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _service.GetLibraryMemberByID(id.Value);
+                    if (response.Success)
+                    {
+                        model.EditItem = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItem = null;
+                }
+                model.StudentId = studentId;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+
+        public async Task<IActionResult> AddStaff(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? departmentID)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddStaff"
+               );
+                var request = new StaffLibraryMemberSearchModel
+                {
+                    PageIndex = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchTerm = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    DepartmentID = departmentID ?? null
+                };
+
+
+                var models = new StaffMemberPageViewModel { };
+
+                var staffMemberResponse = _service.GetAllStaffMembershipWithPageAsync(request);
+
+                var departmet = await _hrService.GetAllDepartmentsAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+
+                await Task.WhenAll(staffMemberResponse, companiesTask);
+
+                var pagedResult = await staffMemberResponse;
+
+
+                var model = new StaffMemberPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<StaffLibraryMember>(),
+                    Departments = departmet.Success ? departmet.Data.Data : new List<HRDepartmentViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    DepartmentID = departmentID
+                };
+
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }            
+
+        }
+
+
+        public async Task<IActionResult> AddLibraryStaffMembership(int? id, int? staffId)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddLibraryStaffMembership"
+               );
+                var model = new HRStudentsMembershipAddViewModel();
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _service.GetLibraryMemberByID(id.Value);
+                    if (response.Success)
+                    {
+                        model.EditItem = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItem = null;
+                }
+                model.StaffId = staffId;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         [HttpGet]
@@ -146,14 +398,14 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteMember(int id, int? studentId, int? staffId)
+        public async Task<IActionResult> DeleteMember(int id, int? studentId, int? staffId,string? modeType)
         {
             if (studentId.HasValue || staffId.HasValue)
             {
                 // Custom delete via SP update
                 var companyId = GetCompanyId();
                 var userId = GetUserId();
-                var res =await _service.DeleteMemberExAsync(id, studentId, staffId);
+                var res =await _service.DeleteMemberExAsync(id, studentId, staffId, modeType);
                 return Json(new { success = res.Success, message = res.Message });
             }
             else
@@ -171,20 +423,124 @@ namespace SchoolERP.Net.Controllers
             return Json(sections);
         }
 
-        public async Task<IActionResult> Member()
+        public async Task<IActionResult> Member(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/HumanResource/Staffs"
-           );
-            return View(perms);
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Staffs"
+               );
+
+                var request = new MemberSearchModel
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchkeyWord = search,
+                    CompanyID = companyId ?? await GetCompanyId()
+                };
+
+
+                var sessionId = await GetSessionId();
+                var libraryResponse = _service.GetAllLibraryMemberWithPageIndexAsync(request);
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(libraryResponse, companiesTask);
+
+                var pagedResult = await libraryResponse;
+
+                var model = new MemberPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<LibraryMemberViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId
+                };
+                model.Permissions = perms;
+                return View(model);
+
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
-        public IActionResult Issue(int id)
+        public async Task<IActionResult> Issue(int id, int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId)
         {
-            if (id <= 0) return RedirectToAction("Member");
-            ViewBag.LibraryMemberID = id;
-            return View();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/Issue"
+               );
+
+
+                var request = new IssueBookSearchModel
+                {
+                    LibraryMemberID=id,
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 5,
+                    SearchkeyWord = search,
+                    CompanyID = companyId ?? await GetCompanyId()
+                };
+
+
+                var model = new IssuePageViewModel();
+                if (id <= 0) return RedirectToAction("Member");
+                if (id > 0)
+                {
+
+                    var issueBookResponse = _service.GetAllIssuedBooksWithPageIndexAsync(request);
+
+                    var companiesTask = _companyService.GetAllAsync();
+
+                    var classResponse = await _classService.GetAllAsync(false, await GetSessionId());
+
+
+                    await Task.WhenAll(issueBookResponse,  companiesTask);
+
+                    var pagedResult = await issueBookResponse;
+
+
+                    var response =await _service.GetMemberDetails(id,await GetCompanyId());
+                    var issueResponse =await _service.GetIssuedBooks(id, await GetCompanyId());                   
+
+                    model = new IssuePageViewModel
+                    {
+                        IssueReturn = pagedResult.Success ? pagedResult.Data.Data : new List<IssueReturnViewModel>(),
+                        MemberDetails = response.Success ? response.Data : new MemberDetailsViewModel(),
+                        Companies = (await companiesTask).Data ?? new(),
+                        TotalRecords = pagedResult.Data.TotalRecords,
+                        PageNumber = pagedResult.Data.PageNumber,
+                        PageSize = pagedResult.Data.PageSize,
+                        SearchTerm = search,
+                        CompanyId = companyId,
+                        LibraryMemberID = id
+                    };
+
+                }
+
+                model.Permissions = perms;
+                ViewBag.LibraryMemberID = id;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            
         }
 
         [HttpGet]
@@ -198,7 +554,7 @@ namespace SchoolERP.Net.Controllers
         public async Task<IActionResult> GetIssuedBooks(int memberId)
         {
             var data = _service.GetIssuedBooks(memberId, await GetCompanyId());
-            return Json(new { success = true, data });
+            return Json(new { success = true, data.Result.Data });
         }
 
         [HttpPost]
@@ -208,10 +564,62 @@ namespace SchoolERP.Net.Controllers
             return Json(new { success = res.Success, message = res.Message });
         }
 
+        public async Task<IActionResult> AddIssueBook(int? id) 
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddIssueBook"
+               );
+                string search = string.Empty;
+                var response = await _service.GetBookListAsync(await GetCompanyId(), search);
+                var model = new IssueBookAddViewModel
+                {
+                    BookViewModels = response.Data,
+                    Permissions = perms,
+                    LibraryMemberID=id
+                };
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<IActionResult> AddIssueBookReturn(int? issueReturnID, int libraryMemberID)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Library/AddIssueBook"
+               );
+                string search = string.Empty;
+                var response = await _service.GetBookListAsync(await GetCompanyId(), search);
+                var model = new IssueBookAddViewModel
+                {
+                    BookViewModels = response.Data,
+                    Permissions = perms,
+                    LibraryMemberID = libraryMemberID,
+                    IssueReturnID= issueReturnID
+                };
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> ReturnBook(int issueId, DateTime returnDate)
         {
-            var res =await _service.ReturnBook(issueId, returnDate);
+            ReturnBookIssue req = new ReturnBookIssue();
+            req.issueId = issueId;
+            req.returnDate = returnDate;
+            var res =await _service.ReturnBook(req);
             return Json(new { success = res.Success, message = res.Message });
         }
 

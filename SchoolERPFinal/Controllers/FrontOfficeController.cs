@@ -8,6 +8,9 @@ using SchoolERP.Shared.Models;
 using SchoolERP.Net.Services;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Net.Helpers;
+using SchoolERP.Shared.Models.Common;
+using Microsoft.DotNet.Scaffolding.Shared.Messaging;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -22,6 +25,10 @@ namespace SchoolERP.Net.Controllers
         private readonly ISectionClientService _sectionClient;
         private readonly IStudentInformationClientService _studentClient;
         private readonly IHumanResourceClientService _hrClient;
+        private readonly ICompanyClientService _companyService;
+        private readonly IConfiguration _configuration;
+        private readonly IPhotoUploadService _photoService;
+        private readonly IWebHostEnvironment _environment;
         private const string MenuPath = "/FrontOffice/Setup";
         private const string ComplaintMenuPath = "/FrontOffice/Complaint";
         private readonly ISessionClientService _sessionService;
@@ -31,7 +38,9 @@ namespace SchoolERP.Net.Controllers
             IClassClientService classClient,
             ISectionClientService sectionClient,
             IStudentInformationClientService studentClient,
-            IHumanResourceClientService hrClient, ISessionClientService sessionService, PermissionHelper permHelper) : base(permHelper)
+            IConfiguration configuration,
+            IHumanResourceClientService hrClient, ISessionClientService sessionService, PermissionHelper permHelper, 
+            ICompanyClientService companyService, IPhotoUploadService photoService, IWebHostEnvironment environment) : base(permHelper)
         {
             _client = client;
             _menuPerm = menuPerm;
@@ -40,6 +49,16 @@ namespace SchoolERP.Net.Controllers
             _studentClient = studentClient;
             _hrClient = hrClient;
             _sessionService = sessionService;
+            _companyService = companyService;
+            _configuration = configuration;
+            _photoService = photoService;
+            _environment = environment;
+        }
+
+        private async Task<int> GetCompanyId()
+        {
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
         }
         private async Task<int> GetSessionId()
         {
@@ -51,10 +70,12 @@ namespace SchoolERP.Net.Controllers
             return CurrentSessionId;
         }
         /// <summary>
-        /// Shows the 'Setup' page where you can manage categories for visitors and complaints (like Purposes, Sources, and References).
+        /// Loads the master-data management page — fetches all Purposes,
+        /// Complaint Types, Sources, References in one shot so an admin can manage all four from a single screen.
         /// </summary>
         public async Task<IActionResult> Setup()
         {
+            var model = new FrontOfficeSetupPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
@@ -68,7 +89,7 @@ namespace SchoolERP.Net.Controllers
                 var references = await _client.GetAllReferencesAsync();
 
                 // Step 2: Organize these lists so they can be shown on the setup management page.
-                var model = new FrontOfficeSetupPageViewModel
+                model = new FrontOfficeSetupPageViewModel
                 {
                     Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
                     ComplaintTypes = complaintTypes.Success ? complaintTypes.Data : new List<MstFOComplaintTypeViewModel>(),
@@ -79,182 +100,382 @@ namespace SchoolERP.Net.Controllers
                 // Step 3: Open the 'Setup' page for the user.
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
            
         }
 
-        // ─── PURPOSE ────────────────────────────────────────────
+        /// <summary>
+        ///  GetReference(id)Fetches one record by ID to pre-fill the "Edit" modal. Each checks Edit permission before returning data.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPurpose(int id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.GetPurposeByIDAsync(id);
-            if (!r.Success) return Json(new { success = false, message = r.Message });
-            return Json(new { success = true, data = r.Data });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.GetPurposeByIDAsync(id);
+                if (!r.Success) return Json(new { success = false, message = r.Message });
+                return Json(new { success = true, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = true, message = ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit, 
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SavePurpose([FromBody] MstFOPurposeUpsertRequest req)
         {
-            bool isCreate = req.PurposeID <= 0;
-            if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.UpsertPurposeAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                bool isCreate = req.PurposeID <= 0;
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.UpsertPurposeAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+           
         }
 
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> DeletePurpose([FromBody] List<int> id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.DeletePurposeAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.DeletePurposeAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
-        [HttpPost]
-        public async Task<IActionResult> TogglePurposeStatus(int id, bool isActive)
-        {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.TogglePurposeStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
+        /// <summary>
+        /// Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
+        //[HttpPost]
+        //public async Task<IActionResult> TogglePurposeStatus(int id, bool isActive)
+        //{
+        //    try
+        //    {
+        //        if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+        //            return Json(new { success = false, message = "Permission denied." });
+        //        var r = await _client.TogglePurposeStatusAsync(id, isActive);
+        //        return Json(new { success = r.Success, message = r.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["Error"] = ex.Message;
+        //        return Json(new { success = false, message = ex.Message });
+        //    }
+            
+        //}
 
-        // ─── COMPLAINT TYPE ─────────────────────────────────────
+        /// <summary>
+        ///  GetReference(id)Fetches one record by ID to pre-fill the "Edit" modal. Each checks Edit permission before returning data.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetComplaintType(int id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.GetComplaintTypeByIDAsync(id);
-            if (!r.Success) return Json(new { success = false, message = r.Message });
-            return Json(new { success = true, data = r.Data });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.GetComplaintTypeByIDAsync(id);
+                if (!r.Success) return Json(new { success = false, message = r.Message });
+                return Json(new { success = true, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit, 
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SaveComplaintType([FromBody] MstFOComplaintTypeUpsertRequest req)
         {
-            bool isCreate = req.ComplaintTypeID <= 0;
-            if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.UpsertComplaintTypeAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                bool isCreate = req.ComplaintTypeID <= 0;
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.UpsertComplaintTypeAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpPost]
         public async Task<IActionResult> DeleteComplaintType([FromBody] List<int> id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.DeleteComplaintTypeAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.DeleteComplaintTypeAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ToggleComplaintTypeStatus(int id, bool isActive)
-        {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.ToggleComplaintTypeStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
+        /// <summary>
+        /// ToggleComplaintTypeStatus / ToggleSourceStatus / ToggleReferenceStatus(id, isActive)Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
+        //[HttpPost]
+        //public async Task<IActionResult> ToggleComplaintTypeStatus(int id, bool isActive)
+        //{
+        //    try
+        //    {
+        //        if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+        //            return Json(new { success = false, message = "Permission denied." });
+        //        var r = await _client.ToggleComplaintTypeStatusAsync(id, isActive);
+        //        return Json(new { success = r.Success, message = r.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["Error"] = ex.Message;
+        //        return Json(new { success = false, message = ex.Message });
+        //    }
+            
+        //}
 
         // ─── SOURCE ─────────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> GetSource(int id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.GetSourceByIDAsync(id);
-            if (!r.Success) return Json(new { success = false, message = r.Message });
-            return Json(new { success = true, data = r.Data });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.GetSourceByIDAsync(id);
+                if (!r.Success) return Json(new { success = false, message = r.Message });
+                return Json(new { success = true, data = r.Data });
+            }
+            catch (Exception ex) 
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit, 
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SaveSource([FromBody] MstFOSourceUpsertRequest req)
         {
-            bool isCreate = req.SourceID <= 0;
-            if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.UpsertSourceAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                bool isCreate = req.SourceID <= 0;
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.UpsertSourceAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+           
         }
 
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> DeleteSource([FromBody] List<int> id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.DeleteSourceAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.DeleteSourceAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ToggleSourceStatus(int id, bool isActive)
-        {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.ToggleSourceStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
+        /// <summary>
+        /// Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
+        //[HttpPost]
+        //public async Task<IActionResult> ToggleSourceStatus(int id, bool isActive)
+        //{
+        //    try
+        //    {
+        //        if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+        //            return Json(new { success = false, message = "Permission denied." });
+        //        var r = await _client.ToggleSourceStatusAsync(id, isActive);
+        //        return Json(new { success = r.Success, message = r.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["Error"] = ex.Message;
+        //        return Json(new { success = false, message = ex.Message });
+        //    }
+            
+        //}
 
         // ─── REFERENCE ──────────────────────────────────────────
+        /// <summary>
+        /// Fetches one record by ID to pre-fill the "Edit" modal. Each checks Edit permission before returning data.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetReference(int id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.GetReferenceByIDAsync(id);
-            if (!r.Success) return Json(new { success = false, message = r.Message });
-            return Json(new { success = true, data = r.Data });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.GetReferenceByIDAsync(id);
+                if (!r.Success) return Json(new { success = false, message = r.Message });
+                return Json(new { success = true, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
-
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit,
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SaveReference([FromBody] MstFOReferenceUpsertRequest req)
         {
-            bool isCreate = req.ReferenceID <= 0;
-            if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.UpsertReferenceAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                bool isCreate = req.ReferenceID <= 0;
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.UpsertReferenceAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> DeleteReference([FromBody] List<int> id)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.DeleteReferenceAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.DeleteReferenceAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ToggleReferenceStatus(int id, bool isActive)
-        {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.ToggleReferenceStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
+        /// <summary>
+        /// Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
+        //[HttpPost]
+        //public async Task<IActionResult> ToggleReferenceStatus(int id, bool isActive)
+        //{
+        //    try
+        //    {
+        //        if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+        //            return Json(new { success = false, message = "Permission denied." });
+        //        var r = await _client.ToggleReferenceStatusAsync(id, isActive);
+        //        return Json(new { success = r.Success, message = r.Message });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        TempData["Error"] = ex.Message;
+        //        return Json(new { success = false, message = ex.Message });
+        //    }
+            
+        //}
 
         /// <summary>
         /// Shows the main 'Complaint' management page where you can see all student or parent complaints and their status.
         /// </summary>
-        public async Task<IActionResult> Complaint()
+        public async Task<IActionResult> Complaint(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        int? complaintTypeID,
+        int? sourceID)
         {
+            var model = new FOComplaintPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
@@ -262,102 +483,302 @@ namespace SchoolERP.Net.Controllers
                    "/FrontOffice/Complaint"
                );
 
+                var request = new ComplaintSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    ComplaintTypeID = complaintTypeID ?? null,
+                    SourceID=sourceID??null
+                };
+
                 // Step 1: Fetch all recorded complaints, types of complaints, and where they came from (sources).
-                var complaints = await _client.GetAllComplaintsAsync();
+                //var complaints = await _client.GetAllComplaintsAsync();
+                var complaints = _client.GetAllComplaintsWithPageAsync(request);
                 var complaintTypes = await _client.GetAllComplaintTypesAsync();
                 var sources = await _client.GetAllSourcesAsync();
 
+
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+
+
+
+                await Task.WhenAll(complaints, sessionTask, companiesTask);
+
+                var pagedResult = await complaints;
+
+
                 // Step 2: Combine this information to be shown on the complaint management screen.
-                var model = new FOComplaintPageViewModel
+                model = new FOComplaintPageViewModel
                 {
-                    Complaints = complaints.Success ? complaints.Data : new List<FOComplaintViewModel>(),
+                    Complaints = pagedResult.Success ? pagedResult.Data.Data : new List<FOComplaintViewModel>(),
                     ComplaintTypes = complaintTypes.Success ? complaintTypes.Data : new List<MstFOComplaintTypeViewModel>(),
-                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>()
+                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>(),
+                                        
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    ComplaintTypeID = complaintTypeID,
+                    SourceID=sourceID
                 };
                 model.Permissions = perms;
                 // Step 3: Open the 'Complaint' management page.
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetComplaint(int id)
-        {
-            if (!(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.GetComplaintByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
-        }
 
-        [HttpPost]
-        public async Task<IActionResult> SaveComplaint([FromBody] FOComplaintUpsertRequest req)
+        public async Task<IActionResult> AddComplaint(int? id)
         {
-            bool isCreate = req.ComplaintID <= 0;
-            if (isCreate && !(await _menuPerm.Has(ComplaintMenuPath, "Add")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            if (!isCreate && !(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.UpsertComplaintAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> DeleteComplaint([FromBody] List<int> id)
-        {
-            if (!(await _menuPerm.Has(ComplaintMenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.DeleteComplaintAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> ToggleComplaintStatus(int id, bool isActive)
-        {
-            if (!(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "Permission denied." });
-            var r = await _client.ToggleComplaintStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        /// <summary>
-        /// Shows the 'Postal Receive' page, which tracks all the physical mail or packages the school has received.
-        /// </summary>
-        public async Task<IActionResult> PostalReceive()
-        {
+            var model = new FOComplaintAddPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/FrontOffice/PostalReceive"
                );
-                var res = await _client.GetAllPostalReceivesAsync();
-                var model = new FOPostalReceivePageViewModel
+
+                var complaintTypes = await _client.GetAllComplaintTypesAsync();
+                var sources = await _client.GetAllSourcesAsync();
+                if (id.HasValue && id.Value > 0)
                 {
-                    Items = res.Success ? res.Data : new List<FOPostalReceiveViewModel>()
+                    var response = await _client.GetComplaintByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Complaints = response.Data;
+                        model.EditComplaints = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditComplaints = null;
+                }
+                model.ComplaintTypes = complaintTypes.Data;
+                model.Sources = sources.Data;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
+
+        /// <summary>
+        /// Fetches one record by ID to pre-fill the "Edit" modal. Each checks Edit permission before returning data.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetComplaint(int id)
+        {
+            try
+            {
+                if (!(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.GetComplaintByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+           
+        }
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit, 
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> SaveComplaint([FromBody] FOComplaintUpsertRequest req)
+        {
+            try
+            {
+                bool isCreate = req.ComplaintID <= 0;
+                if (isCreate && !(await _menuPerm.Has(ComplaintMenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                if (!isCreate && !(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.UpsertComplaintAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
+        }
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> DeleteComplaint([FromBody] List<int> id)
+        {
+            try
+            {
+                if (!(await _menuPerm.Has(ComplaintMenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.DeleteComplaintAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
+        }
+        /// <summary>
+        /// Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ToggleComplaintStatus([FromBody] StatusUpdateRequest request)
+        {
+            try
+            {
+                if (!(await _menuPerm.Has(ComplaintMenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "Permission denied." });
+                var r = await _client.ToggleComplaintStatusAsync(request);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+           
+        }
+
+        /// <summary>
+        /// Shows the 'Postal Receive' page, which tracks all the physical mail or packages the school has received.
+        /// </summary>
+        public async Task<IActionResult> PostalReceive(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
+        {
+            var model = new FOPostalReceivePageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/PostalReceive"
+               );
+
+                var request = new ClassSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+
+                var postalReceiveResponse = _client.GetAllPostalReceiveWithPageAsync(request);
+
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(postalReceiveResponse, sessionTask, companiesTask);
+
+                var pagedResult = await postalReceiveResponse;
+                var res = await _client.GetAllPostalReceivesAsync();
+                model = new FOPostalReceivePageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<FOPostalReceiveViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+
                 };
                 model.Permissions = perms;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
 
+
+        public async Task<IActionResult> AddPostalReceive(int? id)
+        {
+            var model = new FOPostalReceiveAddPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/PostalReceive"
+               );
+
+
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _client.GetPostalReceiveByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
+                }
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
+
+        /// <summary>
+        /// Fetches one record by ID to pre-fill the "Edit" modal. Each checks Edit permission before returning data.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPostalReceive(int id)
         {
-            var r = await _client.GetPostalReceiveByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            try
+            {
+                var r = await _client.GetPostalReceiveByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
-
+        /// <summary>
+        /// One upsert endpoint per entity. PurposeID <= 0 (etc.) decides Create vs Edit, 
+        /// and checks the matching Add or Edit permission accordingly before calling the service layer.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> SavePostalReceive([FromForm] FOPostalReceiveUpsertRequest req, IFormFile? attachmentFile)
         {
@@ -371,80 +792,233 @@ namespace SchoolERP.Net.Controllers
 
                 if (attachmentFile != null && attachmentFile.Length > 0)
                 {
+                    long MaxFileSizeMB = _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
+                    long maxBytes = MaxFileSizeMB * 1024L * 1024L;
+
+                    if (attachmentFile.Length > maxBytes)
+                    {
+                        return Json(new { success = false, message = $"File size exceeds the {MaxFileSizeMB} MB limit." });
+                    }
+
                     req.FileName = attachmentFile.FileName;
                     req.FileType = attachmentFile.ContentType;
-                    using (var ms = new MemoryStream())
+
+                }
+                req.CompanyID = await GetCompanyId();
+                req.SessionID = await GetSessionId();
+                var r = await _client.UpsertPostalReceiveAsync(req);
+                if (r.Data?.Result?.Result == 1)
+                {
+                    int? postalReceiveID = r.Data.Result.PostalReceiveID;
+                    if (attachmentFile != null && attachmentFile.Length > 0)
                     {
-                        await attachmentFile.CopyToAsync(ms);
-                        req.Attachment = ms.ToArray();
+                        using var memoryStream = new MemoryStream();
+                        await attachmentFile.CopyToAsync(memoryStream);
+
+                        byte[] fileBytes = memoryStream.ToArray();
+                        PhotoUploadResult photoResult = new PhotoUploadResult();
+                        if (req.FileName != null)
+                        {
+                            photoResult = await _photoService.SaveBase64PhotoAsync(
+                                Convert.ToBase64String(fileBytes),
+                                req.FileName ?? "photo.jpg",
+                                PhotoModule.PostalReceive,
+                                postalReceiveID.Value
+                            );
+                            var attchment = new FOPostalReceiveAttachmentUpsertRequest
+                            {
+                                PostalReceiveID = postalReceiveID.Value,
+                                Attachment = photoResult.PhotoUrl,
+                                FileName = attachmentFile.FileName,
+                                FileType = attachmentFile.ContentType
+
+                            };
+                            var attachment = await _client.UpsertPostalReceiveAttachmentFileAsync(attchment);
+                        }
                     }
                 }
-                var r = await _client.UpsertPostalReceiveAsync(req);
+
                 return Json(new { success = r.Success, message = r.Message });
             }
             catch (Exception ex)
             {
+                TempData["Error"] = ex.Message;
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
         }
 
+        /// <summary>
+        /// Bulk delete — accepts List<int> so multiple rows can be removed in one call. Checks Delete permission.
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> DeletePostalReceive([FromBody] List<int> id)
         {
-            var r = await _client.DeletePostalReceiveAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.DeletePostalReceiveAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
-
+        /// <summary>
+        /// Flips a record's active/inactive flag (e.g. an Active/Inactive switch in a table row) without a full edit round-trip. Checks Edit permission.
+        /// </summary>
         [HttpPost]
-        public async Task<IActionResult> TogglePostalReceiveStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePostalReceiveStatus([FromBody] StatusUpdateRequest request)
         {
-            var r = await _client.TogglePostalReceiveStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.TogglePostalReceiveStatusAsync(request);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
+        /// <summary>
+        /// Streams the stored byte array back as a downloadable file (File(bytes, contentType, fileName)), 
+        /// reconstructing the original filename/content-type saved at upload time. Returns 404 if there's no attachment.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> DownloadAttachment(int id)
         {
-            var r = await _client.GetPostalReceiveByIDAsync(id);
-            if (!r.Success || r.Data?.Attachment == null) return NotFound();
+            try
+            {
+                var r = await _client.GetPostalReceiveByIDAsync(id);
+                if (!r.Success || r.Data?.Attachment == null) return NotFound();
+
+                string contentType = r.Data.FileType ?? "application/octet-stream";
+                string fileName = r.Data.FileName ?? $"attachment_{id}";
+
+                return File(r.Data.Attachment, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message }); 
+            }
             
-            string contentType = r.Data.FileType ?? "application/octet-stream";
-            string fileName = r.Data.FileName ?? $"attachment_{id}";
-            
-            return File(r.Data.Attachment, contentType, fileName);
         }
 
         /// <summary>
         /// Shows the 'Postal Dispatch' page, which keeps a record of all the mail or packages the school has sent out.
         /// </summary>
-        public async Task<IActionResult> PostalDispatch()
+        public async Task<IActionResult> PostalDispatch(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
         {
+            var model = new FOPostalDispatchPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/FrontOffice/PostalDispatch"
                );
-                var res = await _client.GetAllPostalDispatchesAsync();
-                var model = new FOPostalDispatchPageViewModel
+
+                var request = new FOPostalDispatchSearchRequest
                 {
-                    Items = res.Success ? res.Data : new List<FOPostalDispatchViewModel>()
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+
+                var res = _client.GetAllPostalDispatchesWithPageIndexAsync(request);
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+                await Task.WhenAll(res, sessionTask, companiesTask);
+
+                var pagedResult = await res;
+
+                
+                model = new FOPostalDispatchPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<FOPostalDispatchViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID
                 };
                 model.Permissions = perms;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
 
+
+        public async Task<IActionResult> AddPostalDispatch(int? id)
+        {
+            var model = new FOPostalDispatchAddPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/VisitorBook"
+               );
+
+
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _client.GetPostalDispatchByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
+                }
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
+
+        /// <summary>
+        /// Fetches one record for editing. Notably these two don't check permissions
+        /// before returning data — worth a look if that's intentional, since the sibling actions elsewhere in the file do check.
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetPostalDispatch(int id)
         {
-            var r = await _client.GetPostalDispatchByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            try
+            {
+                var r = await _client.GetPostalDispatchByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpPost]
@@ -460,19 +1034,54 @@ namespace SchoolERP.Net.Controllers
 
                 if (attachmentFile != null && attachmentFile.Length > 0)
                 {
+                    long MaxFileSizeMB = _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
+                    long maxBytes = MaxFileSizeMB * 1024L * 1024L;
+
+                    if (attachmentFile.Length > maxBytes)
+                    {
+                        return Json(new { success = false, message = $"File size exceeds the {MaxFileSizeMB} MB limit." });
+                    }
+
                     req.FileName = attachmentFile.FileName;
                     req.FileType = attachmentFile.ContentType;
-                    using (var ms = new MemoryStream())
-                    {
-                        await attachmentFile.CopyToAsync(ms);
-                        req.Attachment = ms.ToArray();
-                    }
+
                 }
                 var r = await _client.UpsertPostalDispatchAsync(req);
+                if (r.Data?.Result?.Result == 1)
+                {
+                    int? postalDispatchId = r.Data.Result.POSTALDISPATCHID;
+                    if (attachmentFile != null && attachmentFile.Length > 0)
+                    {
+                        using var memoryStream = new MemoryStream();
+                        await attachmentFile.CopyToAsync(memoryStream);
+
+                        byte[] fileBytes = memoryStream.ToArray();
+                        PhotoUploadResult photoResult = new PhotoUploadResult();
+                        if (req.FileName != null)
+                        {
+                            photoResult = await _photoService.SaveBase64PhotoAsync(
+                                Convert.ToBase64String(fileBytes),
+                                req.FileName ?? "photo.jpg",
+                                PhotoModule.PostalDispatch,
+                                postalDispatchId.Value
+                            );
+                            var attchment = new FOPostalDispatchAttachmentUpsertRequest
+                            {
+                                PostalDispatchID = postalDispatchId.Value,
+                                Attachment = photoResult.PhotoUrl,
+                                FileName = attachmentFile.FileName,
+                                FileType = attachmentFile.ContentType
+
+                            };
+                            var attachment = await _client.UpsertPostalDispatchAttachmentFileAsync(attchment);
+                        }
+                    }
+                }
                 return Json(new { success = r.Success, message = r.Message });
             }
             catch (Exception ex)
             {
+                TempData["Error"] = ex.Message;
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
         }
@@ -480,34 +1089,90 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> DeletePostalDispatch([FromBody] List<int> id)
         {
-            var r = await _client.DeletePostalDispatchAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.DeletePostalDispatchAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpPost]
-        public async Task<IActionResult> TogglePostalDispatchStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePostalDispatchStatus([FromBody] StatusUpdateRequest request)
         {
-            var r = await _client.TogglePostalDispatchStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.TogglePostalDispatchStatusAsync(request);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         [HttpGet]
         public async Task<IActionResult> DownloadDispatchAttachment(int id)
         {
-            var r = await _client.GetPostalDispatchByIDAsync(id);
-            if (!r.Success || r.Data?.Attachment == null) return NotFound();
+            try
+            {
+                //var r = await _client.GetPostalDispatchByIDAsync(id);
+                //if (!r.Success || r.Data?.Attachment == null) return NotFound();
 
-            string contentType = r.Data.FileType ?? "application/octet-stream";
-            string fileName = r.Data.FileName ?? $"dispatch_attachment_{id}";
+                //string contentType = r.Data.FileType ?? "application/octet-stream";
+                //string fileName = r.Data.FileName ?? $"dispatch_attachment_{id}";
 
-            return File(r.Data.Attachment, contentType, fileName);
+                //return File(r.Data.Attachment, contentType, fileName);
+
+
+                var r = await _client.GetPostalDispatchByIDAsync(id);
+
+                if (!r.Success || string.IsNullOrWhiteSpace(r.Data?.Attachment))
+                    return NotFound();
+
+                // Full physical path
+                var filePath = Path.Combine(
+                    _environment.WebRootPath,
+                    r.Data.Attachment.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
+                );
+
+                if (!System.IO.File.Exists(filePath))
+                    return NotFound("File not found.");
+
+                var fileName = Path.GetFileName(filePath);
+
+                return PhysicalFile(
+                    filePath,
+                    "application/octet-stream",
+                    fileName);
+
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message }); 
+            }
+            
         }
 
         /// <summary>
         /// Shows the 'Phone Call Log' page, where staff can record details of incoming and outgoing calls.
         /// </summary>
-        public async Task<IActionResult> PhoneCallLog()
+        public async Task<IActionResult> PhoneCallLog(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        string? callType)
         {
+            var model = new FOPhoneCallLogPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
@@ -515,85 +1180,225 @@ namespace SchoolERP.Net.Controllers
                    "/FrontOffice/PhoneCallLog"
                );
 
-                var res = await _client.GetAllPhoneCallLogsAsync();
-                var model = new FOPhoneCallLogPageViewModel
+                var request = new FOPhoneCallLogSearchRequest
                 {
-                    Items = res.Success ? res.Data : new List<FOPhoneCallLogViewModel>()
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    CallType = callType ?? null
+                };
+
+                var res = await _client.GetAllPhoneCallLogsAsync();
+
+                var phoneCallLogsResponse = _client.GetAllPhoneCallLogsWithPageAsync(request);
+
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(phoneCallLogsResponse, sessionTask, companiesTask);
+
+                var pagedResult = await phoneCallLogsResponse;
+
+               
+                model = new FOPhoneCallLogPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<FOPhoneCallLogViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    CallType = callType
                 };
                 model.Permissions = perms;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetPhoneCallLog(int id)
+        public async Task<IActionResult> AddPhoneCallLog(int? id) 
         {
-            var r = await _client.GetPhoneCallLogByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> SavePhoneCallLog([FromBody] FOPhoneCallLogUpsertRequest req)
-        {
-            if (!ModelState.IsValid)
-            {
-                var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                return Json(new { success = false, message = "Validation Error: " + errors });
-            }
-            var r = await _client.UpsertPhoneCallLogAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> DeletePhoneCallLog([FromBody] List<int> id)
-        {
-            var r = await _client.DeletePhoneCallLogAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> TogglePhoneCallLogStatus(int id, bool isActive)
-        {
-            var r = await _client.TogglePhoneCallLogStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
-        }
-
-        /// <summary>
-        /// Shows the 'Visitor Book' page, where the school tracks who visited, why they came, and who they met.
-        /// </summary>
-        public async Task<IActionResult> VisitorBook()
-        {
+            var model = new FOPhoneCallLogAddPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/FrontOffice/VisitorBook"
                );
+               
+               
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _client.GetPhoneCallLogByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Items = response.Data;
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
+                }
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetPhoneCallLog(int id)
+        {
+            try
+            {
+                var r = await _client.GetPhoneCallLogByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SavePhoneCallLog([FromBody] FOPhoneCallLogUpsertRequest req)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Json(new { success = false, message = "Validation Error: " + errors });
+                }
+                req.CompanyID = await GetCompanyId();
+                req.SessionID = await GetSessionId();
+                var r = await _client.UpsertPhoneCallLogAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeletePhoneCallLog([FromBody] List<int> id)
+        {
+            try
+            {
+                var r = await _client.DeletePhoneCallLogAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> TogglePhoneCallLogStatus([FromBody] StatusUpdateRequest request)
+        {
+            try
+            {
+                var r = await _client.TogglePhoneCallLogStatusAsync(request);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
+        }
+
+        /// <summary>
+        /// Loads the visitor list page. Also pulls in Purposes, Classes, and Staff, because the "who did they visit" / "why" 
+        /// fields on the visitor form need those as dropdown sources.
+        /// </summary>
+        public async Task<IActionResult> VisitorBook(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,
+        int? staffId,
+        int? studentId,
+        int? purpose)
+        {
+            var model = new FOVisitorBookPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/VisitorBook"
+               );
+
+                var request = new FOVisitorBookSerchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    StaffID = staffId ?? null,
+                    StudentID = studentId ?? null,
+                    Purposes=purpose
+                };
+
                 var sessionId = await GetSessionId();
-                var visitors = await _client.GetAllVisitorsAsync();
+                var visitors = _client.GetAllVisitorsWithPageIndexAsync(request);
                 var purposes = await _client.GetAllPurposesAsync();
                 var classes = await _classClient.GetAllAsync();
                 var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
 
-                var model = new FOVisitorBookPageViewModel
+                await Task.WhenAll(visitors, sessionTask, companiesTask);
+                var pagedResult = await visitors;
+                model = new FOVisitorBookPageViewModel
                 {
-                    Visitors = visitors.Success ? visitors.Data : new List<FOVisitorBookViewModel>(),
+                    Visitors = pagedResult.Success ? pagedResult.Data.Data : new List<FOVisitorBookViewModel>(),
                     Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
                     Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
+
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionId,
+                    StaffId=staffId,
+                    StudentId=studentId
                 };
                 model.Permissions = perms;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
            
         }
@@ -601,37 +1406,82 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSections(int classId)
         {
-            var r = await _sectionClient.GetByClassAsync(classId);
-            return Json(new { success = r.Success, data = r.Data });
+            try
+            {
+                var r = await _sectionClient.GetByClassAsync(classId);
+                return Json(new { success = r.Success, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpGet]
         public async Task<IActionResult> GetStudents(int classId, int sectionId)
         {
-            var r = await _studentClient.GetStudentListAsync(classId, sectionId);
-            return Json(new { success = r.Success, data = r.Data });
+            try
+            {
+                var r = await _studentClient.GetStudentListAsync(classId, sectionId);
+                return Json(new { success = r.Success, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllStaff()
         {
-            var sessionId = await GetSessionId();
-            var r = await _hrClient.GetAllStaffAsync(sessionId);
-            return Json(new { success = r.Success, data = r.Data });
+            try
+            {
+                var sessionId = await GetSessionId();
+                var r = await _hrClient.GetAllStaffAsync(sessionId);
+                return Json(new { success = r.Success, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpGet]
         public async Task<IActionResult> GetStudentByID(int id)
         {
-            var r = await _studentClient.GetStudentByIDAsync(id);
-            return Json(new { success = r.Success, data = r.Data });
+            try
+            {
+                var r = await _studentClient.GetStudentByIDAsync(id);
+                return Json(new { success = r.Success, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         [HttpGet]
         public async Task<IActionResult> GetVisitor(int id)
         {
-            var r = await _client.GetVisitorByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            try
+            {
+                var r = await _client.GetVisitorByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         [HttpPost]
@@ -647,19 +1497,55 @@ namespace SchoolERP.Net.Controllers
 
                 if (attachmentFile != null && attachmentFile.Length > 0)
                 {
+                    long MaxFileSizeMB = _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
+                    long maxBytes = MaxFileSizeMB * 1024L * 1024L;
+
+                    if (attachmentFile.Length > maxBytes)
+                    {
+                        return Json(new { success = false, message = $"File size exceeds the {MaxFileSizeMB} MB limit." });
+                    }
+
                     req.FileName = attachmentFile.FileName;
                     req.FileType = attachmentFile.ContentType;
-                    using (var ms = new MemoryStream())
-                    {
-                        await attachmentFile.CopyToAsync(ms);
-                        req.Attachment = ms.ToArray();
-                    }
+                                      
                 }
                 var r = await _client.UpsertVisitorAsync(req);
-                return Json(new { success = r.Success, message = r.Message });
+                if (r.Data?.Result?.Result == 1) 
+                {
+                    int? visitorBookId = r.Data.Result.VISITORBOOKID;
+                    if (attachmentFile != null && attachmentFile.Length > 0)
+                    {
+                        using var memoryStream = new MemoryStream();
+                        await attachmentFile.CopyToAsync(memoryStream);
+
+                        byte[] fileBytes = memoryStream.ToArray();
+                        PhotoUploadResult photoResult = new PhotoUploadResult();
+                        if (req.FileName != null)
+                        {
+                            photoResult = await _photoService.SaveBase64PhotoAsync(
+                                Convert.ToBase64String(fileBytes),
+                                req.FileName ?? "photo.jpg",
+                                PhotoModule.VisitorBook,
+                                visitorBookId.Value
+                            );
+                            var attchment = new FOVisitorBookAttachmentUpsertRequest
+                            {
+                                VisitorBookID = visitorBookId.Value,
+                                Attachment = photoResult.PhotoUrl,
+                                FileName = attachmentFile.FileName,
+                                FileType = attachmentFile.ContentType
+
+                            };
+                            var attachment = await _client.UpsertVisitorAttachmentFileAsync(attchment);
+                        }
+                    }
+                }
+                
+                    return Json(new { success = r.Success, message = r.Message });
             }
             catch (Exception ex)
             {
+                TempData["Error"] = ex.Message;
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
         }
@@ -667,51 +1553,108 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> DeleteVisitor([FromBody] List<int> id)
         {
-            var r = await _client.DeleteVisitorAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.DeleteVisitorAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+         
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleVisitorStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleVisitorStatus([FromBody] StatusUpdateRequest request)
         {
-            var r = await _client.ToggleVisitorStatusAsync(id, isActive);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.ToggleVisitorStatusAsync(request);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         /// <summary>
         /// Shows the 'Admission Inquiry' page, where the school records potential students who have asked about joining.
         /// Users can filter inquiries by date, source (like 'Website'), or class.
         /// </summary>
-        public async Task<IActionResult> AdmissionInquiry(DateTime? fromDate = null, DateTime? toDate = null, int sourceId = 0, int classId = 0, string? status = null)
+        public async Task<IActionResult> AdmissionInquiry(
+            DateTime? fromDate = null,
+            DateTime? toDate = null, 
+            int? sourceId = 0,
+            int? classId = 0, 
+            string? status = null,
+            int? pageIndex=null,
+        int? pageSize = null,
+        string? search = null,
+        int? companyId = null,
+        int? sessionID = null)
         {
+            var model = new FOAdmissionInquiryPageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/FrontOffice/AdmissionInquiry"
                );
+                var req = new EnquirySearchRequest 
+                {
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    FromDate=fromDate??null,
+                    ToDate=toDate??null,
+                    SourceID=sourceId??null,
+                    ClassID=classId??null,
+                    Status=status ?? null,
+                    SearchKeyword=search??null,
+                    PageNumber=pageIndex,
+                    PageSize=pageSize
+
+                };
                 var sessionId = await GetSessionId();
-                var inquiries = await _client.GetAllAdmissionInquiriesAsync(fromDate, toDate, sourceId, classId, status);
+                var inquiries = _client.GetAllAdmissionInquiriesWithPageIndexAsync(req);
                 var classes = await _classClient.GetAllAsync(false,sessionId);
                 var sources = await _client.GetAllSourcesAsync();
                 var references = await _client.GetAllReferencesAsync();
                 var staff = await _hrClient.GetAllStaffAsync(sessionId);
 
-                var model = new FOAdmissionInquiryPageViewModel
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(inquiries, sessionTask, companiesTask);
+
+                var pagedResult = await inquiries;
+
+                model = new FOAdmissionInquiryPageViewModel
                 {
-                    Inquiries = inquiries.Success ? inquiries.Data : new List<FOAdmissionInquiryViewModel>(),
+                    Inquiries = pagedResult.Success ? pagedResult.Data.Data : new List<FOAdmissionInquiryViewModel>(),
                     Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
                     Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>(),
                     References = references.Success ? references.Data : new List<MstFOReferenceViewModel>(),
-                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionId
                 };
                 model.Permissions = perms;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
@@ -719,73 +1662,236 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetInquiry(int id)
         {
-            var r = await _client.GetAdmissionInquiryByIDAsync(id);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            try
+            {
+                var r = await _client.GetAdmissionInquiryByIDAsync(id);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllInquiriesJson(DateTime? fromDate = null, DateTime? toDate = null, int sourceId = 0, int classId = 0, string? status = null)
         {
-            var r = await _client.GetAllAdmissionInquiriesAsync(fromDate, toDate, sourceId, classId, status);
-            return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            try
+            {
+                var r = await _client.GetAllAdmissionInquiriesAsync(fromDate, toDate, sourceId, classId, status);
+                return Json(new { success = r.Success, message = r.Message, data = r.Data });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpPost]
         public async Task<IActionResult> SaveInquiry([FromBody] FOAdmissionInquiryUpsertRequest req)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                return Json(new { success = false, message = "Validation Error: " + errors });
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Json(new { success = false, message = "Validation Error: " + errors });
+                }
+                var r = await _client.UpsertAdmissionInquiryAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
             }
-            var r = await _client.UpsertAdmissionInquiryAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpPost]
         public async Task<IActionResult> DeleteInquiry([FromBody] List<int> id)
         {
-            var r = await _client.DeleteAdmissionInquiryAsync(id);
-            return Json(new { success = r.Success, message = r.Message });
+            try
+            {
+                var r = await _client.DeleteAdmissionInquiryAsync(id);
+                return Json(new { success = r.Success, message = r.Message });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+           
         }
 
         [HttpPost]
         public async Task<IActionResult> SaveFollowUp([FromBody] FOInquiryFollowUpSaveRequest req)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
-                return Json(new { success = false, message = "Validation Error: " + errors });
+                if (!ModelState.IsValid)
+                {
+                    var errors = string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                    return Json(new { success = false, message = "Validation Error: " + errors });
+                }
+                var r = await _client.SaveInquiryFollowUpAsync(req);
+                return Json(new { success = r.Success, message = r.Message });
             }
-            var r = await _client.SaveInquiryFollowUpAsync(req);
-            return Json(new { success = r.Success, message = r.Message });
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = "Error: " + ex.Message });
+            }
+            
         }
 
         [HttpGet]
         public async Task<IActionResult> DownloadVisitorAttachment(int id)
         {
-            var r = await _client.GetVisitorByIDAsync(id);
-            if (!r.Success || r.Data?.Attachment == null) return NotFound();
+            try
+            {
+                var r = await _client.GetVisitorByIDAsync(id);
 
-            string contentType = r.Data.FileType ?? "application/octet-stream";
-            string fileName = r.Data.FileName ?? $"visitor_doc_{id}";
+                if (!r.Success || string.IsNullOrWhiteSpace(r.Data?.Attachment))
+                    return NotFound();
 
-            return File(r.Data.Attachment, contentType, fileName);
+                // Full physical path
+                var filePath = Path.Combine(
+                    _environment.WebRootPath,
+                    r.Data.Attachment.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
+                );
+
+                if (!System.IO.File.Exists(filePath))
+                    return NotFound("File not found.");
+
+                var fileName = Path.GetFileName(filePath);
+
+                return PhysicalFile(
+                    filePath,
+                    "application/octet-stream",
+                    fileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return Json(new { success = false, message = ex.Message });
+            }
+
         }
 
         [HttpGet]
         public async Task<IActionResult> InquiryFollowUp(int id) 
         {
+            var model = new FOAdmissionInquiryViewModel();
             try
             {
-                var model = new FOAdmissionInquiryViewModel();
-                var r = await _client.GetAdmissionInquiryByIDAsync(id);
+                
+                model = (await _client.GetAdmissionInquiryByIDAsync(id)).Data;
+
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
+        }
+
+        public async Task<IActionResult> AddAdmissionEnquiry(int? id) 
+        {
+            var model = new AddAdmissionInquiryPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/AddAdmissionEnquiry"
+               );
+                var sessionId = await GetSessionId();
+                //var inquiries = await _client.GetAdmissionInquiryByIDAsync(id);
+                var classes = await _classClient.GetAllAsync(false, sessionId);
+                var sources = await _client.GetAllSourcesAsync();
+                var references = await _client.GetAllReferencesAsync();
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+
+                model = new AddAdmissionInquiryPageViewModel
+                {
+                    //Inquiries = inquiries.Success ? inquiries.Data : new FOAdmissionInquiryViewModel(),
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Sources = sources.Success ? sources.Data : new List<MstFOSourceViewModel>(),
+                    References = references.Success ? references.Data : new List<MstFOReferenceViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                };
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _client.GetAdmissionInquiryByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Inquiries = response.Data;
+                        model.EditInquiries = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditInquiries = null;
+                }
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
+
+        public async Task<IActionResult> AddVisitorBook(int? id)
+        {
+            var model = new AddVisitorBookPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/FrontOffice/VisitorBook"
+               );
+                var sessionId = await GetSessionId();
+                var visitors = await _client.GetAllVisitorsAsync();
+                var purposes = await _client.GetAllPurposesAsync();
+                var classes = await _classClient.GetAllAsync();
+                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+
+                model = new AddVisitorBookPageViewModel
+                {
+                    //Visitors = visitors.Success ? visitors.Data : new List<FOVisitorBookViewModel>(),
+                    Purposes = purposes.Success ? purposes.Data : new List<MstFOPurposeViewModel>(),
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>()
+                };
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _client.GetVisitorByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Visitors = response.Data;
+                        model.EditVisitors = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditVisitors = null;
+                }
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+
         }
     }
 }

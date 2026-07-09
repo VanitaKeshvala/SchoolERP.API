@@ -35,6 +35,6 @@ namespace SchoolERP.Net.Services.Clients
             return await PostAsync<dynamic>($"api/CountryAPI/ToggleStatus", request);
         }
 
-
+        
     }
 }

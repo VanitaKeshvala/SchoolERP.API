@@ -1,4 +1,4 @@
-@model SchoolERP.Shared.Models.PromoteStudentsPageViewModel
+﻿@model SchoolERP.Shared.Models.PromoteStudentsPageViewModel
 @using System.Security.Claims
 @using System.Text.Json
 @{
@@ -17,149 +17,119 @@
     <div>
         <h6 class="fw-bold mb-0">Promote Students</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1 d-none">
-        <a href="#promote" class="btn btn-dark top-btn" id="btnOpenPromoteModal" onclick="openPromoteModal(event)"><i class="ti ti-pray me-1"></i> Promote</a>
-        
+    <div class="d-flex align-items-center flex-wrap gap-1 ">
+        <button class="btn btn-success" id="btnSave" disabled onclick="confirmPromotion()"><i class="ti ti-cloud me-1"></i> Save</button>
+
     </div>
 </div>
 
 <!-- End Page Header -->
 <!-- start row -->
 <div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-tbl-outer mb-2">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 320px;" placeholder="Search students..." />
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model?.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by class, section..."
+                               style="min-width: 320px;" />
                     </div>
-                    @* <input type="text" id="tableSearch" class="form-control w-25 me-3" placeholder="Search..." /> *@
 
-                    <div class="promot-student">
-                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
-                            <div class="dropdown">
-                                <a href="#" id="btnPromote" class="btn btn-primary border rounded btn-md text-white fs-14 align-items-center d-flex fw-normal"
-                                   data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                    <i class="ti ti-pray"></i>Promote
-                                </a>
-                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="promote-students">
-                                    <form id="filterForm1" method="post" action="/Academics/PromoteStudents">
-                                        <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                            <h6 class="mb-0">Promote Students In Next Session</h6>
-                                            <div class="d-flex align-items-center justify-content-end me-2">
-                                                @* <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button> *@
-                                                <button class="btn btn-success" onclick="confirmPromotion()"><i class="ti ti-cloud me-1"></i> Save</button>
-                                                @* <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i>Close</button> *@
-                                            </div>
-                                        </div>
-                                        <div class="filter-body row">
-                                            <div class="col-md-12 mb-3">
-                                                <label class="form-label mb-1">Promote In Session<span class="text-danger">*</span></label>
-                                                <select id="NextSessionID" name="nextSessionId" class="form-select form-control">
-                                                    <option value="">Select</option>
-                                                    @foreach (var s in Model.Sessions)
-                                                    {
-                                                        <option value="@s.SessionId" selected="@(Model.NextSessionId == s.SessionId)">@s.SessionTitle</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
-                                                <select id="NextClassID" name="nextClassId" class="form-select form-control" onchange="onNextClassChange()">
-                                                    <option value="">Select</option>
-                                                    @foreach (var c in Model.Classes)
-                                                    {
-                                                        <option value="@c.ClassID" selected="@(Model.NextClassId == c.ClassID)">@c.ClassName</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
-                                                <select id="NextSectionID" name="nextSectionId" class="form-select form-control">
-                                                    <option value="">Select</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </form>
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="PromoteStudents" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model?.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
+                        <input type="hidden" name="sectionID" id="hdnSectionID" value="" />
+                        <input type="hidden" name="classId" id="hdnclassId" value="" />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model?.PageSize" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
-                            <div class="dropdown">
-                                <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                                   data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                    <i class="ti ti-filter text-gray-5 me-1"></i>Filters
-                                </a>
-                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
-                                    <form id="filterForm" method="post" action="/Academics/PromoteStudents">
-                                        <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                            <h6 class="mb-0">Select Criteria</h6>
-                                            <div class="d-flex align-items-center justify-content-end me-2">
-                                                <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button>
-                                            </div>
-                                        </div>
-                                        <div class="filter-body row">
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
-                                                <select name="classId" id="FilterClassID" class="form-select form-control" onchange="onFilterClassChange()" required>
-                                                    <option value="">Select</option>
-                                                    @foreach (var c in Model.Classes)
-                                                    {
-                                                        <option value="@c.ClassID" selected="@(Model.SelectedClassId == c.ClassID)">@c.ClassName</option>
-                                                    }
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
-                                                <select name="sectionId" id="FilterSectionID" class="form-select form-control" required>
-                                                    <option value="">Select</option>
-                                                </select>
-                                            </div>
-                                            @* <div class="col-md-12">
-                                            <p class="text-primary mb-2">Promote Students In Next Session</p>
-                                        </div>
-                                        <div class="col-md-12 mb-3">
-                                            <label class="form-label mb-1">Promote In Session<span class="text-danger">*</span></label>
-                                            <select id="NextSessionID" name="nextSessionId" class="form-select form-control">
-                                                <option value="">Select</option>
-                                                @foreach (var s in Model.Sessions)
-                                                {
-                                                    <option value="@s.SessionId" selected="@(Model.NextSessionId == s.SessionId)">@s.SessionTitle</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
-                                            <select id="NextClassID" name="nextClassId" class="form-select form-control" onchange="onNextClassChange()">
-                                                <option value="">Select</option>
-                                                @foreach (var c in Model.Classes)
-                                                {
-                                                    <option value="@c.ClassID" selected="@(Model.NextClassId == c.ClassID)">@c.ClassName</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
-                                            <select id="NextSectionID" name="nextSectionId" class="form-select form-control">
-                                                <option value="">Select</option>
-                                            </select>
-                                        </div> *@
-                                        </div>
-                                    </form>
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                   
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
+                                        <select name="classId" id="FilterClassID" class="form-select form-control" onchange="onFilterClassChange()" required>
+                                            <option value="">Select</option>
+                                            @foreach (var c in Model?.Classes)
+                                            {
+                                                <option value="@c.ClassID" selected="@(Model?.SelectedClassId == c.ClassID)">@c.ClassName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
+                                        <select name="sectionId" id="FilterSectionID" class="form-select form-control" required>
+                                            <option value="">Select</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
-                    
 
-                   
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">
             <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
@@ -184,41 +154,28 @@
                                 <th>Student Name</th>
                                 <th>Father Name</th>
                                 <th>Date Of Birth</th>
-                                <th>Current Result</th>
-                                <th>Next Session Status</th>
+                                <th>Promotion Class</th>
+                                <th>Next Session</th>
                             </tr>
                         </thead>
                         <tbody>
                             @if (Model.Students.Any())
                             {
-                                foreach (var s in Model.Students)
+                                foreach (var s in Model?.Students)
                                 {
+                                    
                                     <tr class="student-row" data-id="@s.StudentID">
-                                        <td><input type="checkbox" onchange="selectItem(@s.StudentID,this)" class="form-check-input student-checkbox"></td>
+                                        <td>
+                                            <input type="hidden" id="hdnNEXTCLASSID" value="@s.NEXTCLASSID" />
+                                            <input type="hidden" id="hdnNEXTSESSIONTITLE" value="@s.NEXTSESSIONID" />
+                                            <input type="checkbox" onchange="selectItem(@s.StudentID,this)" class="form-check-input student-checkbox">
+                                        </td>
                                         <td>@s.AdmissionNo</td>
                                         <td>@s.StudentName</td>
                                         <td>@s.FatherName</td>
                                         <td>@(s.DOB?.ToString("dd-MM-yyyy") ?? "-")</td>
-                                        <td>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input"  name="pass_@s.StudentID" id="p_@s.StudentID" value="Pass" checked>
-                                                <label for="p_@s.StudentID">Pass</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="pass_@s.StudentID" id="f_@s.StudentID" value="Fail">
-                                                <label for="f_@s.StudentID">Fail</label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="cont_@s.StudentID" id="c_@s.StudentID" value="Continue" checked>
-                                                <label for="c_@s.StudentID">Continue</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="cont_@s.StudentID" id="l_@s.StudentID" value="Leave">
-                                                <label for="l_@s.StudentID">Leave</label>
-                                            </div>
-                                        </td>
+                                        <td>@s.NextClassName</td>
+                                        <td>@s.NEXTSESSIONTITLE</td>
                                     </tr>
                                 }
                             }
@@ -236,24 +193,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="promote">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title">Promote Confirmation</h5>
-                <div>
-                    <button class="btn btn-success" onclick="confirmPromotion()"><i class="ti ti-cloud me-1"></i> Save</button>
-                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i>Close</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <h6 class="text-center text-muted py-5">
-                    Are you sure <br> You want to promote Confirmation ?
-                </h6>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 @section Styles {
     <style>
@@ -262,310 +202,5 @@
 }
 
 @section Scripts {
-    <script>
-        function triggerExport(index) {
-            if ($('#studentsTable tbody tr.student-row').length === 0) {
-                if (window.Swal) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'No Data',
-                        text: 'Please apply filters first to load students.',
-                        confirmButtonColor: '#3085d6'
-                    });
-                } else {
-                    alert('Please apply filters first to load students.');
-                }
-                return;
-            }
-            if ($.fn.DataTable.isDataTable('#studentsTable')) {
-                const table = $('#studentsTable').DataTable();
-                table.button(index).trigger();
-            }
-        }
-
-        $(document).ready(function () 
-        {
-            updatePromoteButton();
-            const exportOpts = {
-                columns: [1, 2, 3, 4, 5, 6],
-                format: {
-                    body: function (data, row, column, node) {
-                        const checkedRadio = node.querySelector('input[type="radio"]:checked');
-                        if (checkedRadio) {
-                            return checkedRadio.value;
-                        }
-                        return data.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-                    }
-                }
-            };
-
-            if ($('#studentsTable tbody tr.student-row').length > 0) {
-                $('#studentsTable').DataTable({
-                    dom: 'Bfrtip',
-                    buttons: [
-                        { extend: 'copy', exportOptions: exportOpts },
-                        { extend: 'csv', exportOptions: exportOpts },
-                        { extend: 'excel', exportOptions: exportOpts },
-                        { extend: 'pdf', exportOptions: exportOpts },
-                        { extend: 'print', exportOptions: exportOpts }
-                    ],
-                    searching: false,
-                    paging: false,
-                    info: false
-                });
-            }
-
-            $('.filter-dropdown').on('click', function (e) {
-                e.stopPropagation();
-            });
-            
-            
-            $('#selectAll').on('change', function () {
-                $('.student-checkbox').prop('checked', $(this).is(':checked'));
-                let checkedCount = $('.student-checkbox:checked').length;
-                $('#btnPromote').prop('disabled', checkedCount === 0);
-            });
-
-            const initialClassId = '@Model.SelectedClassId';
-            const initialSectionId = '@Model.SelectedSectionId';
-            if (initialClassId) {
-                loadSections(initialClassId, '#FilterSectionID', initialSectionId);
-            }
-
-            const initialNextClassId = '@Model.NextClassId';
-            const initialNextSectionId = '@Model.NextSectionId';
-            if (initialNextClassId) {
-                loadSections(initialNextClassId, '#NextSectionID', initialNextSectionId);
-            }
-
-            renderFilterBadges();
-
-            $("#txtSearchInput").on("keyup", function() {
-                var value = $(this).val().toLowerCase();
-                $("#studentsTable tbody tr").filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-                });
-                renderFilterBadges();
-            });
-        });
-
-        function loadSections(classId, targetSelector, selectedId = null) {
-            if (!classId) {
-                $(targetSelector).html('<option value="">Select</option>');
-                return;
-            }
-            $.get('/Academics/GetSectionsByClass/' + classId, function (res) {
-                if (res.success) {
-                    let html = '<option value="">Select</option>';
-                    res.data.forEach(s => {
-                        html += `<option value="${s.sectionID}" ${s.sectionID == selectedId ? 'selected' : ''}>${s.sectionName}</option>`;
-                    });
-                    $(targetSelector).html(html);
-                    renderFilterBadges();
-                }
-            });
-        }
-
-        function onFilterClassChange() {
-            loadSections($('#FilterClassID').val(), '#FilterSectionID');
-        }
-
-        function onNextClassChange() {
-            loadSections($('#NextClassID').val(), '#NextSectionID');
-        }
-
-        // --- Filter Badges Logic ---
-        function renderFilterBadges() {
-            const container = document.getElementById('badgeContainer');
-            const mainContainer = document.getElementById('activeFilterBadges');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filters = [
-                { id: 'txtSearchInput', label: 'Search', type: 'text' },
-                { id: 'FilterClassID', label: 'Class', type: 'select' },
-                { id: 'FilterSectionID', label: 'Section', type: 'select' }
-            ];
-
-            let activeCount = 0;
-
-            filters.forEach(f => {
-                const el = document.getElementById(f.id);
-                if (!el) return;
-
-                let value = el.value;
-                let text = '';
-
-                if (f.type === 'text') {
-                    if (value.trim()) {
-                        text = value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'select') {
-                    if (value && value !== 'all' && value !== '') {
-                        const selectedOption = el.options[el.selectedIndex];
-                        if (selectedOption && selectedOption.value !== "") {
-                            text = selectedOption.text;
-                            activeCount++;
-                        }
-                    }
-                }
-
-                if (text) {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
-                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
-                    container.appendChild(badge);
-                }
-            });
-
-            if (activeCount > 0) {
-                mainContainer.style.display = 'block';
-            } else {
-                mainContainer.style.display = 'none';
-            }
-        }
-
-        function removeFilter(filterId) {
-            const el = document.getElementById(filterId);
-            if (!el) return;
-
-            if (el.tagName === 'INPUT') {
-                el.value = '';
-                $(el).trigger('keyup');
-            } else {
-                el.value = '';
-                if (filterId === 'FilterClassID') {
-                    $('#FilterSectionID').html('<option value="">Select</option>');
-                }
-                if (window.jQuery && jQuery(el).data('select2')) {
-                    jQuery(el).trigger('change.select2');
-                }
-                $('#filterForm').submit();
-            }
-        }
-
-        function resetAllFilters() {
-            document.getElementById('txtSearchInput').value = '';
-            document.getElementById('FilterClassID').value = '';
-            document.getElementById('FilterSectionID').value = '';
-            
-            $('#txtSearchInput').trigger('keyup');
-            $('#filterForm').submit();
-        }
-        function selectItem(id, row)
-        {
-                updatePromoteButton();
-        }
-        function openPromoteModal(e) {
-            const checkedCount = $('.student-checkbox:checked').length;
-            if (checkedCount === 0) {
-                e.preventDefault();
-                Swal.fire({
-                                icon: 'warning',
-                                title: 'No Data',
-                                text: 'Please select at least one student.',
-                                confirmButtonColor: '#3085d6'
-                            });
-                 
-                //alert('Please select at least one student.');
-                return;
-            }
-
-            const nextSession = $('#NextSessionID').val();
-            const nextClass = $('#NextClassID').val();
-            const nextSection = $('#NextSectionID').val();
-
-            if (!nextSession || !nextClass || !nextSection) {
-                e.preventDefault();
-                 Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Please select Promote In Session, Class, and Section in the filter dropdown.',
-                    confirmButtonText: 'OK',
-                    customClass: { confirmButton: 'btn btn-danger' },
-                    buttonsStyling: false
-                });
-                //alert('Please select Promote In Session, Class, and Section in the filter dropdown.');
-                return;
-            }
-            
-            // Allow default behavior (opening modal)
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('promote')).show();
-        }
-
-        async function confirmPromotion() {
-            const nextSession = $('#NextSessionID').val();
-            const nextClass = $('#NextClassID').val();
-            const nextSection = $('#NextSectionID').val();
-            const students = [];
-            $('.student-checkbox:checked').each(function () {
-                const row = $(this).closest('tr');
-                const studentId = row.data('id');
-                students.push({
-                    StudentID: studentId,
-                    Result: row.find(`input[name="pass_${studentId}"]:checked`).val(),
-                    NextStatus: row.find(`input[name="cont_${studentId}"]:checked`).val()
-                });
-                
-            });
-            
-            const data = {
-                CurrentClassID: parseInt($('#FilterClassID').val()),
-                CurrentSectionID: parseInt($('#FilterSectionID').val()),
-                NextSessionID: parseInt(nextSession),
-                NextClassID: parseInt(nextClass),
-                NextSectionID: parseInt(nextSection),
-                Students: students
-            };
-
-
-                 try {
-
-            const r = await fetch('/Academics/SavePromotion', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            const res = await r.json();
-            if (res.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Saved!',
-                    text: 'Promotion student has been added successfully.',
-                    confirmButtonText: 'OK',
-                    customClass: { confirmButton: 'btn btn-success' },
-                    buttonsStyling: false
-                }).then(() => {
-                    window.location.reload();
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: res.message || 'Failed to save promotion student.',
-                    confirmButtonText: 'OK',
-                    customClass: { confirmButton: 'btn btn-danger' },
-                    buttonsStyling: false
-                });
-            }
-
-        } catch (err) {
-            console.error(err);
-            IV.setNotice('classModalNotice', 'Could not save hostel.');
-        }
-        }
-
-                // Replace .prop('disabled') with a class-based approach for <a> tags
-
-        function updatePromoteButton() {
-            const checkedCount = $('.student-checkbox:checked').length;
-            const btn = $('#btnPromote');
-            if (checkedCount > 0) {
-                btn.removeClass('disabled pe-none opacity-50');
-            } else {
-                btn.addClass('disabled pe-none opacity-50');
-            }
-        }
-    </script>
+    <script src="~/assets/js/PromoteStudents.js"></script>
 }

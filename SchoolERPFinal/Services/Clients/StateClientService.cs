@@ -38,5 +38,6 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await GetAsync<List<StateModel>>($"api/StateAPI/GetAllStateByCounty?companyId={companyId}&sessionId={sessionId}&countryId={countryId}");
         }
+
     }
 }

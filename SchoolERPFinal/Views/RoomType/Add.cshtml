@@ -2,14 +2,14 @@
 @using System.Text.Json
 @model SchoolERP.Shared.Models.RoomCoolingTypeAddViewModel
 @{
-    ViewData["Title"] = "Add Room Cooling Type";
+    ViewData["Title"] = "Add Room Type";
     var p = Model.Permissions;
 }
 
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">@(Model.EditRoomCoolingType == null ? "Add Room Cooling Type" : "Edit Room Cooling Type")</h6>
+        <h6 class="fw-bold mb-0">@(Model.EditRoomCoolingType == null ? "Add Room Type" : "Edit Room Type")</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
@@ -18,7 +18,7 @@
                 <i class="ti ti-device-floppy me-1"></i> Save
             </button>
         }
-        <a href="/RoomCoolingType/Index" class="btn btn-secondary top-btn">
+        <a href="/RoomType/Index" class="btn btn-secondary top-btn">
             <i class="ti ti-arrow-left me-1"></i> Back
         </a>
     </div>
@@ -34,13 +34,19 @@
                     <div class="row">
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Room Cooling Type Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="txtHostelTypeName"
+                            <label class="form-label fw-semibold">Room Type Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtRoomTypeName"
                                    value="@Model.EditRoomCoolingType?.RoomCoolingTypeName"
                                    placeholder="e.g. 1st Class" autocomplete="off">
                             <div class="invalid-feedback" id="errTxtHostelTypeName"></div>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Display Name</label>
+                            <input type="text" class="form-control" id="txtDisplayLabel"
+                                   value="@Model.EditRoomCoolingType?.DisplayLabel"
+                                   placeholder="e.g. 1st Class" autocomplete="off">
+                        </div>
+                        <div class="col-md-12 mb-3">
                             <label class="form-label fw-bold">Description</label>
                             <textarea class="form-control" id="txtDescription" rows="1">@Model.EditRoomCoolingType?.Description</textarea>
                             <div class="invalid-feedback" id="errDdlSections"></div>

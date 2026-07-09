@@ -5,6 +5,7 @@ using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Data;
+using System.Net;
 
 namespace SchoolERP.API.Services
 {
@@ -14,9 +15,11 @@ namespace SchoolERP.API.Services
     public class FrontOfficeService : IFrontOfficeService
     {
         private readonly IConfiguration _configuration;
-        public FrontOfficeService(IConfiguration configuration)
+        private readonly ILogger<FrontOfficeService> _logger;
+        public FrontOfficeService(IConfiguration configuration, ILogger<FrontOfficeService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
         // ─── HELPERS ────────────────────────────────────────────
@@ -52,6 +55,67 @@ namespace SchoolERP.API.Services
                 commandType: CommandType.StoredProcedure
             ).ToList();
         }
+
+
+        public async Task<PagedResult<MstFOPurposeViewModel>> GetAllPurposesWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<MstFOPurposeViewModel>(
+                "SP_FO_PURPOSE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstFOPurposeViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<MstFOPurposeViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
 
         /// <summary>
         /// Retrieves a purpose record by its ID.
@@ -90,24 +154,27 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
-                    "sp_FO_Purpose_Upsert",
-                    new
-                    {
-                        req.PurposeID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.Name,
-                        req.Description,
-                        req.IsActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
+
+                var param = new DynamicParameters();
+                
+                param.Add("@PurposeID", req.PurposeID);
+                param.Add("@CompanyID", companyId);
+                param.Add("@SESSIONID", sessionId);
+                param.Add("@Name", req.Name);
+                param.Add("@Description", req.Description);
+                param.Add("@IsActive", req.IsActive);
+                param.Add("@UserId", userId);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                 "sp_FO_Purpose_Upsert",
+                 param,
+                 commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result?.Result ?? 0) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
+                
             }
             catch (Exception ex)
             {
@@ -167,7 +234,7 @@ namespace SchoolERP.API.Services
         /// Item1 = Success flag.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) TogglePurposeStatus(int id, bool isActive, int userId)
+        public (bool, string) TogglePurposeStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -178,9 +245,9 @@ namespace SchoolERP.API.Services
                     "sp_FO_Purpose_ToggleStatus",
                     new
                     {
-                        PurposeID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        PurposeID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
@@ -265,7 +332,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_FO_ComplaintType_Upsert",
                     new
                     {
@@ -280,9 +347,9 @@ namespace SchoolERP.API.Services
                     commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result?.Result ?? 0) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
-                );
+                     result?.Result == 1,
+                     result?.Message ?? "Operation completed."
+                 );
             }
             catch (Exception ex)
             {
@@ -354,27 +421,26 @@ namespace SchoolERP.API.Services
         /// Item1 = Success status.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) ToggleComplaintTypeStatus(int id, bool isActive, int userId)
+        public (bool, string) ToggleComplaintTypeStatus(StatusUpdateRequest request)
         {
             try
             {
+
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
+                var result = conn.QueryFirstOrDefault<(int Result, string Message)>(
                     "sp_FO_ComplaintType_ToggleStatus",
                     new
                     {
-                        ComplaintTypeID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        COMPLAINTTYPEID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return (
-                    Convert.ToInt32(result?.Result ?? 0) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
-                );
+                return (result.Result == 1, result.Message);
+
             }
             catch (Exception ex)
             {
@@ -446,24 +512,25 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
-                    "sp_FO_Source_Upsert",
-                    new
-                    {
-                        req.SourceID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.Name,
-                        Description = req.Description,
-                        req.IsActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
+                var param = new DynamicParameters();
+
+                param.Add("@SourceID", req.SourceID);
+                param.Add("@CompanyID", companyId);
+                param.Add("@SESSIONID", sessionId);
+                param.Add("@Name", req.Name);
+                param.Add("@Description", req.Description);
+                param.Add("@IsActive", req.IsActive);
+                param.Add("@UserId", userId);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                 "sp_FO_Source_Upsert",
+                 param,
+                 commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result?.Result ?? 0) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
-                );
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );                
             }
             catch (Exception ex)
             {
@@ -525,7 +592,7 @@ namespace SchoolERP.API.Services
         /// Item1 = Success flag.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) ToggleSourceStatus(int id, bool isActive, int userId)
+        public (bool, string) ToggleSourceStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -536,9 +603,9 @@ namespace SchoolERP.API.Services
                     "sp_FO_Source_ToggleStatus",
                     new
                     {
-                        SourceID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        SourceID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
@@ -689,7 +756,7 @@ namespace SchoolERP.API.Services
         /// Item1: Success status.
         /// Item2: Result message.
         /// </returns>
-        public (bool, string) ToggleReferenceStatus(int id, bool isActive, int userId)
+        public (bool, string) ToggleReferenceStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -700,9 +767,9 @@ namespace SchoolERP.API.Services
                     "sp_FO_Reference_ToggleStatus",
                     new
                     {
-                        ReferenceID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        ReferenceID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
@@ -738,6 +805,68 @@ namespace SchoolERP.API.Services
                 },
                 commandType: CommandType.StoredProcedure
             ).ToList();
+        }
+
+
+        public async Task<PagedResult<FOComplaintViewModel>> GetAllComplaintsWithPage(ComplaintSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@ComplaintTypeID", req.ComplaintTypeID);
+                param.Add("@SourceID", req.SourceID);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<FOComplaintViewModel>(
+                "sp_FO_Complaint_GetAllWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<FOComplaintViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<FOComplaintViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
 
         /// <summary>
@@ -861,7 +990,7 @@ namespace SchoolERP.API.Services
         /// Item1 = Success status.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) ToggleComplaintStatus(int id, bool isActive, int userId)
+        public (bool, string) ToggleComplaintStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -872,9 +1001,9 @@ namespace SchoolERP.API.Services
                     "sp_FO_Complaint_ToggleStatus",
                     new
                     {
-                        ComplaintID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        ComplaintID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
@@ -911,6 +1040,67 @@ namespace SchoolERP.API.Services
                 commandType: CommandType.StoredProcedure)
                 .ToList();
         }
+
+
+        public async Task<PagedResult<FOPostalReceiveViewModel>> GetAllPostalReceiveWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<FOPostalReceiveViewModel>(
+                "sp_FO_PostalReceive_GetAllPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<FOPostalReceiveViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<FOPostalReceiveViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
         /// <summary>
         /// Retrieves a postal receive record by its unique identifier.
         /// </summary>
@@ -938,7 +1128,7 @@ namespace SchoolERP.API.Services
         /// <returns>
         /// Returns a tuple containing operation status and message.
         /// </returns>
-        public (bool, string) UpsertPostalReceive(
+        public SpPostalReceive UpsertPostalReceive(
             FOPostalReceiveUpsertRequest req,
             int companyId,
             int sessionId,
@@ -946,33 +1136,64 @@ namespace SchoolERP.API.Services
         {
             try
             {
-                using var conn = new SqlConnection(
-                    _configuration.GetConnectionString("DefaultConnection"));
+
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@PostalReceiveID", req.PostalReceiveID);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@SESSIONID", sessionId);
+                parameters.Add("@FromTitle", req.FromTitle);
+                parameters.Add("@ToTitle", req.ToTitle);
+                parameters.Add("@ReferenceNo ", req.ReferenceNo);
+                parameters.Add("@ADDRESS", req.Address);
+                parameters.Add("@NOTE", req.Note);
+                parameters.Add("@DATE", req.Date);
+                parameters.Add("@ISACTIVE", req.IsActive);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<SpPostalReceive>(
+                    "sp_FO_PostalReceive_Upsert",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+
+                return result;
+
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex,
+                   "Error occurred in GetAllClasses. CompanyID:");
+                return null;
+            }
+        }
+
+
+        public (bool success, string message) UpsertPostalReceiveAttachmentFile(
+   FOPostalReceiveAttachmentUpsertRequest req, int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@PostalReceiveID", req.PostalReceiveID);
+                parameters.Add("@ATTACHMENT", req.Attachment);
+                parameters.Add("@FILENAME", req.FileName);
+                parameters.Add("@FILETYPE", req.FileType);
+                parameters.Add("@USERID", userId);
 
                 var result = conn.QueryFirstOrDefault<dynamic>(
-                    "sp_FO_PostalReceive_Upsert",
-                    new
-                    {
-                        req.PostalReceiveID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.FromTitle,
-                        req.ToTitle,
-                        req.ReferenceNo,
-                        req.Address,
-                        req.Note,
-                        req.Date,
-                        req.Attachment,
-                        req.FileName,
-                        req.FileType,
-                        req.IsActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
+                    "sp_FO_PostalReceive_Upsert_Attachment",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
 
                 return (
-                    Convert.ToInt32(result?.Result) == 1,
-                    Convert.ToString(result?.Message) ?? string.Empty
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
                 );
             }
             catch (Exception ex)
@@ -980,6 +1201,7 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
+
         /// <summary>
         /// Deletes a postal receive record from the system.
         /// </summary>
@@ -1020,27 +1242,25 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Updates whether a postal receive record is active or inactive.
         /// </summary>
-        public (bool, string) TogglePostalReceiveStatus(int id, bool isActive, int userId)
+        public (bool, string) TogglePostalReceiveStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
+                var result = conn.QueryFirstOrDefault<(int Result, string Message)>(
                     "sp_FO_PostalReceive_ToggleStatus",
                     new
                     {
-                        PostalReceiveID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        PostalReceiveID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
-                return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
-                );
+                return (result.Result == 1, result.Message);
+                
             }
             catch (Exception ex)
             {
@@ -1061,21 +1281,93 @@ namespace SchoolERP.API.Services
             int sessionId,
             bool includeDeleted = false)
         {
-            using var conn = new SqlConnection(
+            try
+            {
+                using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
-            var parameters = new
-            {
-                CompanyID = companyId,
-                SessionID = sessionId,
-                IncludeDeleted = includeDeleted
-            };
+                var parameters = new
+                {
+                    CompanyID = companyId,
+                    SessionID = sessionId,
+                    IncludeDeleted = includeDeleted
+                };
 
-            return conn.Query<FOPostalDispatchViewModel>(
-                "sp_FO_PostalDispatch_GetAll",
-                parameters,
-                commandType: CommandType.StoredProcedure)
-                .ToList();
+                return conn.Query<FOPostalDispatchViewModel>(
+                    "sp_FO_PostalDispatch_GetAll",
+                    parameters,
+                    commandType: CommandType.StoredProcedure)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                var model = new List<FOPostalDispatchViewModel>();
+                return model;
+            }
+            
+        }
+
+        /// <summary>
+        /// Retrieves all postal dispatches for the specified company and session.
+        /// </summary>
+        public async Task<PagedResult<FOPostalDispatchViewModel>> GetAllPostalDispatchesWithPageIndex(FOPostalDispatchSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<FOPostalDispatchViewModel>(
+                "SP_FO_POSTALDISPATCH_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<FOPostalDispatchViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<FOPostalDispatchViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex,
+                    "Error occurred in GetAllClasses. CompanyID:");
+
+                return null;
+            }
         }
         /// <summary>
         /// Retrieves postal dispatch details by PostalDispatchID.
@@ -1106,7 +1398,7 @@ namespace SchoolERP.API.Services
         /// Item1 = Success status.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) UpsertPostalDispatch(
+        public SpPostalDispatch UpsertPostalDispatch(
             FOPostalDispatchUpsertRequest req,
             int companyId,
             int sessionId,
@@ -1114,35 +1406,37 @@ namespace SchoolERP.API.Services
         {
             try
             {
-                using var conn = new SqlConnection(
-                    _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<(int Result, string Message)>(
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@PostalDispatchID", req.PostalDispatchID);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@SESSIONID", sessionId);
+                parameters.Add("@TOTITLE", req.ToTitle);
+                parameters.Add("@FROMTITLE", req.FromTitle);
+                parameters.Add("@REFERENCENO", req.ReferenceNo);
+                parameters.Add("@ADDRESS", req.Address);
+                parameters.Add("@NOTE", req.Note);
+                parameters.Add("@DATE", req.Date);
+                parameters.Add("@ISACTIVE", req.IsActive);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<SpPostalDispatch>(
                     "sp_FO_PostalDispatch_Upsert",
-                    new
-                    {
-                        req.PostalDispatchID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.ToTitle,
-                        req.FromTitle,
-                        req.ReferenceNo,
-                        req.Address,
-                        req.Note,
-                        req.Date,
-                        req.Attachment,
-                        req.FileName,
-                        req.FileType,
-                        req.IsActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure);
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
 
-                return (result.Result == 1, result.Message ?? string.Empty);
+
+                return result;
+
             }
             catch (Exception ex)
             {
-                return (false, ex.Message);
+                _logger?.LogError(ex,
+                   "Error occurred in GetAllClasses. CompanyID:");
+                return null;
             }
         }
         /// <summary>
@@ -1195,7 +1489,7 @@ namespace SchoolERP.API.Services
         /// Item1 = Success status.
         /// Item2 = Result message.
         /// </returns>
-        public (bool, string) TogglePostalDispatchStatus(int id, bool isActive, int userId)
+        public (bool, string) TogglePostalDispatchStatus(StatusUpdateRequest request)
         {
             try
             {
@@ -1206,9 +1500,9 @@ namespace SchoolERP.API.Services
                     "sp_FO_PostalDispatch_ToggleStatus",
                     new
                     {
-                        PostalDispatchID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        PostalDispatchID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure);
 
@@ -1219,7 +1513,39 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
-       
+
+
+        public (bool success, string message) UpsertPostalDispatchAttachmentFile(
+     FOPostalDispatchAttachmentUpsertRequest req, int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@POSTALDISPATCHID", req.PostalDispatchID);
+                parameters.Add("@ATTACHMENT", req.Attachment);
+                parameters.Add("@FILENAME", req.FileName);
+                parameters.Add("@FILETYPE", req.FileType);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<dynamic>(
+                    "SP_FO_POSTALDISPATCH_UPSERT_ATTACHMENT",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
         // ─── PHONE CALL LOG ─────────────────────────────────────
 
         /// <summary>
@@ -1243,6 +1569,67 @@ namespace SchoolERP.API.Services
                 },
                 commandType: CommandType.StoredProcedure
             ).ToList();
+        }
+
+
+        public async Task<PagedResult<FOPhoneCallLogViewModel>> GetAllPhoneCallLogsWithPage(FOPhoneCallLogSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@CallType", req.CallType);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<FOPhoneCallLogViewModel>(
+                "SP_FO_PHONECALLLOG_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<FOPhoneCallLogViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<FOPhoneCallLogViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
 
         /// <summary>
@@ -1272,34 +1659,37 @@ namespace SchoolERP.API.Services
         /// <param name="sessionId">Session ID.</param>
         /// <param name="userId">User ID.</param>
         /// <returns>Success status and message.</returns>
-        public (bool, string) UpsertPhoneCallLog(FOPhoneCallLogUpsertRequest req, int companyId, int sessionId, int userId)
+        public (bool success, string message) UpsertPhoneCallLog(FOPhoneCallLogUpsertRequest req, int companyId, int sessionId, int userId)
         {
             try
             {
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
-                    "sp_FO_PhoneCallLog_Upsert",
-                    new
-                    {
-                        req.PhoneCallLogID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.Name,
-                        req.Phone,
-                        req.Date,
-                        req.Description,
-                        req.NextFollowUpDate,
-                        req.CallDuration,
-                        req.Note,
-                        req.CallType,
-                        req.IsActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
+                var parameters = new DynamicParameters();
 
-                return ((int)result.Result == 1, (string)result.Message);
+                parameters.Add("@PhoneCallLogID", req.PhoneCallLogID, DbType.Int32);
+                parameters.Add("@CompanyID", companyId, DbType.Int32);
+                parameters.Add("@SessionID", sessionId, DbType.Int32);
+                parameters.Add("@Name", req.Name, DbType.String);
+                parameters.Add("@Phone", req.Phone, DbType.String);
+                parameters.Add("@Date", req.Date, DbType.DateTime);
+                parameters.Add("@Description", req.Description, DbType.String);
+                parameters.Add("@NextFollowUpDate", req.NextFollowUpDate, DbType.DateTime);
+                parameters.Add("@CallDuration", req.CallDuration, DbType.String);
+                parameters.Add("@Note", req.Note, DbType.String);
+                parameters.Add("@CallType", req.CallType, DbType.String);
+                parameters.Add("@IsActive", req.IsActive, DbType.Boolean);
+                parameters.Add("@UserId", userId, DbType.Int32);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "sp_FO_PhoneCallLog_Upsert",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -1327,17 +1717,20 @@ namespace SchoolERP.API.Services
 
                 string phoneCallLogIDs = string.Join(",", id);
 
-                var result = conn.QueryFirstOrDefault(
-                    "sp_FO_PhoneCallLog_Delete",
-                    new
-                    {
-                        PhoneCallLogID = phoneCallLogIDs,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure
+                var parameters = new DynamicParameters();
+                parameters.Add("@PhoneCallLogID", phoneCallLogIDs);
+                parameters.Add("@UserId", userId);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                  "sp_FO_PhoneCallLog_Delete",
+                  parameters,
+                  commandType: CommandType.StoredProcedure);
+
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
 
-                return ((int)result.Result == 1, (string)result.Message);
             }
             catch (Exception ex)
             {
@@ -1352,24 +1745,27 @@ namespace SchoolERP.API.Services
         /// <param name="isActive">Status value.</param>
         /// <param name="userId">User ID.</param>
         /// <returns>Success status and message.</returns>
-        public (bool success, string message) TogglePhoneCallLogStatus(int id, bool isActive, int userId)
+        public (bool success, string message) TogglePhoneCallLogStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault(
-                    "sp_FO_PhoneCallLog_ToggleStatus",
-                    new
-                    {
-                        PhoneCallLogID = id,
-                        IsActive = isActive,
-                        UserId = userId
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
 
-                return ((int)result.Result == 1, (string)result.Message);
+                var parameters = new DynamicParameters();
+                parameters.Add("@PhoneCallLogID", request.Ids);
+                parameters.Add("@IsActive", request.IsActive);
+                parameters.Add("@UserId", request.DoneBy);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "SP_FO_PHONECALLLOG_TOGGLESTATUS",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
+                );                
             }
             catch (Exception ex)
             {
@@ -1377,6 +1773,8 @@ namespace SchoolERP.API.Services
             }
         }
         
+
+
         // ─── VISITOR BOOK ───────────────────────────────────────
         /// <summary>
         /// Retrieves all visitors for the specified company and session.
@@ -1395,6 +1793,69 @@ namespace SchoolERP.API.Services
                 },
                 commandType: CommandType.StoredProcedure
             ).ToList();
+        }
+
+        /// <summary>
+        /// Retrieves all visitors for the specified company and session and page index.
+        /// </summary>
+        public async Task<PagedResult<FOVisitorBookViewModel>> GetAllVisitorsWithPageIndex(FOVisitorBookSerchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@Purposes", req.Purposes);
+                param.Add("@STAFFID", req.StaffID);
+                param.Add("@STUDENTID", req.StudentID);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<FOVisitorBookViewModel>(
+                    "SP_FO_VISITORBOOK_GETALLWITHPAGEINDEX",
+                    param,
+                    commandType: CommandType.StoredProcedure)).ToList();
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<FOVisitorBookViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<FOVisitorBookViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
         /// <summary>
         /// Retrieves visitor details by visitor ID.
@@ -1415,41 +1876,74 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Creates or updates visitor information.
         /// </summary>
-        public (bool success, string message) UpsertVisitor(
-            FOVisitorBookUpsertRequest req,
-            int companyId,
-            int sessionId,
-            int userId)
+        public SpVisitorResult UpsertVisitor(
+     FOVisitorBookUpsertRequest req,
+     int companyId,
+     int sessionId,
+     int userId)
         {
             try
             {
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@VISITORBOOKID", req.VisitorBookID);
+                parameters.Add("@COMPANYID", companyId);
+                parameters.Add("@SESSIONID", sessionId);
+                parameters.Add("@PURPOSEID", req.PurposeID);
+                parameters.Add("@NAME", req.Name);
+                parameters.Add("@PHONE", req.Phone);
+                parameters.Add("@IDCARD", req.IDCard);
+                parameters.Add("@NOOFPERSONS", req.NoOfPersons);
+                parameters.Add("@DATE", req.Date);
+                parameters.Add("@INTIME", req.InTime);
+                parameters.Add("@OUTTIME", req.OutTime);
+                parameters.Add("@NOTE", req.Note);
+                parameters.Add("@ATTACHMENT", req.Attachment);
+                parameters.Add("@FILENAME", req.FileName);
+                parameters.Add("@FILETYPE", req.FileType);
+                parameters.Add("@ISACTIVE", req.IsActive);
+                parameters.Add("@MEETINGWITH", req.MeetingWith);
+                parameters.Add("@STUDENTID", req.StudentID);
+                parameters.Add("@STAFFID", req.StaffID);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<SpVisitorResult>(
+                    "sp_FO_VisitorBook_Upsert",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                var model = new SpVisitorResult();
+                model.Result = 0;
+                model.Message = ex.Message;
+                return model;
+            }
+        }
+
+
+        public (bool success, string message) UpsertVisitorAttachmentFile(
+     FOVisitorBookAttachmentUpsertRequest req,int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@VISITORBOOKID", req.VisitorBookID);
+                parameters.Add("@ATTACHMENT", req.Attachment);
+                parameters.Add("@FILENAME", req.FileName);
+                parameters.Add("@FILETYPE", req.FileType);
+                parameters.Add("@USERID", userId);
 
                 var result = conn.QueryFirstOrDefault<dynamic>(
-                    "sp_FO_VisitorBook_Upsert",
-                    new
-                    {
-                        req.VisitorBookID,
-                        CompanyID = companyId,
-                        SessionID = sessionId,
-                        req.PurposeID,
-                        req.Name,
-                        req.Phone,
-                        req.IDCard,
-                        req.NoOfPersons,
-                        req.Date,
-                        req.InTime,
-                        req.OutTime,
-                        req.Note,
-                        req.Attachment,
-                        req.FileName,
-                        req.FileType,
-                        req.IsActive,
-                        req.MeetingWith,
-                        req.StudentID,
-                        req.StaffID,
-                        UserId = userId
-                    },
+                    "sp_FO_VisitorBook_Upsert_Attachment",
+                    parameters,
                     commandType: CommandType.StoredProcedure
                 );
 
@@ -1463,6 +1957,7 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
+
         /// <summary>
         /// Deletes a visitor record.
         /// </summary>
@@ -1480,7 +1975,7 @@ namespace SchoolERP.API.Services
 
                 string visitorBookIDs = string.Join(",", id);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_FO_VisitorBook_Delete",
                     new
                     {
@@ -1491,8 +1986,8 @@ namespace SchoolERP.API.Services
                 );
 
                 return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)
@@ -1503,26 +1998,26 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Activates or deactivates a visitor record.
         /// </summary>
-        public (bool success, string message) ToggleVisitorStatus(int id, bool isActive, int userId)
+        public (bool success, string message) ToggleVisitorStatus(StatusUpdateRequest request)
         {
             try
             {
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "sp_FO_VisitorBook_ToggleStatus",
                     new
                     {
-                        VisitorBookID = id,
-                        IsActive = isActive,
-                        UserId = userId
+                        VisitorBookID = request.Ids,
+                        IsActive = request.IsActive,
+                        UserId = request.DoneBy
                     },
                     commandType: CommandType.StoredProcedure
                 );
 
                 return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)
@@ -1571,6 +2066,8 @@ namespace SchoolERP.API.Services
                 commandType: CommandType.StoredProcedure)
                 .ToList();
         }
+
+
         /// <summary>
         /// Retrieves admission inquiry details by inquiry ID.
         /// </summary>
@@ -1616,7 +2113,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "SP_FO_ADMISSION_INQUIRY_UPSERT",
                     new
                     {
@@ -1642,8 +2139,8 @@ namespace SchoolERP.API.Services
                     commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)
@@ -1671,7 +2168,7 @@ namespace SchoolERP.API.Services
 
                 string inquiryIDs = string.Join(",", id);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "SP_FO_ADMISSION_INQUIRY_DELETE",
                     new
                     {
@@ -1681,8 +2178,8 @@ namespace SchoolERP.API.Services
                     commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)
@@ -1705,7 +2202,7 @@ namespace SchoolERP.API.Services
                 using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpResult>(
                     "SP_FO_INQUIRY_FOLLOWUP_SAVE",
                     new
                     {
@@ -1719,8 +2216,8 @@ namespace SchoolERP.API.Services
                     commandType: CommandType.StoredProcedure);
 
                 return (
-                    Convert.ToInt32(result.Result) == 1,
-                    Convert.ToString(result.Message) ?? string.Empty
+                    result?.Result == 1,
+                    result?.Message ?? "Operation completed."
                 );
             }
             catch (Exception ex)
@@ -1728,6 +2225,219 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
-       
+
+
+        /// <summary>
+        /// Retrieves all admission inquiries based on filter criteria.
+        /// </summary>
+        /// <param name="companyId">Company identifier.</param>
+        /// <param name="sessionId">Session identifier.</param>
+        /// <param name="fromDate">Optional from date filter.</param>
+        /// <param name="toDate">Optional to date filter.</param>
+        /// <param name="sourceId">Source identifier.</param>
+        /// <param name="classId">Class identifier.</param>
+        /// <param name="status">Inquiry status.</param>
+        /// <returns>List of admission inquiries.</returns>
+        public List<FOAdmissionInquiryViewModel> GetAllAdmissionInquiriesWithPageIndex(EnquirySearchRequest req)
+        {
+            using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+            return conn.Query<FOAdmissionInquiryViewModel>(
+                "SP_FO_ADMISSION_INQUIRY_GETALLWITHPAGEINDEX",
+                new
+                {
+                    CompanyID = req.CompanyID,
+                    SessionID = req.SessionID,
+                    FromDate = req.FromDate,
+                    ToDate = req.ToDate,
+                    SourceID = req.SourceID,
+                    ClassID = req.ClassID,
+                    Status = req.Status,
+                    SEARCHKEYWORD=req.SearchKeyword,
+                    PAGENUMBER=req.PageNumber,
+                    PAGESIZE=req.PageSize
+                },
+                commandType: CommandType.StoredProcedure)
+                .ToList();
+        }
+
+
+        public async Task<PagedResult<MstFOComplaintTypeViewModel>> GetAllComplaintTypesWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<MstFOComplaintTypeViewModel>(
+                "SP_FO_COMPLAINTTYPE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstFOComplaintTypeViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<MstFOComplaintTypeViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<PagedResult<MstFOSourceViewModel>> GetAllSourceWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<MstFOSourceViewModel>(
+                "SP_FO_SOURCE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstFOSourceViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<MstFOSourceViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<PagedResult<MstFOReferenceViewModel>> GetAllReferenceWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@CompanyID", req.CompanyID);
+                param.Add("@SessionID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<MstFOReferenceViewModel>(
+                "SP_FO_REFERENCE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<MstFOReferenceViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<MstFOReferenceViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
     }
 }

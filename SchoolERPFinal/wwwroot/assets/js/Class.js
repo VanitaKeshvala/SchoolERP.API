@@ -388,6 +388,16 @@ async function saveItem() {
         IV.setFieldError('txtClassName', 'errTxtClassName', 'Class name is required.');
         return;
     }
+    const displayLabel = document.getElementById('txtDisplayLabel').value.trim();
+    if (!displayLabel) {
+        IV.setFieldError('txtDisplayLabel', 'errDisplayLabel', 'Class name is required.');
+        return;
+    }
+    const sequenceOrder = document.getElementById('ddlSequenceOrder').value;
+    if (!sequenceOrder) {
+        IV.setFieldError('ddlSequenceOrder', 'errtxtSequenceOrder', 'Class name is required.');
+        return;
+    }
 
     // ✅ Fix 2: null guard before .join()
     const selectedSections = $('#ddlSections').val() || [];
@@ -406,7 +416,9 @@ async function saveItem() {
         classID: cid,
         className: name,
         isActive: isActive,//document.getElementById('isActive').checked,
-        sectionIds: sectionIds
+        sectionIds: sectionIds,
+        sequenceOrder: sequenceOrder,
+        displayLabel: displayLabel
     };
 
     try {

@@ -109,11 +109,11 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpGet("GetStudentsForPromotion")]
-        public IActionResult GetStudentsForPromotion(int classId, int sectionId)
+        public IActionResult GetStudentsForPromotion(int classId, int sectionId,int companyId,int sessionId)
         {
             try
             {
-                var list = _svc.GetStudentsForPromotion(CompanyId, SessionId, classId, sectionId);
+                var list = _svc.GetStudentsForPromotion(companyId, sessionId, classId, sectionId);
                 return Ok(ApiResponse<List<StudentPromotionViewModel>>.SuccessResponse(list));
             }
             catch (Exception ex) { return Ok(ApiResponse<List<StudentPromotionViewModel>>.ErrorResponse(ex.Message)); }
@@ -155,5 +155,17 @@ namespace SchoolERP.Net.Controllers.Api
             }
 
         }
+
+        [HttpPost("GetForPromotionPageIndex")]
+        public async Task<IActionResult> GetForPromotionPageIndex(SearchPromotedStudent req)
+        {
+            try
+            {
+                var list =await _svc.GetForPromotionPageIndex(req);
+                return Ok(ApiResponse<PagedResult<StudentPromotionViewModel>>.SuccessResponse(list));
+            }
+            catch (Exception ex) { return Ok(ApiResponse<PagedResult<StudentPromotionViewModel>>.ErrorResponse(ex.Message)); }
+        }
+
     }
 }

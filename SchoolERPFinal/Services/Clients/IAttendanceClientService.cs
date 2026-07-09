@@ -20,5 +20,7 @@ namespace SchoolERP.Net.Services.Clients
 
         Task<ApiResponse<object>> SaveBulkAttendanceAsync(
             AttendanceUpsertRequest request);
+
+        Task<ApiResponse<PagedResult<StudentLeaveViewModel>>> GetAllLeaveApplicationsWithPageAsync(StudentLeaveSearchRequest request);
     }
 }

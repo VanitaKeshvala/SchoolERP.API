@@ -100,6 +100,9 @@ namespace SchoolERP.Net.Controllers
                 var sessionTask = _sessionClient.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
 
+
+
+
                 await Task.WhenAll(classesResponse, sessionTask, companiesTask);
 
                 var pagedResult = await classesResponse;
@@ -651,33 +654,65 @@ namespace SchoolERP.Net.Controllers
 
         [HttpGet]
         [HttpPost]
-        public async Task<IActionResult> PromoteStudents(int? classId, int? sectionId, int? nextSessionId, int? nextClassId, int? nextSectionId)
+        public async Task<IActionResult> PromoteStudents(int? classId, int? sectionId, int? pageIndex = null,
+        int? pageSize = null,
+        string? search = null,
+        int? companyId = null,
+        int? sessionID = null)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Academics/PromoteStudents"
-           );
-            var classes = await _classClient.GetAllAsync();
-            var sessions = await _sessionClient.GetAllAsync();
-            
-            var model = new PromoteStudentsPageViewModel
+            var model = new PromoteStudentsPageViewModel();
+            try
             {
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                Sessions = sessions.Success ? sessions.Data : new List<MstSessionViewModel>(),
-                SelectedClassId = classId,
-                SelectedSectionId = sectionId,
-                NextSessionId = nextSessionId,
-                NextClassId = nextClassId,
-                NextSectionId = nextSectionId
-            };
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Academics/PromoteStudents"
+               );
 
-            if (classId.HasValue && sectionId.HasValue)
-            {
-                var students = await _academicsClient.GetStudentsForPromotionAsync(classId.Value, sectionId.Value);
-                if (students.Success) model.Students = students.Data;
+
+                var reqModel = new SearchPromotedStudent
+                {
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    ClassID = classId ?? null,
+                    SectionID = sectionId ?? null,
+                    SearchKeyword = search ?? null,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                var classes = await _classClient.GetAllAsync(false, sessionID);
+                var sessions = await _sessionClient.GetAllAsync();
+                var companies = await _companyService.GetAllAsync();
+
+                model = new PromoteStudentsPageViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    Sessions = sessions.Success ? sessions.Data : new List<MstSessionViewModel>(),
+                    Companies = companies.Success ? companies.Data : new List<MstCompanyViewModel>(),
+                    SelectedClassId = classId,
+                    SelectedSectionId = sectionId,
+                    CompanyId = companyId,
+                    SessionId = sessionID
+
+                };
+                if (classId.HasValue && sectionId.HasValue)
+                {
+                    var students = await _academicsClient.GetForPromotionPageIndexAsync(reqModel);
+                    if (students.Success) model.Students = students.Data.Data;
+                    model.PageNumber = students.Data.PageNumber;
+                    model.PageSize = students.Data.PageSize;
+                    model.SearchTerm = search;
+
+                }
+                model.Permissions = perms;
+                return View(model);
             }
-            model.Permissions = perms;
-            return View(model);
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+            
         }
 
         [HttpPost]

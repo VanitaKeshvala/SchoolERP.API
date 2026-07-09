@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace SchoolERP.Shared.Models
 {
@@ -21,6 +21,14 @@ namespace SchoolERP.Shared.Models
         public string? AttachmentName { get; set; }
         public string? AttachmentType { get; set; }
         public int HasAttachment { get; set; }
+
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+                                              // Must exist — mapped from TOTALCOUNT column in SP
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     public class LeaveStatusUpdateRequest
@@ -42,4 +50,34 @@ namespace SchoolERP.Shared.Models
         public string? AttachmentName { get; set; }
         public int Status { get; set; }
     }
+
+    public class StudentLeaveSearchRequest
+    {
+        public int CompanyID { get; set; }
+        public string? SearchKeyword { get; set; }
+        public int? PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int? UserId { get; set; }
+        public int? SectionID { get; set; }
+        public int? ClassID { get; set; }
+        public int? Status { get; set; }
+    }
+
+    public class StudentLeavePageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
+        public List<StudentLeaveViewModel> StudentLeaveModel { get; set; } = new List<StudentLeaveViewModel>();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? ClassId { get; set; }
+        public int? SectionID { get; set; }
+        public int? Status { get; set; }
+    }
+
 }

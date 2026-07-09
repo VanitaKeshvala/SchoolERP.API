@@ -6,13 +6,13 @@ using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Controllers
 {
-    public class RoomCoolingTypeController : BaseController
+    public class RoomTypeController : BaseController
     {
         private readonly IHostelClientService _client;
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
         private readonly IRoomCoolingTypeClientService _roomCoolingTypeService;
-        public RoomCoolingTypeController(IHostelClientService client,
+        public RoomTypeController(IHostelClientService client,
             ICompanyClientService companyService, ISessionClientService sessionService, PermissionHelper permHelper, IRoomCoolingTypeClientService roomCoolingTypeService) : base(permHelper)
         {
             _client = client;
@@ -44,7 +44,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/Hostel/HostelType"
+                   "/RoomType/Index"
                );
 
 
@@ -73,7 +73,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/Hostel/HostelType"
+                   "/RoomType/Index"
                );
                 var model = new RoomCoolingTypeAddViewModel();
                 if (id.HasValue && id.Value > 0)

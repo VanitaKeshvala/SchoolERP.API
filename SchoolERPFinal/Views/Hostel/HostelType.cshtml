@@ -9,7 +9,7 @@
 @using System.Text.Json
 @{
     Layout = "_Layout";
-    ViewData["Title"] = "Hostel Type Management";
+    ViewData["Title"] = "Hostel Type";
     int currentUserId = 0;
     if (User.Identity != null && User.Identity.IsAuthenticated)
     {
@@ -199,6 +199,7 @@
                             <tr class="bg-light">
                                 <th class="ps-4" style="width: 50px;">Select</th>
                                 <th>Hostel Type</th>
+                                <th>Display Name</th>
                                 <th>Description</th>
                                 <th>Created On</th>
                                 <th>Status</th>
@@ -217,6 +218,7 @@
 
                                         </td>
                                         <td>@c.HostelTypeName</td>
+                                        <td>@c.DisplayLabel</td>
                                         <td>@c.Description</td>
                                         <td>@c.CreatedOn?.ToString("dd MMM yyyy")</td>
                                         <td>

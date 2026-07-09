@@ -146,70 +146,144 @@ function resetAllFilters() {
 // ========================================
 // DOMContentLoaded — init DataTable + UI
 // ========================================
-document.addEventListener('DOMContentLoaded', () => {
-
-    // ── DataTable (export only) ───────────────────────────────────────
-    if ($.fn.DataTable.isDataTable('#tblRoomType')) {
-        $('#tblRoomType').DataTable().destroy();
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('txtPinCode');
+    const list = document.getElementById('pinCodeSuggestions');
+    if (!input || !list) {
+        console.warn('PinCode autocomplete: input or list element not found');
+        return;
     }
-    $.fn.dataTable.ext.errMode = 'none';
-    window.exportTable = $('#tblRoomType').DataTable({
-        dom: 'Bfrtip',
-        buttons: [
-            { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4] } },
-            { extend: 'csv', exportOptions: { columns: [1, 2, 3, 4] } },
-            { extend: 'excel', exportOptions: { columns: [1, 2, 3, 4] } },
-            { extend: 'pdf', exportOptions: { columns: [1, 2, 3, 4] } },
-            { extend: 'print', exportOptions: { columns: [1, 2, 3, 4] } }
-        ],
-        searching: false,
-        paging: false,
-        info: false,
-        ordering: false
-    });
 
-    // ── Select2 ───────────────────────────────────────────────────────
-    try {
-        if (window.jQuery && typeof jQuery.fn.select2 === 'function') {
-            jQuery('#ddlFilterSessions, #ddlFilterCompany','#ddlFilterRoolType').select2({
-                width: '100%',
-                dropdownParent: jQuery('#filter-dropdown'),
-                allowClear: true,
-                placeholder: function () { return jQuery(this).data('placeholder') || 'Select'; }
-            });
+    let debounceTimer;
+    let currentItems = [];
+
+  
+        // ── Add/Edit form: Hostel change -> reload State select ────────
+        const formCountry = document.getElementById('ddlCountry');
+        if (formCountry) {
+            const preselectState = document.getElementById('hdnSelectedStateId')?.value;
+            const preselectCity = document.getElementById('hdnSelectedCityId')?.value;
+
+            if (window.jQuery) {
+                jQuery(formCountry).on('change', function () {
+                    loadStatesByCountry(this.value, 'ddlState');
+                });
+            } else {
+                formCountry.addEventListener('change', function () {
+                    loadStatesByCountry(this.value, 'ddlState');
+                });
+            }
+
+            // On edit: preload states for the already-selected country, then select saved state
+            if (formCountry.value)
+            {
+                loadStatesByCountry(formCountry.value, 'ddlState', preselectState).then(() => {
+                    // Once state is preselected, cascade into city
+                    const stateEl = document.getElementById('ddlState');
+                    if (stateEl && stateEl.value) {
+                        loadCitiesByState(stateEl.value, 'ddlCity', preselectCity);
+                    }
+                });
+            }
         }
-    } catch (e) {
-        console.warn('Select2 init skipped:', e);
+
+        // ── Add/Edit form: State change -> reload City select ───────────
+        const formState = document.getElementById('ddlState');
+        if (formState) {
+            if (window.jQuery) {
+                jQuery(formState).on('change', function () {
+                    loadCitiesByState(this.value, 'ddlCity');
+                });
+            } else {
+                formState.addEventListener('change', function () {
+                    loadCitiesByState(this.value, 'ddlCity');
+                });
+            }
+        }
+
+    input.addEventListener('input', function () {
+        const term = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (term.length < 2) {
+            hideList();
+            return;
+        }
+        debounceTimer = setTimeout(() => fetchPinCodes(term), 300);
+
+
+    });
+
+    async function fetchPinCodes(term) {
+        try {
+            const res = await fetch(`/Hostel/SearchPostalCode?term=${encodeURIComponent(term)}`);
+            const result = await res.json();
+
+            console.log('API response:', result); // 🔍 TEMP: check shape of result.data
+
+            if (result.success && result.data && result.data.length > 0) {
+                currentItems = result.data;
+                renderList(currentItems);
+            } else {
+                hideList();
+            }
+        } catch (err) {
+            console.error('SearchPostalCode error:', err);
+            hideList();
+        }
     }
 
-    // ── Keep filter dropdown open while interacting inside ────────────
-    document.getElementById('filter-dropdown')?.addEventListener('click', e => e.stopPropagation());
-
-    // ── Apply Filters ─────────────────────────────────────────────────
-    document.getElementById('btnApplyFilters')?.addEventListener('click', () => {
-        document.getElementById('hdnPageIndex').value = 1;
-        document.getElementById('hdnSearch').value = document.getElementById('txtSearchInput').value;
-        applyFilters();
-        submitForm();
-    });
-
-    // ── Reset Filters ─────────────────────────────────────────────────
-    document.getElementById('btnResetFilters')?.addEventListener('click', () => {
-        document.getElementById('txtSearchInput').value = '';
-        document.getElementById('hdnSearch').value = '';
-        ['ddlFilterSessions', 'ddlFilterCompany','ddlFilterRoolType'].forEach(id => {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.value = '';
-            if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val('').trigger('change');
+    function renderList(items) {
+        list.innerHTML = '';
+        items.forEach((item, idx) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.style.cursor = 'pointer';
+            li.textContent = `${item.postalCode ?? item.postalCode}`;
+            li.addEventListener('click', () => selectPinItem(idx));
+            list.appendChild(li);
         });
-        clearAppliedFilters();
-        document.getElementById('hdnPageIndex').value = 1;
-        submitForm();
-    });
+        list.style.display = 'block';
+    }
 
-    // ── Render badges on load ─────────────────────────────────────────
-    renderFilterBadges();
+    async function selectPinItem(idx) {
+        const item = currentItems[idx];
+        input.value = item.postalCode ?? item.postalCode;
+        hideList();
+        const countryId = item.countryId ?? item.countryId;
+        const stateId = item.stateId ?? item.stateId;
+        const cityId = item.cityId ?? item.cityId;
+
+        // 1️⃣ Select Country immediately (options already exist server-side)
+        if (countryId) {
+            $('#ddlCountry').val(countryId).trigger('change.select2');
+            $('#ddlCountry').trigger('change');
+        }
+
+
+        // 2️⃣ Load States for that country, then select the right one
+        if (countryId && stateId)
+        {
+            await loadStatesByCountry(countryId, 'ddlState', stateId);
+        }
+
+        // 3️⃣ Load Cities for that state, then select the right one
+        if (stateId && cityId) {
+            await loadCitiesByState(stateId, 'ddlCity', cityId);
+        }
+
+    }
+
+    function hideList() {
+        list.style.display = 'none';
+        list.innerHTML = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!input.contains(e.target) && !list.contains(e.target)) {
+            hideList();
+        }
+    });
 });
 
 
@@ -225,7 +299,8 @@ function triggerExport(index) {
     }
 }
 
-$(document).ready(function () {
+$(document).ready(function ()
+{
     $('#tblHostel').DataTable({
         dom: 'Bfrtip',
         buttons: [
@@ -335,6 +410,7 @@ async function saveRecord() {
     const data = {
         hostelID: hostelID || 0,
         hostelName: document.getElementById('txtHostelName').value.trim(),
+        displayLabel: document.getElementById('txtDisplayLabel').value.trim(),
         roomTypeID: parseInt(document.getElementById('ddlRoomType').value),
         hostelIntake: parseInt(document.getElementById('txtIntake').value),
         hostelAddress: document.getElementById('txtAddress').value.trim() || null,
@@ -342,10 +418,10 @@ async function saveRecord() {
         isActive: document.getElementById('chkActive').checked,
         hostelTypeID: document.getElementById('ddlHostelType').value.trim() || null,
         hostelCode: document.getElementById('txtHostelCode').value.trim() || null,
-        wardenName: document.getElementById('txtWardenName').value.trim() || null,
-        wardenContact: document.getElementById('txtWardenContact').value.trim() || null,
-        emergencyContact: document.getElementById('txtEmergencyContact').value.trim() || null,
-        hostelEmail: document.getElementById('txtHostelEmail').value.trim() || null,
+        postalCode: document.getElementById('txtPinCode').value.trim() || null,
+        countryId: document.getElementById('ddlCountry').value || null,
+        stateId: document.getElementById('ddlState').value || null,
+        cityId: document.getElementById('ddlCity').value || null,
         hostelRules: document.getElementById('txtHostelRules').value.trim() || null
     };
 
@@ -531,4 +607,61 @@ function showToast(msg, type = 'success') {
             </div></div>`;
     document.body.appendChild(wrapper);
     setTimeout(() => wrapper.remove(), 3000);
+}
+
+// ========================================
+// Country -> State -> City cascade (shared helpers)
+// ========================================
+async function loadStatesByCountry(countryId, targetSelectId, preselectStateId = null) {
+    const stateEl = document.getElementById(targetSelectId);
+    if (!stateEl) return;
+
+    stateEl.innerHTML = '<option value="">-- Select --</option>';
+    if (window.jQuery && jQuery(stateEl).data('select2')) jQuery(stateEl).trigger('change');
+
+    if (!countryId) return;
+
+    try {
+        const res = await fetch(`/PostalCode/GetStatesByCountry?countryID=${countryId}`);
+        const result = await res.json();
+        const states = result.data || [];
+        stateEl.innerHTML = '<option value="">Select</option>';
+        states.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.stateId;
+            opt.textContent = s.stateName;
+            if (preselectStateId && parseInt(preselectStateId) === s.stateId) opt.selected = true;
+            stateEl.appendChild(opt);
+        });
+        if (window.jQuery && jQuery(stateEl).data('select2')) jQuery(stateEl).trigger('change');
+    } catch (err) {
+        console.error('Failed to load states:', err);
+    }
+}
+
+async function loadCitiesByState(stateId, targetSelectId, preselectCityId = null) {
+    const cityEl = document.getElementById(targetSelectId);
+    if (!cityEl) return;
+
+    cityEl.innerHTML = '<option value="">-- Select --</option>';
+    if (window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).trigger('change');
+
+    if (!stateId) return;
+
+    try {
+        const res = await fetch(`/PostalCode/GetCitiesByState?stateID=${stateId}`);
+        const result = await res.json();
+        const cities = result.data || [];
+        cityEl.innerHTML = '<option value="">Select</option>';
+        cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.cityId;
+            opt.textContent = c.cityName;
+            if (preselectCityId && parseInt(preselectCityId) === c.cityId) opt.selected = true;
+            cityEl.appendChild(opt);
+        });
+        if (window.jQuery && jQuery(cityEl).data('select2')) jQuery(cityEl).trigger('change');
+    } catch (err) {
+        console.error('Failed to load cities:', err);
+    }
 }

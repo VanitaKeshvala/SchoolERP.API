@@ -1,0 +1,104 @@
+﻿@using System.Security.Claims
+@using System.Text.Json
+@model SchoolERP.Shared.Models.CityAddViewModel
+@{
+    ViewData["Title"] = "Add City";
+    var p = Model.Permissions;
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">@(Model.EditCity == null ? "Add City" : "Edit City")</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (p.CanAdd)
+        {
+            <button class="btn btn-success top-btn" onclick="saveItem()">
+                <i class="ti ti-device-floppy me-1"></i> Save
+            </button>
+        }
+        <a href="/City/Index" class="btn btn-secondary top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card shadow-tbl-outer">
+            <div class="card-body">
+                <form id="itemForm" class="needs-validation" novalidate>
+                    <input type="hidden" id="txtItemId" value="@(Model.EditCity?.CityId ?? 0)">
+                    <input type="hidden" id="hdnUserID" value="@(Model.EditCity?.USERID ?? 0)">
+                    <!-- Holds the state that should be pre-selected once the cascading AJAX call populates ddlState -->
+                    <input type="hidden" id="hdnSelectedStateId" value="@(Model.EditCity?.StateId ?? 0)">
+
+                    <div class="row">
+                        <div class="d-block col-md-6 mb-3">
+                            <label class="form-label fw-bold">Country Name <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlCountry" style="width: 100%;">
+                                <option value="">-- Select --</option>
+                                @foreach (var rt in Model.Country.Where(x => x.IsActive))
+                                {
+                                    <option value="@rt.CountryId" selected="@(Model.EditCity?.CountryId == rt.CountryId)">@rt.CountryName</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback" id="errddlCountry"></div>
+                        </div>
+
+                        <div class="d-block col-md-6 mb-3">
+                            <label class="form-label fw-bold">State Name <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlState" style="width: 100%;">
+                                <option value="">-- Select Country First --</option>
+                            </select>
+                            <div class="invalid-feedback" id="errddlState"></div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">City Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtCityName"
+                                   value="@Model.EditCity?.CityName"
+                                   placeholder="e.g. Rajkot" autocomplete="off">
+                            <div class="invalid-feedback" id="errtxtCityName"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Display Label</label>
+                            <input type="text" class="form-control" id="txtDisplayLabel"
+                                   value="@Model.EditCity?.DisplayLabel"
+                                   placeholder="e.g. Rajkot" autocomplete="off">
+                            <div class="invalid-feedback" id="errtxtDisplayLabel"></div>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" id="txtDescription" rows="1">@Model.EditCity?.Description</textarea>
+                        </div>
+
+                        <div class="col-md-2 mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="isActive"
+                                @(Model.EditCity?.IsActive ?? true ? "checked" : "")>
+                                <label class="form-check-label fw-bold" for="isActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link href="~/assets/css/select2.min.css" rel="stylesheet" />
+
+@section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+
+        window.initSelect2('#ddlCountry', { placeholder: "Select Country" });
+        window.initSelect2('#ddlState', { placeholder: "Select State" });
+    </script>
+    <script src="~/assets/js/City.js"></script>
+}

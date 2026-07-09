@@ -1,0 +1,191 @@
+﻿@model SchoolERP.Shared.Models.AddVisitorBookPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Visitor Book";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    var p = Model.Permissions;
+
+}
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">@(Model.EditVisitors == null ? "Add Visitor Book" : "Edit Visitor Book")</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (p.CanAdd)
+        {
+            <button type="submit" onclick="saveVisitor()" class="btn btn-success top-btn">
+                <i class="ti ti-device-floppy me-1"></i> Save
+            </button>
+        }
+        <a href="/FrontOffice/VisitorBook" class="btn btn-secondary top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<form id="visitorForm" enctype="multipart/form-data">
+   
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow-tbl-outer">
+                <div class="card-body">
+
+                    <input type="hidden" id="hdnVisitorBookID" name="VisitorBookID" value="0">
+
+
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Purpose <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlPurpose" name="PurposeID">
+                                <option value="">Select</option>
+                                @foreach (var p in Model.Purposes)
+                                {
+                                    <option value="@p.PurposeID" selected="@(Model.EditVisitors?.PurposeID == p.PurposeID)">@p.Name</option>
+                                }
+                            </select>
+                            <div id="errPurpose" class="invalid-feedback" style="display: none;">Purpose is required.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Meeting With <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlMeetingWith" name="MeetingWith" onchange="handleMeetingWith(this.value)">
+                                <option value="">Select</option>
+                                <option value="Student" selected="@(Model.EditVisitors?.MeetingWith == "Student")">Student</option>
+                                <option value="Staff" selected="@(Model.EditVisitors?.MeetingWith == "Staff")">Staff</option>
+                            </select>
+                            <div id="errMeetingWith" class="invalid-feedback" style="display: none;">Meeting With is required.</div>
+                        </div>
+
+                        <!-- Student Selection Section -->
+                        <div id="studentSelection" class="col-md-12 border rounded p-3 d-none bg-light">
+                            <div class="row row-gap-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Class</label>
+                                    <select class="form-select select2" id="ddlClass" onchange="loadSections(this.value)">
+                                        <option value="">Select Class</option>
+                                        @foreach (var c in Model.Classes)
+                                        {
+                                            <option value="@c.ClassID">@c.ClassName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Section</label>
+                                    <select class="form-select select2" id="ddlSection" onchange="loadStudents()">
+                                        <option value="">Select Section</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Student <span class="text-danger">*</span></label>
+                                    <select class="form-select select2" id="ddlStudent" name="StudentID">
+                                        <option value="">Select Student</option>
+                                    </select>
+                                    <div id="errStudent" class="invalid-feedback" style="display: none;">Student is required.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="staffSelection" class="col-md-12 border rounded p-3 d-none bg-light">
+                            <label class="form-label">Staff Member <span class="text-danger">*</span></label>
+                            <select class="form-select select2" id="ddlStaff" name="StaffID">
+                                <option value="">Select Staff</option>
+                                @foreach (var s in Model.Staff)
+                                {
+                                    <option value="@s.StaffID" selected="@(Model.EditVisitors?.StaffID == s.StaffID)">@s.FirstName @s.LastName (@s.StaffCode)</option>
+                                }
+                            </select>
+                            <div id="errStaff" class="invalid-feedback" style="display: none;">Staff Member is required.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Visitor Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" value="@Model.EditVisitors?.Name" id="txtName" name="Name" placeholder="Full Name">
+                            <div id="errName" class="invalid-feedback" style="display: none;">Visitor Name is required.</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" value="@Model.EditVisitors?.Phone" id="txtPhone" name="Phone" placeholder="Contact Number">
+                            <div id="errPhone" class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">ID Card</label>
+                            <input type="text" class="form-control" value="@Model.EditVisitors?.IDCard" id="txtIDCard" name="IDCard" placeholder="ID Card Detail">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">No Of Persons</label>
+                            <input type="number" class="form-control" value="@Model.EditVisitors?.NoOfPersons" id="txtNoOfPersons" name="NoOfPersons" value="1" min="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="txtDate" name="Date" value="@System.DateTime.Now.ToString("yyyy-MM-dd")">
+                            <div id="errDate" class="invalid-feedback" style="display: none;">Date is required.</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">In Time</label>
+                            <input type="text" class="form-control timepicker" value="@Model.EditVisitors?.InTime" id="txtInTime" name="InTime" placeholder="HH:MM AM/PM">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Out Time</label>
+                            <input type="text" class="form-control timepicker" id="txtOutTime" value="@Model.EditVisitors?.OutTime" name="OutTime" placeholder="HH:MM AM/PM">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-control" id="txtNote" name="Note" rows="2" placeholder="Any additional information">@Model.EditVisitors?.Note</textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Attachment</label>
+                            <input type="file" class="form-control" id="attachmentFile" name="attachmentFile">
+                            <small class="text-muted" id="fileInfo"></small>
+
+                            @if (!string.IsNullOrEmpty(Model.EditVisitors?.FileName))
+                            {
+                                <div id="existingFileInfo" class="mt-1 d-flex align-items-center gap-2">
+                                    <a href="@Model.EditVisitors.Attachment" target="_blank" class="small">
+                                        <i class="ti ti-paperclip me-1"></i>@Model.EditVisitors.FileName
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeExistingFile()">
+                                        <i class="ti ti-x"></i>
+                                    </button>
+                                </div>
+                            }
+                            <!-- Tells the backend whether to keep, replace, or delete the existing file -->
+                            <input type="hidden" id="hdnExistingFile" name="ExistingFileName" value="@Model.EditVisitors?.FileName">
+                            <input type="hidden" id="hdnRemoveFile" name="RemoveAttachment" value="false">
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" name="IsActive" value="true"
+                                @(Model.EditVisitors?.IsActive ?? true ? "checked" : "")>
+                                <input type="hidden" name="IsActive" value="false">
+                                <label class="form-check-label" for="chkActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+        window.editVisitor = @Html.Raw(Model.EditVisitors != null
+    ? JsonSerializer.Serialize(Model.EditVisitors)
+    : "null");
+    </script>
+    <script src="~/js/inline-form-validation.js"></script>
+    <script src="~/assets/js/VisitorBook.js"></script>
+
+}

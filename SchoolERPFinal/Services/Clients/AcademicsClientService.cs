@@ -54,8 +54,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteClassTeacherAsync(List<int> ids)
             => PostAsync<dynamic>($"api/AcademicsApi/DeleteClassTeacher", ids!);
 
-        public Task<ApiResponse<List<StudentPromotionViewModel>>> GetStudentsForPromotionAsync(int classId, int sectionId)
-            => GetAsync<List<StudentPromotionViewModel>>($"api/AcademicsApi/GetStudentsForPromotion?classId={classId}&sectionId={sectionId}");
+        public Task<ApiResponse<List<StudentPromotionViewModel>>> GetStudentsForPromotionAsync(int classId, int sectionId, int companyId, int sessionId)
+            => GetAsync<List<StudentPromotionViewModel>>($"api/AcademicsApi/GetStudentsForPromotion?classId={classId}&sectionId={sectionId}&companyId={companyId}&sessionId={sessionId}");
 
         public Task<ApiResponse<dynamic>> PromoteStudentsAsync(PromotionRequest req)
             => PostAsync<dynamic>("api/AcademicsApi/PromoteStudents", req);
@@ -65,5 +65,11 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<PagedResult<ClassTeacherViewModel>>("api/AcademicsApi/GetAllClassTeachersWithPage", request);
         }
+
+        public Task<ApiResponse<PagedResult<FOAdmissionInquiryViewModel>>> GetAllAdmissionInquiriesWithPageIndexAsync(EnquirySearchRequest req)
+            => PostAsync<PagedResult<FOAdmissionInquiryViewModel>>("api/FrontOfficeApi/GetAllAdmissionInquiriesWithPageIndex", req);
+
+        public Task<ApiResponse<PagedResult<StudentPromotionViewModel>>> GetForPromotionPageIndexAsync(SearchPromotedStudent req)
+           => PostAsync<PagedResult<StudentPromotionViewModel>>("api/AcademicsApi/GetForPromotionPageIndex", req);
     }
 }

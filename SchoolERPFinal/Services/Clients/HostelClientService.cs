@@ -74,5 +74,17 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<List<HostelRoomRateViewModel>>> GetHostelRoomRateByIDAsync(int id)
            => GetAsync<List<HostelRoomRateViewModel>>($"api/HostelApi/GetHostelRoomRateByID/{id}");
+
+        public Task<ApiResponse<List<RoomTypeViewModel>>> GetAllRoomOccupancyByRoomTypesWiseAsync(int roomTypeId)
+            => GetAsync<List<RoomTypeViewModel>>($"api/HostelApi/GetAllRoomOccupancyByRoomTypesWise?roomTypeId={roomTypeId}");
+
+        public Task<ApiResponse<List<HostelSummary>>> GetHostelSummary(int hostelId)
+            => GetAsync<List<HostelSummary>>($"api/HostelApi/GetHostelSummary?hostelId={hostelId}");
+
+        public async Task<ApiResponse<List<HostelReportResponse>>> GetAllHostelReportWithPageAsync(HotelReportSearchRequest request)
+        {
+            return await PostAsync<List<HostelReportResponse>>("api/HostelApi/GetAllHostelReportWithPage", request);
+        }
+
     }
 }

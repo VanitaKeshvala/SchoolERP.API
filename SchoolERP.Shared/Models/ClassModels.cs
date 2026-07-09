@@ -15,7 +15,10 @@ namespace SchoolERP.Shared.Models
         public int SessionID { get; set; }
 
         public string ClassName { get; set; } = string.Empty;
+        
         public string SectionNames { get; set; } = string.Empty; // From STRING_AGG in SP
+        public int SequenceOrder { get; set; } = 0; // From STRING_AGG in SP
+        public string DisplayLabel { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedOn { get; set; }
         public int CreatedBy { get; set; }
@@ -48,17 +51,19 @@ namespace SchoolERP.Shared.Models
         [Required(ErrorMessage = "Class name is required")]
         [StringLength(200, ErrorMessage = "Class name cannot exceed 200 characters")]
         public string ClassName { get; set; } = string.Empty;
+        public string DisplayLabel { get; set; } = string.Empty;
 
         public bool IsActive { get; set; } = true;
 
         public List<int> SectionIds { get; set; } = new List<int>();
         public int? CompanyId { get; set; }
         public int? SessionId { get; set; }
+        public int? SequenceOrder { get; set; }
     }
 
     public class MstClassPageViewModel
     {
-        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;        
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
         public List<MstSectionViewModel> AvailableSections { get; set; } = new List<MstSectionViewModel>();
         public List<MstCompanyViewModel> Companies { get; set; } = new();

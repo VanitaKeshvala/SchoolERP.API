@@ -41,100 +41,194 @@ namespace SchoolERP.Net.Controllers.Api
         [HttpGet("GetAllPurposes")]
         public IActionResult GetAllPurposes(bool includeDeleted = false)
         {
-            var data = _svc.GetAllPurposes(CompanyId, SessionId, includeDeleted);
-            return Ok(ApiResponse<List<MstFOPurposeViewModel>>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetAllPurposes(CompanyId, SessionId, includeDeleted);
+                return Ok(ApiResponse<List<MstFOPurposeViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+          
         }
 
         [HttpGet("GetPurposeByID/{id}")]
         public IActionResult GetPurposeByID(int id)
         {
-            var data = _svc.GetPurposeByID(id);
-            if (data == null) return NotFound(ApiResponse<MstFOPurposeViewModel>.ErrorResponse("Not found"));
-            return Ok(ApiResponse<MstFOPurposeViewModel>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetPurposeByID(id);
+                if (data == null) return NotFound(ApiResponse<MstFOPurposeViewModel>.ErrorResponse("Not found"));
+                return Ok(ApiResponse<MstFOPurposeViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("UpsertPurpose")]
         public async Task<IActionResult> UpsertPurpose([FromBody] MstFOPurposeUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.PurposeID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add purposes." });
-            if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit purposes." });
-
-            var (success, message) = _svc.UpsertPurpose(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.PurposeID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add purposes." });
+                if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit purposes." });
+                if (req.CompanyID == null)
+                {
+                    req.CompanyID = CompanyId;
+                }
+                if (req.SessionID == null)
+                {
+                    req.SessionID = SessionId;
+                }
+                var (success, message) = _svc.UpsertPurpose(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpPost("DeletePurpose")]
         public async Task<IActionResult> DeletePurpose(List<int> id)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Delete"))
-                return Ok(new { success = false, message = "You do not have permission to delete purposes." });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete purposes." });
 
-            var (success, message) = _svc.DeletePurpose(id, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.DeletePurpose(id, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message }); 
+            }
+            
         }
 
         [HttpPost("TogglePurposeStatus")]
-        public async Task<IActionResult> TogglePurposeStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePurposeStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change purpose status." });
-
-            var (success, message) = _svc.TogglePurposeStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change purpose status." });
+                request.DoneBy = UserId;
+                var (success, message) = _svc.TogglePurposeStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         // ─── COMPLAINT TYPE ─────────────────────────────────────
         [HttpGet("GetAllComplaintTypes")]
         public IActionResult GetAllComplaintTypes(bool includeDeleted = false)
         {
-            var data = _svc.GetAllComplaintTypes(CompanyId, SessionId, includeDeleted);
-            return Ok(ApiResponse<List<MstFOComplaintTypeViewModel>>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetAllComplaintTypes(CompanyId, SessionId, includeDeleted);
+                return Ok(ApiResponse<List<MstFOComplaintTypeViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message }); 
+            }
+            
         }
 
         [HttpGet("GetComplaintTypeByID/{id}")]
         public IActionResult GetComplaintTypeByID(int id)
         {
-            var data = _svc.GetComplaintTypeByID(id);
-            if (data == null) return NotFound(ApiResponse<MstFOComplaintTypeViewModel>.ErrorResponse("Not found"));
-            return Ok(ApiResponse<MstFOComplaintTypeViewModel>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetComplaintTypeByID(id);
+                if (data == null) return NotFound(ApiResponse<MstFOComplaintTypeViewModel>.ErrorResponse("Not found"));
+                return Ok(ApiResponse<MstFOComplaintTypeViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("UpsertComplaintType")]
         public async Task<IActionResult> UpsertComplaintType([FromBody] MstFOComplaintTypeUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.ComplaintTypeID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add complaint types." });
-            if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit complaint types." });
-
-            var (success, message) = _svc.UpsertComplaintType(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.ComplaintTypeID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add complaint types." });
+                if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit complaint types." });
+                if (req.CompanyID == null) 
+                {
+                    req.CompanyID = CompanyId;
+                }
+                if (req.SessionID == null) 
+                {
+                    req.SessionID = SessionId;
+                }
+                var (success, message) = _svc.UpsertComplaintType(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeleteComplaintType")]
         public async Task<IActionResult> DeleteComplaintType(List<int> id)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Delete"))
-                return Ok(new { success = false, message = "You do not have permission to delete complaint types." });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete complaint types." });
 
-            var res = _svc.DeleteComplaintType(id, UserId);
-            return Ok(new { res.success, res.message });
+                var res = _svc.DeleteComplaintType(id, UserId);
+                return Ok(new { res.success, res.message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("ToggleComplaintTypeStatus")]
-        public async Task<IActionResult> ToggleComplaintTypeStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleComplaintTypeStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change complaint type status." });
-
-            var (success, message) = _svc.ToggleComplaintTypeStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change complaint type status." });
+                request.DoneBy = UserId;
+                var (success, message) = _svc.ToggleComplaintTypeStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         // ─── SOURCE ─────────────────────────────────────────────
@@ -162,8 +256,15 @@ namespace SchoolERP.Net.Controllers.Api
                 return Ok(new { success = false, message = "You do not have permission to add sources." });
             if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
                 return Ok(new { success = false, message = "You do not have permission to edit sources." });
-
-            var (success, message) = _svc.UpsertSource(req, CompanyId, SessionId, UserId);
+            if (req.SessionID == null) 
+            {
+                req.SessionID = SessionId;
+            }
+            if (req.CompanyID == null)
+            {
+                req.CompanyID = CompanyId;
+            }
+            var (success, message) = _svc.UpsertSource(req, req.CompanyID, req.SessionID, UserId);
             return Ok(new { success, message });
         }
 
@@ -178,21 +279,37 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpPost("ToggleSourceStatus")]
-        public async Task<IActionResult> ToggleSourceStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleSourceStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change source status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change source status." });
 
-            var (success, message) = _svc.ToggleSourceStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.ToggleSourceStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         // ─── REFERENCE ──────────────────────────────────────────
         [HttpGet("GetAllReferences")]
         public IActionResult GetAllReferences(bool includeDeleted = false)
         {
-            var data = _svc.GetAllReferences(CompanyId, SessionId, includeDeleted);
-            return Ok(ApiResponse<List<MstFOReferenceViewModel>>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetAllReferences(CompanyId, SessionId, includeDeleted);
+                return Ok(ApiResponse<List<MstFOReferenceViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpGet("GetReferenceByID/{id}")]
@@ -206,15 +323,23 @@ namespace SchoolERP.Net.Controllers.Api
         [HttpPost("UpsertReference")]
         public async Task<IActionResult> UpsertReference([FromBody] MstFOReferenceUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.ReferenceID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add references." });
-            if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit references." });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.ReferenceID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add references." });
+                if (!isCreate && !await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit references." });
 
-            var (success, message) = _svc.UpsertReference(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.UpsertReference(req, CompanyId, SessionId, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeleteReference")]
@@ -228,13 +353,21 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpPost("ToggleReferenceStatus")]
-        public async Task<IActionResult> ToggleReferenceStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleReferenceStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change reference status." });
-
-            var (success, message) = _svc.ToggleReferenceStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!await _menuPerm.Has(User, SetupMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change reference status." });
+                request.DoneBy = UserId;
+            var (success, message) = _svc.ToggleReferenceStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
         
         // ─── COMPLAINT ──────────────────────────────────────────
@@ -278,13 +411,21 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpPost("ToggleComplaintStatus")]
-        public async Task<IActionResult> ToggleComplaintStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleComplaintStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, ComplaintMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change complaint status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, ComplaintMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change complaint status." });
 
-            var (success, message) = _svc.ToggleComplaintStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.ToggleComplaintStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         // ─── POSTAL RECEIVE ─────────────────────────────────────
@@ -306,15 +447,30 @@ namespace SchoolERP.Net.Controllers.Api
         [HttpPost("UpsertPostalReceive")]
         public async Task<IActionResult> UpsertPostalReceive([FromBody] FOPostalReceiveUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.PostalReceiveID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, PostalReceiveMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add postal receives." });
-            if (!isCreate && !await _menuPerm.Has(User, PostalReceiveMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit postal receives." });
-
-            var (success, message) = _svc.UpsertPostalReceive(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.PostalReceiveID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, PostalReceiveMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add postal receives." });
+                if (!isCreate && !await _menuPerm.Has(User, PostalReceiveMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit postal receives." });
+                if(req.SessionID == null) 
+                {
+                    req.SessionID = SessionId;
+                }
+                if (req.CompanyID == null) 
+                {
+                    req.CompanyID = CompanyId;
+                }
+                var result = _svc.UpsertPostalReceive(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { result });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeletePostalReceive")]
@@ -328,113 +484,263 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpPost("TogglePostalReceiveStatus")]
-        public async Task<IActionResult> TogglePostalReceiveStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePostalReceiveStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, PostalReceiveMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change postal receive status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, PostalReceiveMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change postal receive status." });
 
-            var (success, message) = _svc.TogglePostalReceiveStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.TogglePostalReceiveStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         // ─── POSTAL DISPATCH ─────────────────────────────────────
         [HttpGet("GetAllPostalDispatches")]
         public IActionResult GetAllPostalDispatches(bool includeDeleted = false)
         {
-            var data = _svc.GetAllPostalDispatches(CompanyId, SessionId, includeDeleted);
-            return Ok(ApiResponse<List<FOPostalDispatchViewModel>>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetAllPostalDispatches(CompanyId, SessionId, includeDeleted);
+                return Ok(ApiResponse<List<FOPostalDispatchViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }            
+        }
+
+        [HttpPost("GetAllPostalDispatchesWithPageIndex")]
+        public async Task<IActionResult> GetAllPostalDispatchesWithPageIndex([FromBody] FOPostalDispatchSearchRequest request)
+        {
+            try
+            {
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID =CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<FOPostalDispatchViewModel>>.SuccessResponse(new List<FOPostalDispatchViewModel>()));
+
+                var data = await _svc.GetAllPostalDispatchesWithPageIndex(request);
+                return Ok(ApiResponse<PagedResult<FOPostalDispatchViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
         }
 
         [HttpGet("GetPostalDispatchByID/{id}")]
         public IActionResult GetPostalDispatchByID(int id)
         {
-            var data = _svc.GetPostalDispatchByID(id);
-            if (data == null) return NotFound(ApiResponse<FOPostalDispatchViewModel>.ErrorResponse("Not found"));
-            return Ok(ApiResponse<FOPostalDispatchViewModel>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetPostalDispatchByID(id);
+                if (data == null) return NotFound(ApiResponse<FOPostalDispatchViewModel>.ErrorResponse("Not found"));
+                return Ok(ApiResponse<FOPostalDispatchViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("UpsertPostalDispatch")]
         public async Task<IActionResult> UpsertPostalDispatch([FromBody] FOPostalDispatchUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.PostalDispatchID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, PostalDispatchMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add postal dispatches." });
-            if (!isCreate && !await _menuPerm.Has(User, PostalDispatchMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit postal dispatches." });
-
-            var (success, message) = _svc.UpsertPostalDispatch(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.PostalDispatchID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, PostalDispatchMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add postal dispatches." });
+                if (!isCreate && !await _menuPerm.Has(User, PostalDispatchMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit postal dispatches." });
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var result = _svc.UpsertPostalDispatch(req, CompanyId, SessionId, UserId);
+                return Ok(new { result });
+            }
+            catch (Exception  ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeletePostalDispatch")]
         public async Task<IActionResult> DeletePostalDispatch(List<int> id)
         {
-            if (!await _menuPerm.Has(User, PostalDispatchMenuPath, "Delete"))
-                return Ok(new { success = false, message = "You do not have permission to delete postal dispatches." });
+            try
+            {
+                if (!await _menuPerm.Has(User, PostalDispatchMenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete postal dispatches." });
 
-            var (success, message) = _svc.DeletePostalDispatch(id, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.DeletePostalDispatch(id, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpPost("TogglePostalDispatchStatus")]
-        public async Task<IActionResult> TogglePostalDispatchStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePostalDispatchStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, PostalDispatchMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change postal dispatch status." });
-
-            var (success, message) = _svc.TogglePostalDispatchStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!await _menuPerm.Has(User, PostalDispatchMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change postal dispatch status." });
+                request.DoneBy = UserId;
+                var (success, message) = _svc.TogglePostalDispatchStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         // ─── PHONE CALL LOG ─────────────────────────────────────
         [HttpGet("GetAllPhoneCallLogs")]
         public IActionResult GetAllPhoneCallLogs(bool includeDeleted = false)
         {
-            var data = _svc.GetAllPhoneCallLogs(CompanyId, SessionId, includeDeleted);
-            return Ok(ApiResponse<List<FOPhoneCallLogViewModel>>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetAllPhoneCallLogs(CompanyId, SessionId, includeDeleted);
+                return Ok(ApiResponse<List<FOPhoneCallLogViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        [HttpPost("GetAllPhoneCallLogsWithPage")]
+        public async Task<IActionResult> GetAllPhoneCallLogsWithPage([FromBody] FOPhoneCallLogSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<FOPhoneCallLogViewModel>>.SuccessResponse(new List<FOPhoneCallLogViewModel>()));
+
+                var data = await _svc.GetAllPhoneCallLogsWithPage(request);
+                return Ok(ApiResponse<PagedResult<FOPhoneCallLogViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
 
         [HttpGet("GetPhoneCallLogByID/{id}")]
         public IActionResult GetPhoneCallLogByID(int id)
         {
-            var data = _svc.GetPhoneCallLogByID(id);
-            if (data == null) return NotFound(ApiResponse<FOPhoneCallLogViewModel>.ErrorResponse("Not found"));
-            return Ok(ApiResponse<FOPhoneCallLogViewModel>.SuccessResponse(data));
+            try
+            {
+                var data = _svc.GetPhoneCallLogByID(id);
+                if (data == null) return NotFound(ApiResponse<FOPhoneCallLogViewModel>.ErrorResponse("Not found"));
+                return Ok(ApiResponse<FOPhoneCallLogViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpPost("UpsertPhoneCallLog")]
         public async Task<IActionResult> UpsertPhoneCallLog([FromBody] FOPhoneCallLogUpsertRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            var isCreate = req.PhoneCallLogID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, PhoneCallLogMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add phone call logs." });
-            if (!isCreate && !await _menuPerm.Has(User, PhoneCallLogMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit phone call logs." });
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var isCreate = req.PhoneCallLogID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, PhoneCallLogMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add phone call logs." });
+                if (!isCreate && !await _menuPerm.Has(User, PhoneCallLogMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit phone call logs." });
 
-            var (success, message) = _svc.UpsertPhoneCallLog(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+                if (req.SessionID == null)
+                {
+                    req.SessionID = SessionId;
+                }
+                if (req.CompanyID == null)
+                {
+                    req.CompanyID = CompanyId;
+                }
+                var (success, message) = _svc.UpsertPhoneCallLog(req, req.CompanyID, req.SessionID, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpPost("DeletePhoneCallLog")]
         public async Task<IActionResult> DeletePhoneCallLog(List<int> id)
         {
-            if (!await _menuPerm.Has(User, PhoneCallLogMenuPath, "Delete"))
-                return Ok(new { success = false, message = "You do not have permission to delete phone call logs." });
+            try
+            {
+                if (!await _menuPerm.Has(User, PhoneCallLogMenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete phone call logs." });
 
-            var (success, message) = _svc.DeletePhoneCallLog(id, UserId);
-            return Ok(new { success, message });
+                var (success, message) = _svc.DeletePhoneCallLog(id, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("TogglePhoneCallLogStatus")]
-        public async Task<IActionResult> TogglePhoneCallLogStatus(int id, bool isActive)
+        public async Task<IActionResult> TogglePhoneCallLogStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, PhoneCallLogMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change phone call log status." });
-
-            var (success, message) = _svc.TogglePhoneCallLogStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {
+                if (!await _menuPerm.Has(User, PhoneCallLogMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change phone call log status." });
+                request.DoneBy = UserId;
+                var (success, message) = _svc.TogglePhoneCallLogStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         // ─── VISITOR BOOK ─────────────────────────────────────
@@ -443,6 +749,33 @@ namespace SchoolERP.Net.Controllers.Api
         {
             var data = _svc.GetAllVisitors(CompanyId, SessionId, includeDeleted);
             return Ok(ApiResponse<List<FOVisitorBookViewModel>>.SuccessResponse(data));
+        }
+
+        [HttpPost("GetAllVisitorsWithPageIndex")]
+        public async Task<IActionResult> GetAllVisitorsWithPageIndex([FromBody] FOVisitorBookSerchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<FOVisitorBookViewModel>>.SuccessResponse(new List<FOVisitorBookViewModel>()));
+
+                var data = await _svc.GetAllVisitorsWithPageIndex(request);
+                return Ok(ApiResponse<PagedResult<FOVisitorBookViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
         }
 
         [HttpGet("GetVisitorByID/{id}")]
@@ -457,8 +790,8 @@ namespace SchoolERP.Net.Controllers.Api
         public IActionResult UpsertVisitor([FromBody] FOVisitorBookUpsertRequest req)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var (success, message) = _svc.UpsertVisitor(req, CompanyId, SessionId, UserId);
-            return Ok(new { success, message });
+            var result = _svc.UpsertVisitor(req, CompanyId, SessionId, UserId);
+            return Ok(new { result });
         }
 
         [HttpPost("DeleteVisitor")]
@@ -469,10 +802,18 @@ namespace SchoolERP.Net.Controllers.Api
         }
 
         [HttpPost("ToggleVisitorStatus")]
-        public IActionResult ToggleVisitorStatus(int id, bool isActive)
+        public IActionResult ToggleVisitorStatus([FromBody] StatusUpdateRequest request)
         {
-            var (success, message) = _svc.ToggleVisitorStatus(id, isActive, UserId);
-            return Ok(new { success, message });
+            try
+            {                
+                int userId = UserId;
+                var (success, message) = _svc.ToggleVisitorStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
         }
 
         // ─── ADMISSION INQUIRY ──────────────────────────────────────
@@ -512,6 +853,224 @@ namespace SchoolERP.Net.Controllers.Api
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var (success, message) = _svc.SaveInquiryFollowUp(req, UserId);
             return Ok(new { success, message });
+        }
+
+        // ─── ADMISSION INQUIRY ──────────────────────────────────────
+        [HttpPost("GetAllAdmissionInquiriesWithPageIndex")]
+        public IActionResult GetAllAdmissionInquiriesWithPageIndex([FromBody] EnquirySearchRequest request)
+        {
+            try
+            {
+                var data = _svc.GetAllAdmissionInquiriesWithPageIndex(request);
+                return Ok(ApiResponse<List<FOAdmissionInquiryViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
+        }
+
+        [HttpPost("UpsertVisitorAttachmentFile")]
+        public IActionResult UpsertVisitorAttachmentFile([FromBody] FOVisitorBookAttachmentUpsertRequest req)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var (success, message) = _svc.UpsertVisitorAttachmentFile(req, UserId);
+            return Ok(new { success, message });
+        }
+
+        [HttpPost("UpsertPostalDispatchAttachmentFile")]
+        public IActionResult UpsertPostalDispatchAttachmentFile([FromBody] FOPostalDispatchAttachmentUpsertRequest req)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _svc.UpsertPostalDispatchAttachmentFile(req, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        [HttpPost("GetAllPostalReceiveWithPage")]
+        public async Task<IActionResult> GetAllPostalReceiveWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<FOPostalReceiveViewModel>>.SuccessResponse(new List<FOPostalReceiveViewModel>()));
+
+                var data = await _svc.GetAllPostalReceiveWithPage(request);
+                return Ok(ApiResponse<PagedResult<FOPostalReceiveViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpPost("UpsertPostalReceiveAttachmentFile")]
+        public IActionResult UpsertPostalReceiveAttachmentFile([FromBody] FOPostalReceiveAttachmentUpsertRequest req)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _svc.UpsertPostalReceiveAttachmentFile(req, UserId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllComplaintsWithPage")]
+        public async Task<IActionResult> GetAllComplaintsWithPage([FromBody] ComplaintSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<FOComplaintViewModel>>.SuccessResponse(new List<FOComplaintViewModel>()));
+
+                var data = await _svc.GetAllComplaintsWithPage(request);
+                return Ok(ApiResponse<PagedResult<FOComplaintViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllPurposesWithPage")]
+        public async Task<IActionResult> GetAllPurposesWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstFOPurposeViewModel>>.SuccessResponse(new List<MstFOPurposeViewModel>()));
+
+                var data = await _svc.GetAllPurposesWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstFOPurposeViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllComplaintTypesWithPage")]
+        public async Task<IActionResult> GetAllComplaintTypesWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstFOComplaintTypeViewModel>>.SuccessResponse(new List<MstFOComplaintTypeViewModel>()));
+
+                var data = await _svc.GetAllComplaintTypesWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstFOComplaintTypeViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllSourceWithPage")]
+        public async Task<IActionResult> GetAllSourceWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstFOSourceViewModel>>.SuccessResponse(new List<MstFOSourceViewModel>()));
+
+                var data = await _svc.GetAllSourceWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstFOSourceViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllReferenceWithPage")]
+        public async Task<IActionResult> GetAllReferenceWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<MstFOReferenceViewModel>>.SuccessResponse(new List<MstFOReferenceViewModel>()));
+
+                var data = await _svc.GetAllReferenceWithPage(request);
+                return Ok(ApiResponse<PagedResult<MstFOReferenceViewModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
         }
     }
 }

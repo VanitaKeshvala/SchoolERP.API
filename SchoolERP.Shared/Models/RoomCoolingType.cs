@@ -16,6 +16,7 @@ namespace SchoolERP.Shared.Models
         public string Message { get; set; }   // maps to MESSAGE
         public int RoomCoolingTypeId { get; set; }
         public string RoomCoolingTypeName { get; set; }
+        public string DisplayLabel { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; } = true;
         public int CompanyId { get; set; }
@@ -34,6 +35,7 @@ namespace SchoolERP.Shared.Models
     {
         public int RoomCoolingTypeId { get; set; }
         public string RoomCoolingTypeName { get; set; }
+        public string DisplayLabel { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; }
         public int CompanyID { get; set; }

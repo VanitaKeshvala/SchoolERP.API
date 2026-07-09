@@ -19,9 +19,9 @@ namespace SchoolERP.Net.Services.Clients
         // Max file size: 2MB
         //private const long MaxFileSizeBytes = 2 * 1024 * 1024;
         private long MaxFileSizeBytes =>
-    _configuration.GetValue<long>("FileSettings:MaxFileSizeBytes");
+    _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
 
-       
+        
 
         // ── UPLOAD ────────────────────────────────────────────────
         public async Task<PhotoUploadResult> UploadAsync(
@@ -34,9 +34,9 @@ namespace SchoolERP.Net.Services.Clients
             // ── Validate: file type ────────────────────────────
             if (!AllowedTypes.Contains(photo.ContentType.ToLower()))
                 return Fail("Only JPG, PNG, GIF, and WEBP images are allowed.");
-
+            long maxBytes = MaxFileSizeBytes * 1024L * 1024L;
             // ── Validate: file size ────────────────────────────
-            if (photo.Length > MaxFileSizeBytes)
+            if (photo.Length > maxBytes)
                 return Fail("Photo size must not exceed 2MB.");
 
             // ── Validate: recordId ─────────────────────────────

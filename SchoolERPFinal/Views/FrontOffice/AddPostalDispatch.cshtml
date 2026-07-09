@@ -1,0 +1,113 @@
+﻿@model SchoolERP.Shared.Models.FOPostalDispatchAddPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Postal Dispatch";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    var p = Model.Permissions;
+
+}
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">@(Model.EditItems == null ? "Add Postal Dispatch" : "Edit Postal Dispatch")</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (p.CanAdd)
+        {
+            <button type="submit" onclick="saveRecord()" class="btn btn-success top-btn">
+                <i class="ti ti-device-floppy me-1"></i> Save
+            </button>
+        }
+        <a href="/FrontOffice/PostalDispatch" class="btn btn-secondary top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<form id="postalForm">
+
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow-tbl-outer">
+                <div class="card-body">
+                    <input type="hidden" id="hdnPostalDispatchID" value="@Model.EditItems?.PostalDispatchID">
+                    <div class="row row-gap-3">
+                        <div class="col-md-6">
+                            <label class="form-label">To Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtToTitle" value="@Model.EditItems?.ToTitle" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">From Title</label>
+                            <input type="text" class="form-control" value="@Model.EditItems?.FromTitle" id="txtFromTitle">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Reference No</label>
+                            <input type="text" class="form-control" id="txtReferenceNo" value="@Model.EditItems?.ReferenceNo">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" id="txtAddress" rows="2">@Model.EditItems?.Address</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Note</label>
+                            <textarea class="form-control" id="txtNote" rows="2">@Model.EditItems?.Note</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="txtDate" required value="@(Model.EditItems?.Date.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd"))">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Attachment</label>
+                            <input type="file" class="form-control" id="attachmentFile" name="attachmentFile">
+                            <small class="text-muted" id="fileInfo"></small>
+
+                            @if (!string.IsNullOrEmpty(Model.EditItems?.FileName))
+                            {
+                                <div id="existingFileInfo" class="mt-1 d-flex align-items-center gap-2">
+                                    <a href="@Model.EditItems.Attachment" target="_blank" class="small">
+                                        <i class="ti ti-paperclip me-1"></i>@Model.EditItems.FileName
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeExistingFile()">
+                                        <i class="ti ti-x"></i>
+                                    </button>
+                                </div>
+                            }
+                            <!-- Tells the backend whether to keep, replace, or delete the existing file -->
+                            <input type="hidden" id="hdnExistingFile" name="ExistingFileName" value="@Model.EditItems?.FileName">
+                            <input type="hidden" id="hdnRemoveFile" name="RemoveAttachment" value="false">
+                        </div>
+                        @*<div class="col-md-6">
+                            <label class="form-label">Attachment</label>
+                            <input type="file" class="form-control" id="fileAttachment">
+                        </div>*@
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="chkActive" @(Model.EditItems?.IsActive ?? true ? "checked" : "")>
+                                <label class="form-check-label" for="chkActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+@section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+
+    </script>
+    <script src="~/js/inline-form-validation.js"></script>
+    <script src="~/assets/js/PostalDispatch.js"></script>
+
+}

@@ -2,7 +2,7 @@
 @using System.Security.Claims
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Room Type";
+    ViewData["Title"] = "Room Occupancy Type";
     int currentUserId = 0;
     if (User.Identity != null && User.Identity.IsAuthenticated)
     {
@@ -22,7 +22,7 @@
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">Room Type</h6>
+        <h6 class="fw-bold mb-0">Room Occupancy Type</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
@@ -198,6 +198,7 @@
                             <tr>
                                 <th style="width: 50px;">Select</th>
                                 <th>Room Type</th>
+                                <th>Display Name</th>
                                 <th>Description</th>
                                 <th style="width: 100px;">Status</th>
                             </tr>
@@ -215,6 +216,7 @@
 
                                         </td>
                                         <td>@item.RoomTypeTitle</td>
+                                        <td>@item.DisplayLabel</td>
                                         <td>@item.RoomTypeDescription</td>
                                         <td>
                                             <div class="form-check form-switch" onclick="event.stopPropagation()">

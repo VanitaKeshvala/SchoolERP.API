@@ -82,6 +82,31 @@
             border-radius: 5px !important;
             color: var(--primary) !important;
         }
+
+        /* Extend theme's submenu styling to support 3rd-level (grandchild) menus */
+        .sidebar .sidebar-menu > ul > li ul li.submenu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+            .sidebar .sidebar-menu > ul > li ul li.submenu ul li a {
+                padding-left: 56px;
+                display: flex;
+                align-items: center;
+                font-size: 13px;
+            }
+
+                .sidebar .sidebar-menu > ul > li ul li.submenu ul li a i {
+                    font-size: 14px;
+                    margin-right: 8px;
+                }
+
+        .sidebar .sidebar-menu > ul > li ul li.submenu > a.subdrop {
+            background: transparent !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
     </style>
     @RenderSection("Styles", required: false)
 
@@ -603,8 +628,7 @@
     <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
 
     <script src="~/assets/js/copySessionModal.js"></script>
-    <!-- Sidebar Active Menu Highlighting -->
-    <script src="~/assets/js/sidebarActiveMenu.js"></script>
+    
 
 
     <!-- DataTable Core -->
@@ -624,7 +648,8 @@
     <script src="~/js/buttons.html5.min.js"></script>
 
     <script src="~/js/buttons.print.min.js"></script>
-
+    <!-- Sidebar Active Menu Highlighting -->
+    <script src="~/assets/js/sidebarActiveMenu.js"></script>
     <script>
 
 

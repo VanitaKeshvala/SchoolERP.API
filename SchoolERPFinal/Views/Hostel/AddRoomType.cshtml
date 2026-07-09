@@ -2,14 +2,14 @@
 @using System.Text.Json
 @model SchoolERP.Shared.Models.RoomTypeAddViewModel
 @{
-    ViewData["Title"] = "Add Room Type";
+    ViewData["Title"] = "Add Room Occupancy Type";
     var p = Model.Permissions;
 }
 
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">@(Model.EditRoomType == null ? "Add Room Type" : "Edit Room Type")</h6>
+        <h6 class="fw-bold mb-0">@(Model.EditRoomType == null ? "Add Room Occupancy Type" : "Edit Room Occupancy Type")</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
         @if (p.CanAdd)
@@ -33,27 +33,9 @@
                     <input type="hidden" id="hdnUserID" value="@(Model.EditRoomType?.CreatedBy ?? 0)">
                     <input type="hidden" id="hdnRoomTypeID" value="0">
                     <div class="row">
-
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">Room Type Title <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="txtTitle"
-                                   value="@Model.EditRoomType?.RoomTypeTitle"
-                                   placeholder="e.g. 1st Class" autocomplete="off" required>
-                            <div class="invalid-feedback" id="errtxtTitle"></div>
-                        </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">
-                                Bed Capacity
-                                <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" class="form-control" id="txtBedCapacity"
-                                   value="@Model.EditRoomType?.BedCapacity"
-                                   placeholder="e.g. 1st Class" autocomplete="off" required>
-                            <div class="invalid-feedback" id="errBedCapacity"></div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-semibold">
-                                AC / Non-AC
+                                Room Type
                             </label>
                             <select class="form-select select2" id="ddlACNonAC" required style="width: 100%;">
                                 <option value="">-- Select --</option>
@@ -61,37 +43,32 @@
                                 {
                                     <option value="@rt.RoomCoolingTypeId" selected="@(Model.EditRoomType?.RoomCoolingTypeId == rt.RoomCoolingTypeId)">@rt.RoomCoolingTypeName</option>
                                 }
-                            </select>                           
+                            </select>
                         </div>
-
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Room Occupancy Type <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtTitle"
+                                   value="@Model.EditRoomType?.RoomTypeTitle"
+                                   placeholder="e.g. Single" autocomplete="off" required>
+                            <div class="invalid-feedback" id="errtxtTitle"></div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Display Name</label>
+                            <input type="text" class="form-control" id="txtDisplayLabel"
+                                   value="@Model.EditRoomType?.DisplayLabel"
+                                   placeholder="e.g. Single" autocomplete="off">
+                        </div>
+                        <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">
-                                Default Rent Per Bed
+                                Bed Capacity
                                 <span class="text-danger">*</span>
                             </label>
-                            <input type="text" class="form-control" id="txtRentPerBed"
-                                   value="@Model.EditRoomType?.RentPerBed"
-                                   placeholder="e.g. 1st Class" autocomplete="off" required>
-                            <div class="invalid-feedback" id="errRentPerBed"></div>
+                            <input type="number" class="form-control" id="txtBedCapacity"
+                                   value="@Model.EditRoomType?.BedCapacity"
+                                   placeholder="e.g. 1" autocomplete="off" required>
+                            <div class="invalid-feedback" id="errBedCapacity"></div>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Security Deposit</label>
-                            <input type="text"
-                                   value="@Model.EditRoomType?.SecurityAmount"
-                                class="form-control" id="txtSecurityAmount">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Effective From</label>
-                            <input type="date"
-                                   value="@(Model.EditRoomType?.EffectiveFrom?.ToString("yyyy-MM-dd"))"
-                                   class="form-control" id="txtEffectiveFrom">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold">Effective To</label>
-                            <input type="date"
-                                   value="@(Model.EditRoomType?.EffectiveTO?.ToString("yyyy-MM-dd"))"
-                                   class="form-control" id="txtEffectiveTo">
-                        </div>
+                        
                         
                         <div class="col-md-12 mb-3">                           
                             <label class="form-label fw-bold">Description</label>

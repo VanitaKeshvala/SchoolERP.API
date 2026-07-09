@@ -443,5 +443,62 @@ namespace SchoolERP.API.Controllers
                         .ErrorResponse(ex.Message));
             }
         }
+
+        [HttpGet("GetAllRoomOccupancyByRoomTypesWise")]
+        public IActionResult GetAllRoomOccupancyByRoomTypesWise(int roomTypeId)
+        {
+            try
+            {
+                var data = _hostelService.GetAllRoomOccupancyByRoomTypesWise(roomTypeId);
+                return Ok(ApiResponse<List<RoomTypeViewModel>>.SuccessResponse(data));
+            }
+            catch (System.Exception ex)
+            {
+                return Ok(ApiResponse<List<RoomTypeViewModel>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("GetHostelSummary")]
+        public IActionResult GetHostelSummary(int hostelId)
+        {
+            try
+            {
+                var data = _hostelService.GetHostelSummary(hostelId);
+                return Ok(ApiResponse<List<HostelSummary>>.SuccessResponse(data));
+            }
+            catch (System.Exception ex)
+            {
+                return Ok(ApiResponse<List<HostelSummary>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("GetAllHostelReportWithPage")]
+        public async Task<IActionResult> GetAllHostelReportWithPage([FromBody] HotelReportSearchRequest request)
+        {
+            try
+            {
+                int userId = UserId;
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HostelReportResponse>>.SuccessResponse(new List<HostelReportResponse>()));
+
+                var data = await _hostelService.GetAllHostelReportWithPage(request);
+                return Ok(ApiResponse<List<HostelReportResponse>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
     }
 }

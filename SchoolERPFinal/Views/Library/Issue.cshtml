@@ -1,6 +1,12 @@
-
+﻿@model SchoolERP.Shared.Models.IssuePageViewModel
+@using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Issue";
+    var p = Model.Permissions;
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
 }
 
 <!-- Page Header -->
@@ -10,14 +16,25 @@
     </div>
 
     <div class="d-flex gap-1">
-        <button class="btn btn-primary top-btn" data-bs-toggle="modal" data-bs-target="#examModal"><i class="ti ti-plus"></i> Add Issued Book</button>
-        <!-- <button class="btn btn-info"><i
-        class="ti ti-pencil me-1"></i>Edit</button> -->
-        <a href="#" class="btn btn-secondary top-btn"><i class="ti ti-printer me-1"></i> Print</a>
-        <button data-bs-toggle="modal" data-bs-target="#return" class="btn btn-teal top-btn">
-            <i class="ti ti-share-3 me-1"></i>Return
-        </button>
-        
+        @if(p.CanAdd)
+        {
+            <a href="/Library/AddIssueBook/@Model.LibraryMemberID" class="btn btn-primary top-btn"><i class="ti ti-plus"></i> Add</a>
+            <!-- <button class="btn btn-info"><i
+            class="ti ti-pencil me-1"></i>Edit</button> -->
+        }
+        @* @if (p.CanEdit)
+        {
+            <button data-bs-toggle="modal" data-bs-target="#return" class="btn btn-teal top-btn">
+                <i class="ti ti-share-3 me-1"></i>Return
+            </button>
+        } *@
+        @if(p.CanPrint)
+        {
+            <a href="#" class="btn btn-secondary top-btn"><i class="ti ti-printer me-1"></i> Print</a>
+        }       
+        <a href="/Library/Member" class="btn btn-teal top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
     </div>
 
 </div>
@@ -28,48 +45,169 @@
         <div class="card shadow-tbl-outer position-sticky" style="top: 70px;">
             <div class="card-body d-flex align-items-center flex-sm-nowrap flex-wrap row-gap-3">
                 <div class="me-3 doctor-profile-img" style="width: 85px;">
-                    <a href="#"><img src="assets/img/doctors/doctor-01.jpg" class="rounded" alt=""></a>
+                    <a href="#">
+                        @if (Model.MemberDetails?.MemberType == "Student")
+                        {
+                            <img src="@(string.IsNullOrEmpty(Model.MemberDetails?.StudentPhoto)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.MemberDetails?.StudentPhoto))" class="rounded" style="height:100px" alt="">
+                        }
+                        else
+                        {
+                            <img src="@(string.IsNullOrEmpty(Model.MemberDetails?.StaffPhoto)
+                                            ? Url.Content("~/images/no-image.png")
+                                            : Url.Content("~" + Model.MemberDetails?.StaffPhoto))" class="rounded" style="height:100px" alt="">
+                        }                        
+                    </a>
                 </div>
                 <div class="flex-fill">
-                    <div class="d-flex align-items-center  mb-1">
+                    <div class="d-flex align-items-center  mb-1">                        
                         <h6 class="mb-2 fw-semibold">
-                            <a href="#" id="memberNamePlaceholder">-</a>
+                            @if (Model.MemberDetails?.MemberType == "Student")
+                            {
+                                <a href="#" id="memberNamePlaceholder">@Model.MemberDetails?.StudentFullName</a>
+                            }
+                            else
+                            {
+                                <a href="#" id="memberNamePlaceholder">@Model.MemberDetails?.StaffFullName</a>
+                            }
+
                         </h6>
                     </div>
                     <p class="mb-2 fs-13">
-                        <span class="text-dark">Admission No </span> : <span id="admissionNoPlaceholder">-</span>
+                        <span class="text-dark">Admission No </span> : <span id="admissionNoPlaceholder">@Model.MemberDetails?.AdmissionNo</span>
                     </p>
                     <p class="mb-2 fs-13">
-                        <span class="text-dark">Member ID</span> : <span id="memberIDPlaceholder">-</span>
+                        <span class="text-dark">Member ID</span> : <span id="memberIDPlaceholder">@Model.MemberDetails?.LibraryMemberID</span>
                     </p>
                     <!-- <p class="mb-2 fs-13">
-                        <span class="text-dark">Designation</span> : Teacher
+                    <span class="text-dark">Designation</span> : Teacher
                     </p> -->
                 </div>
             </div>
             <!-- end card body -->
             <ul class="list-group list-group-flush">
-                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Library Card No. :</span> <span id="cardNoPlaceholder">-</span></li>
-                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Member Type :</span> <span id="memberTypePlaceholder">-</span></li>
-                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Gender :</span> <span id="genderPlaceholder">-</span></li>
-                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Mobile :</span> <span id="mobilePlaceholder">-</span></li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Library Card No. :</span> <span id="cardNoPlaceholder">@Model.MemberDetails?.LibraryCardNo</span></li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Member Type :</span> <span id="memberTypePlaceholder">@Model.MemberDetails?.MemberType</span></li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Gender :</span> <span id="genderPlaceholder">@Model.MemberDetails?.Gender</span></li>
+                <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Mobile :</span> <span id="mobilePlaceholder">@Model.MemberDetails?.MobileNo</span></li>
+                @if (Model.MemberDetails?.MemberType == "Student")
+                {
+                    <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Email :</span> <span id="mobilePlaceholder">@Model.MemberDetails?.StudentEmail</span></li>
+                }
+                else
+                {
+                    <li class="list-group-item list-group-item-action d-flex justify-content-between"><span class="text-dark">Email :</span> <span id="mobilePlaceholder">@Model.MemberDetails?.StaffEmail</span></li>
+                }
+
             </ul>
         </div>
         <!-- end card -->
     </div>
     <div class="col-xl-8 ps-md-0">
+
+
+        <div class="col-xl-12">
+            <div class="card mb-2 shadow-tbl-outer">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                        <!-- ── Search box (name="search" so form submits it) ── -->
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                            <i class="fas fa-search search-icon-input"></i>
+                            <input type="text"
+                            name="search"
+                            id="txtSearchInput"
+                            value="@Model.SearchTerm"
+                            class="form-control border-0 ps-2"
+                            placeholder="Search by class, section..."
+                            style="min-width: 320px;" />
+                        </div>
+
+                        <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                        <form method="get" asp-action="Issue" id="frmSearch" style="display:none;">
+                            <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                            <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                            <input type="hidden" name="id" id="hdnid" value=@Model.LibraryMemberID />
+                            <input type="hidden" name="companyId" id="hdnCompanyId" value=@Model.CompanyId />
+                            <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                        </form>
+
+                        <div class="dropdown">
+                            <a href="#" id="btnFilterToggle"
+                            class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                            </a>
+
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                            id="filter-dropdown">
+
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                    <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                        <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                    </div>
+                                </div>
+
+                                <div class="filter-body pb-0">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label class="form-label mb-1">Company</label>
+                                            <select class="form-select form-control select2"
+                                            id="ddlFilterCompany"
+                                            data-placeholder="Select company">
+                                                <option value="">All</option>
+                                                @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                                {
+                                                    <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                        @c.SchoolName
+                                                    </option>
+                                                }
+                                            </select>
+                                        </div>                                    
+
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active filter badges -->
+        <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+            <div class="card shadow-tbl border-0 py-2 mb-2">
+                <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                    <span class="text-muted small fw-bold ms-2 me-2">
+                        <i class="ti ti-filter-check me-1"></i>Active Filters:
+                    </span>
+                    <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                    <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                    id="btnResetAllFilters" onclick="resetAllFilters()">
+                        <i class="ti ti-trash me-1"></i>Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
         <div class="card shadow-tbl">
             <div class="card-header">
                 <h6 class="mb-0">Book Issued</h6>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table mb-0">
+                    <table class="table mb-0" id="tblIssuebook">
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
                                 <th>Book Title</th>
-                                <th>Book Number</th>
+                                <th>Book No</th>
                                 <th>Issue Date</th>
                                 <th>Due Return Date</th>
                                 <th>Return Date</th>
@@ -77,8 +215,117 @@
                             </tr>
                         </thead>
                         <tbody id="issuedBooksTableBody">
+                            @if (Model.IssueReturn != null)
+                            {
+                                int index = 1;
+                                @foreach (var c in Model.IssueReturn)
+                                {
+                                    <tr class="item-row" onclick="selectItem(@c.IssueReturnID, this)" style="cursor: pointer;">
+                                        <td>@index</td>
+                                        <td>@c.BookTitle</td>
+                                        <td>@c.BookNo</td>
+                                        <td>@c.IssueDate.ToString("dd MMM yyyy")</td>
+                                        <td>@c.DueReturnDate.ToString("dd MMM yyyy")</td>
+                                        <td>@c.ReturnDate?.ToString("dd MMM yyyy")</td>
+                                        <td>
+                                            @if (c.Status == 2)
+                                            {
+                                                <span class="badge bg-success">Returned</span>
+                                            }
+                                            else
+                                            {
+                                                <a href="/Library/AddIssueBookReturn?issueReturnID=@c.IssueReturnID&libraryMemberID=@Model.LibraryMemberID"
+                                                        class="btn btn-sm btn-outline-apply">
+                                                    Return
+                                                </a>
+                                            }
+
+                                        </td>
+
+                                    </tr>
+
+                                    index++;
+                                }
+
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <span class="text-muted">No records found.</span>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?id=@Model.LibraryMemberID&pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?id=@Model.LibraryMemberID&pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?id=@Model.LibraryMemberID&pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?id=@Model.LibraryMemberID&pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?id=@Model.LibraryMemberID&pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -152,112 +399,6 @@
 </div>
 
 @section Scripts {
-    <script>
-        const memberId = @ViewBag.LibraryMemberID;
-        let selectedIssueId = 0;
-
-        $(document).ready(function () {
-            loadMemberDetails();
-            loadIssuedBooks();
-            loadBooks();
-
-            $('#issueBookForm').on('submit', function (e) {
-                e.preventDefault();
-                const req = {
-                    libraryMemberID: memberId,
-                    bookID: $('#bookSelect').val(),
-                    issueDate: new Date().toISOString(),
-                    dueReturnDate: $('#dueReturnDate').val()
-                };
-
-                $.ajax({
-                    url: '/Library/IssueBook',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(req),
-                    success: function (res) {
-                        if (res.success) {
-                            $('#examModal').modal('hide');
-                            loadIssuedBooks();
-                            Swal.fire('Success', res.message, 'success');
-                        } else {
-                            Swal.fire('Error', res.message, 'error');
-                        }
-                    }
-                });
-            });
-
-            $('#returnBookForm').on('submit', function (e) {
-                e.preventDefault();
-                $.post('/Library/ReturnBook', { issueId: selectedIssueId, returnDate: $('#returnDate').val() }, function (res) {
-                    if (res.success) {
-                        $('#return').modal('hide');
-                        loadIssuedBooks();
-                        Swal.fire('Success', res.message, 'success');
-                    } else {
-                        Swal.fire('Error', res.message, 'error');
-                    }
-                });
-            });
-        });
-
-        function loadMemberDetails() {
-            $.get('/Library/GetMemberDetails', { id: memberId }, function (res) {
-                if (res.success) {
-                    const m = res.data;
-                    $('#memberNamePlaceholder').text(m.memberName);
-                    $('#admissionNoPlaceholder').text(m.admissionNo);
-                    $('#memberIDPlaceholder').text(m.libraryMemberID);
-                    $('#cardNoPlaceholder').text(m.libraryCardNo || '-');
-                    $('#memberTypePlaceholder').text(m.memberType);
-                    $('#genderPlaceholder').text(m.gender);
-                    $('#mobilePlaceholder').text(m.mobileNo);
-                }
-            });
-        }
-
-        function loadIssuedBooks() {
-            $.get('/Library/GetIssuedBooks', { memberId: memberId }, function (res) {
-                if (res.success) {
-                    let html = '';
-                    res.data.forEach((b, index) => {
-                        const isReturned = b.status === 2;
-                        html += `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${b.bookTitle}</td>
-                                <td>${b.bookNo}</td>
-                                <td>${new Date(b.issueDate).toLocaleDateString()}</td>
-                                <td>${new Date(b.dueReturnDate).toLocaleDateString()}</td>
-                                <td>${b.returnDate ? new Date(b.returnDate).toLocaleDateString() : '-'}</td>
-                                <td class="text-end">
-                                    ${!isReturned ? `<button class="btn btn-sm btn-outline-apply" onclick="openReturnModal(${b.issueReturnID})">Return</button>` : '<span class="badge bg-success">Returned</span>'}
-                                </td>
-                            </tr>`;
-                    });
-                    $('#issuedBooksTableBody').html(html);
-                }
-            });
-        }
-
-        function loadBooks() {
-            $.get('/Library/GetBookList', function (res) {
-                if (res.success) {
-                    let html = '<option value="">Select Book</option>';
-                    res.data.forEach(b => {
-                        html += `<option value="${b.bookID}">${b.bookTitle} (${b.bookNo})</option>`;
-                    });
-                    $('#bookSelect').html(html);
-                    $('#bookSelect').select2({ dropdownParent: $('#examModal') });
-                }
-            });
-        }
-
-        function openReturnModal(id) {
-            selectedIssueId = id;
-            $('#returnDate').val(new Date().toISOString().split('T')[0]);
-            $('#return').modal('show');
-        }
-    </script>
+    <script src="~/assets/js/IssuedBooks.js"></script>
 }
 

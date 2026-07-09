@@ -92,8 +92,15 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'Approve Leave' page where administrators can review and approve student leave requests.
         /// </summary>
-        public async Task<IActionResult> ApproveLeave()
+        public async Task<IActionResult> ApproveLeave(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? classId,
+        int? sectionId,
+        int? status)
         {
+            var model = new StudentLeavePageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
@@ -101,13 +108,46 @@ namespace SchoolERP.Net.Controllers
                    "/StudentInformation/DisabledStudents"
                );
 
-                ViewBag.ClassList = (await _classService.GetAllAsync()).Data;
-                return View(perms);
-            }
-            catch (Exception)
-            {
+                var request = new StudentLeaveSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    ClassID =classId??null,
+                    SectionID = sectionId ?? null,
+                    Status=status
+                };
 
-                throw;
+                var sessionId = await GetSessionId();
+                var classesResponse = _service.GetAllLeaveApplicationsWithPageAsync(request);
+                var companiesTask = _companyService.GetAllAsync();
+                var classList = await _classService.GetAllAsync();
+                await Task.WhenAll(classesResponse, companiesTask);
+
+                var pagedResult = await classesResponse;
+
+                model = new StudentLeavePageViewModel
+                {
+                    StudentLeaveModel = pagedResult.Success ? pagedResult.Data.Data : new List<StudentLeaveViewModel>(),
+                    Classes = classList.Data ?? new(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SectionID =sectionId,
+                    ClassId=classId
+                };
+                model.Permissions = perms;
+                return View(model);
+
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }

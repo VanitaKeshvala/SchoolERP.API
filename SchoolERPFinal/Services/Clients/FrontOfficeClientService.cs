@@ -23,8 +23,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeletePurposeAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeletePurpose", id!);
 
-        public Task<ApiResponse<dynamic>> TogglePurposeStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePurposeStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> TogglePurposeStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePurposeStatus", request);
 
         // ─── COMPLAINT TYPE ─────────────────────────────────────
         public Task<ApiResponse<List<MstFOComplaintTypeViewModel>>> GetAllComplaintTypesAsync(bool includeDeleted = false)
@@ -39,8 +39,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteComplaintTypeAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeleteComplaintType", id!);
 
-        public Task<ApiResponse<dynamic>> ToggleComplaintTypeStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleComplaintTypeStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleComplaintTypeStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleComplaintTypeStatus", request);
 
         // ─── SOURCE ─────────────────────────────────────────────
         public Task<ApiResponse<List<MstFOSourceViewModel>>> GetAllSourcesAsync(bool includeDeleted = false)
@@ -55,8 +55,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteSourceAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeleteSource", id!);
 
-        public Task<ApiResponse<dynamic>> ToggleSourceStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleSourceStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleSourceStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleSourceStatus", request);
 
         // ─── REFERENCE ──────────────────────────────────────────
         public Task<ApiResponse<List<MstFOReferenceViewModel>>> GetAllReferencesAsync(bool includeDeleted = false)
@@ -71,8 +71,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteReferenceAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeleteReference", id!);
 
-        public Task<ApiResponse<dynamic>> ToggleReferenceStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleReferenceStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleReferenceStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleReferenceStatus", request);
 
         // ─── COMPLAINT ──────────────────────────────────────────
         public Task<ApiResponse<List<FOComplaintViewModel>>> GetAllComplaintsAsync(bool includeDeleted = false)
@@ -87,8 +87,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeleteComplaintAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeleteComplaint/", id);
 
-        public Task<ApiResponse<dynamic>> ToggleComplaintStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleComplaintStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleComplaintStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleComplaintStatus", request);
 
         // ─── POSTAL RECEIVE ─────────────────────────────────────
         public Task<ApiResponse<List<FOPostalReceiveViewModel>>> GetAllPostalReceivesAsync(bool includeDeleted = false)
@@ -97,34 +97,42 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<FOPostalReceiveViewModel>> GetPostalReceiveByIDAsync(int id)
             => GetAsync<FOPostalReceiveViewModel>($"api/FrontOfficeApi/GetPostalReceiveByID/{id}");
 
-        public Task<ApiResponse<dynamic>> UpsertPostalReceiveAsync(FOPostalReceiveUpsertRequest req)
-            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertPostalReceive", req);
+        public Task<ApiResponse<UpsertPostalReceiveResponse>> UpsertPostalReceiveAsync(FOPostalReceiveUpsertRequest req)
+            => PostAsync<UpsertPostalReceiveResponse>("api/FrontOfficeApi/UpsertPostalReceive", req);
 
         public Task<ApiResponse<dynamic>> DeletePostalReceiveAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeletePostalReceive", id);
 
-        public Task<ApiResponse<dynamic>> TogglePostalReceiveStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePostalReceiveStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> TogglePostalReceiveStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePostalReceiveStatus", request);
 
         // ─── POSTAL DISPATCH ─────────────────────────────────────
         public Task<ApiResponse<List<FOPostalDispatchViewModel>>> GetAllPostalDispatchesAsync(bool includeDeleted = false)
             => GetAsync<List<FOPostalDispatchViewModel>>($"api/FrontOfficeApi/GetAllPostalDispatches?includeDeleted={includeDeleted}");
 
+        public async Task<ApiResponse<PagedResult<FOPostalDispatchViewModel>>> GetAllPostalDispatchesWithPageIndexAsync(FOPostalDispatchSearchRequest request)
+        {
+            return await PostAsync<PagedResult<FOPostalDispatchViewModel>>("api/FrontOfficeApi/GetAllPostalDispatchesWithPageIndex", request);
+        }
+
         public Task<ApiResponse<FOPostalDispatchViewModel>> GetPostalDispatchByIDAsync(int id)
             => GetAsync<FOPostalDispatchViewModel>($"api/FrontOfficeApi/GetPostalDispatchByID/{id}");
 
-        public Task<ApiResponse<dynamic>> UpsertPostalDispatchAsync(FOPostalDispatchUpsertRequest req)
-            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertPostalDispatch", req);
+        public Task<ApiResponse<UpsertPostalDispatchResponse>> UpsertPostalDispatchAsync(FOPostalDispatchUpsertRequest req)
+            => PostAsync<UpsertPostalDispatchResponse>("api/FrontOfficeApi/UpsertPostalDispatch", req);
 
         public Task<ApiResponse<dynamic>> DeletePostalDispatchAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeletePostalDispatch",id);
 
-        public Task<ApiResponse<dynamic>> TogglePostalDispatchStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePostalDispatchStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> TogglePostalDispatchStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePostalDispatchStatus", request);
 
         // ─── PHONE CALL LOG ─────────────────────────────────────
         public Task<ApiResponse<List<FOPhoneCallLogViewModel>>> GetAllPhoneCallLogsAsync(bool includeDeleted = false)
             => GetAsync<List<FOPhoneCallLogViewModel>>($"api/FrontOfficeApi/GetAllPhoneCallLogs?includeDeleted={includeDeleted}");
+
+        public Task<ApiResponse<PagedResult<FOPhoneCallLogViewModel>>> GetAllPhoneCallLogsWithPageAsync(FOPhoneCallLogSearchRequest req)
+            => PostAsync<PagedResult<FOPhoneCallLogViewModel>>("api/FrontOfficeApi/GetAllPhoneCallLogsWithPage", req);
 
         public Task<ApiResponse<FOPhoneCallLogViewModel>> GetPhoneCallLogByIDAsync(int id)
             => GetAsync<FOPhoneCallLogViewModel>($"api/FrontOfficeApi/GetPhoneCallLogByID/{id}");
@@ -135,24 +143,30 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> DeletePhoneCallLogAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeletePhoneCallLog", id!);
 
-        public Task<ApiResponse<dynamic>> TogglePhoneCallLogStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePhoneCallLogStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> TogglePhoneCallLogStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/TogglePhoneCallLogStatus", request);
 
         // ─── VISITOR BOOK ───────────────────────────────────────
         public Task<ApiResponse<List<FOVisitorBookViewModel>>> GetAllVisitorsAsync(bool includeDeleted = false)
             => GetAsync<List<FOVisitorBookViewModel>>($"api/FrontOfficeApi/GetAllVisitors?includeDeleted={includeDeleted}");
 
+
+        public async Task<ApiResponse<PagedResult<FOVisitorBookViewModel>>> GetAllVisitorsWithPageIndexAsync(FOVisitorBookSerchRequest request)
+        {
+            return await PostAsync<PagedResult<FOVisitorBookViewModel>>("api/FrontOfficeApi/GetAllVisitorsWithPageIndex", request);
+        }
+
         public Task<ApiResponse<FOVisitorBookViewModel>> GetVisitorByIDAsync(int id)
             => GetAsync<FOVisitorBookViewModel>($"api/FrontOfficeApi/GetVisitorByID/{id}");
 
-        public Task<ApiResponse<dynamic>> UpsertVisitorAsync(FOVisitorBookUpsertRequest req)
-            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertVisitor", req);
+        public Task<ApiResponse<UpsertVisitorResponse>> UpsertVisitorAsync(FOVisitorBookUpsertRequest req)
+            => PostAsync<UpsertVisitorResponse>("api/FrontOfficeApi/UpsertVisitor", req);
 
         public Task<ApiResponse<dynamic>> DeleteVisitorAsync(List<int> id)
             => PostAsync<dynamic>($"api/FrontOfficeApi/DeleteVisitor", id);
 
-        public Task<ApiResponse<dynamic>> ToggleVisitorStatusAsync(int id, bool isActive)
-            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleVisitorStatus?id={id}&isActive={isActive}", null!);
+        public Task<ApiResponse<dynamic>> ToggleVisitorStatusAsync(StatusUpdateRequest request)
+            => PostAsync<dynamic>($"api/FrontOfficeApi/ToggleVisitorStatus", request);
 
         // Admission Inquiry
         public Task<ApiResponse<List<FOAdmissionInquiryViewModel>>> GetAllAdmissionInquiriesAsync(System.DateTime? fromDate = null, System.DateTime? toDate = null, int sourceId = 0, int classId = 0, string? status = null)
@@ -175,5 +189,45 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<dynamic>> SaveInquiryFollowUpAsync(FOInquiryFollowUpSaveRequest req)
             => PostAsync<dynamic>("api/FrontOfficeApi/SaveInquiryFollowUp", req);
+
+        public Task<ApiResponse<PagedResult<FOAdmissionInquiryViewModel>>> GetAllAdmissionInquiriesWithPageIndexAsync(EnquirySearchRequest req)
+            => PostAsync<PagedResult<FOAdmissionInquiryViewModel>>("api/FrontOfficeApi/GetAllAdmissionInquiriesWithPageIndex", req);
+
+        public Task<ApiResponse<dynamic>> UpsertVisitorAttachmentFileAsync(FOVisitorBookAttachmentUpsertRequest req)
+            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertVisitorAttachmentFile", req);
+
+        public Task<ApiResponse<dynamic>> UpsertPostalDispatchAttachmentFileAsync(FOPostalDispatchAttachmentUpsertRequest req)
+            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertPostalDispatchAttachmentFile", req);
+
+        public async Task<ApiResponse<PagedResult<FOPostalReceiveViewModel>>> GetAllPostalReceiveWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<FOPostalReceiveViewModel>>("api/FrontOfficeApi/GetAllPostalReceiveWithPage", request);
+        }
+
+        public Task<ApiResponse<dynamic>> UpsertPostalReceiveAttachmentFileAsync(FOPostalReceiveAttachmentUpsertRequest req)
+            => PostAsync<dynamic>("api/FrontOfficeApi/UpsertPostalReceiveAttachmentFile", req);
+
+        public async Task<ApiResponse<PagedResult<FOComplaintViewModel>>> GetAllComplaintsWithPageAsync(ComplaintSearchRequest request)
+        {
+            return await PostAsync<PagedResult<FOComplaintViewModel>>("api/FrontOfficeApi/GetAllComplaintsWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<MstFOPurposeViewModel>>> GetAllPurposesWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstFOPurposeViewModel>>("api/FrontOfficeApi/GetAllPurposesWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<MstFOComplaintTypeViewModel>>> GetAllComplaintTypesWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstFOComplaintTypeViewModel>>("api/FrontOfficeApi/GetAllComplaintTypesWithPage", request);
+        }
+        public async Task<ApiResponse<PagedResult<MstFOSourceViewModel>>> GetAllSourceWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstFOSourceViewModel>>("api/FrontOfficeApi/GetAllSourceWithPage", request);
+        }
+        public async Task<ApiResponse<PagedResult<MstFOReferenceViewModel>>> GetAllReferenceWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<MstFOReferenceViewModel>>("api/FrontOfficeApi/GetAllReferenceWithPage", request);
+        }
     }
 }

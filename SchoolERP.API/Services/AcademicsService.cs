@@ -4,7 +4,9 @@ using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 using System.Data;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SchoolERP.API.Services
 {
@@ -420,5 +422,53 @@ namespace SchoolERP.API.Services
             }
 
         }
+
+        /// <summary>
+        /// Retrieves a list of students eligible for promotion based on company, session, class, and section.
+        /// </summary>
+        /// <param name="companyId">The ID of the company.</param>
+        /// <param name="sessionId">The ID of the academic session.</param>
+        /// <param name="classId">The ID of the class.</param>
+        /// <param name="sectionId">The ID of the section.</param>
+        /// <returns>A list of <see cref="StudentPromotionViewModel"/> representing students eligible for promotion.</returns>
+        public async Task<PagedResult<StudentPromotionViewModel>> GetForPromotionPageIndex(SearchPromotedStudent req)
+        {
+            using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+            if (req.PageNumber == 0 && req.PageSize == 0)
+            {
+                req.PageNumber = 1;
+                req.PageSize = 10;
+            }
+
+            var param = new DynamicParameters();
+            param.Add("@COMPANYID", req.CompanyID);
+            param.Add("@SESSIONID", req.SessionID);
+            param.Add("@CLASSID", req.ClassID);
+            param.Add("@SECTIONID", req.SectionID);
+            param.Add("@SEARCHKEYWORD", req.SearchKeyword);
+            param.Add("@PAGENUMBER", req.PageNumber);
+            param.Add("@PAGESIZE", req.PageSize);
+
+            var results = (await conn.QueryAsync<StudentPromotionViewModel>(
+                "sp_Academics_Students_GetForPromotionPageIndex",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+            var first = results.FirstOrDefault();
+            int res = first.STUDENTRESULT;
+            int totalRecords = first.TOTALRECORDS;
+            int pageNumber = first.TotalPages;
+            int pageSize = first.PageSize;
+
+            return new PagedResult<StudentPromotionViewModel>
+            {
+                Data = res == 1 ? results : new List<StudentPromotionViewModel>(),
+                TotalRecords = totalRecords,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
     }
 }

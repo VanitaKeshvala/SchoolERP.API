@@ -1,0 +1,372 @@
+﻿@model SchoolERP.Shared.Models.HostelManageReportPageViewModel
+@{
+    ViewData["Title"] = "Hostel Manage Report";
+    var p = Model.Permissions;
+    var req = Model.SearchRequest;
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
+
+    // ---- helpers: build a querystring for the CURRENT filters, with optional
+    // overrides (e.g. a different PageNumber) or a single key excluded (badge "x"). ----
+    Func<Dictionary<string, string>> currentParams = () =>
+    {
+        var d = new Dictionary<string, string>();
+        void Add(string key, object val)
+        {
+            if (val == null) return;
+            var s = val.ToString();
+            if (string.IsNullOrEmpty(s)) return;
+            d[key] = s;
+        }
+        Add("Mode", req.Mode);
+        Add("HostelID", req.HostelID);
+        Add("HostelTypeID", req.HostelTypeID);
+        Add("RoomTypeID", req.RoomTypeID);
+        Add("RoomCoolingTypeId", req.RoomCoolingTypeId);
+        Add("IsActive", req.IsActive);
+        Add("AsOnDate", req.AsOnDate.HasValue ? req.AsOnDate.Value.ToString("yyyy-MM-dd") : null);
+        Add("SearchText", req.SearchText);
+        Add("PageNumber", req.PageNumber);
+        Add("PageSize", req.PageSize);
+        return d;
+    };
+
+    Func<string, string, string> buildLink = (overrideKey, overrideVal) =>
+    {
+        var d = currentParams();
+        if (overrideKey != null)
+        {
+            if (overrideVal == null) d.Remove(overrideKey);
+            else d[overrideKey] = overrideVal;
+        }
+        var qs = string.Join("&", d.Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value)}"));
+        return Url.Action("HostelManageReport") + (qs.Length > 0 ? "?" + qs : "");
+    };
+
+    // display text for currently-applied filters (for the badge row)
+    var hostelName = req.HostelID.HasValue ? Model.Hostels?.FirstOrDefault(h => h.HostelID == req.HostelID)?.HostelName : null;
+    var hostelTypeName = req.HostelTypeID.HasValue ? Model.HostelTypes?.FirstOrDefault(h => h.HostelTypeID == req.HostelTypeID)?.HostelTypeName : null;
+    var roomTypeName = req.RoomTypeID.HasValue ? Model.RoomTypes?.FirstOrDefault(h => h.RoomTypeID == req.RoomTypeID)?.RoomTypeTitle : null;
+    var coolingName = req.RoomCoolingTypeId.HasValue ? Model.RoomCoolingTypes?.FirstOrDefault(h => h.RoomCoolingTypeId == req.RoomCoolingTypeId)?.RoomCoolingTypeName : null;
+}
+<style>
+    .dt-buttons {
+        display: none !important;
+    }
+
+    .mode-pill.active {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+
+    .col-rate, .col-report {
+        display: none;
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Hostel Manage Report</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        @if (p.CanPrint)
+        {
+            <a class="btn btn-secondary d-inline-flex align-items-center top-btn"
+               href="@Url.Action("ExportHostelManageReport")?@Html.Raw(string.Join("&", currentParams().Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value)}")))&format=4"
+               target="_blank">
+                <i class="ti ti-printer me-1"></i>Print
+            </a>
+        }
+        @if (p.CanExport)
+        {
+            <div class="dropdown d-inline-flex">
+                <button class="btn btn-warning dropdown-toggle top-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ti ti-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    @{
+                        var baseQs = string.Join("&", currentParams().Select(kv => $"{kv.Key}={Uri.EscapeDataString(kv.Value)}"));
+                    }
+                    <li><a class="dropdown-item" href="@Url.Action("ExportHostelManageReport")?@Html.Raw(baseQs)&format=1" target="_blank"><i class="ti ti-file-text me-1"></i>CSV</a></li>
+                    <li><a class="dropdown-item" href="@Url.Action("ExportHostelManageReport")?@Html.Raw(baseQs)&format=2" target="_blank"><i class="ti ti-file-spreadsheet me-1"></i>Excel</a></li>
+                    <li><a class="dropdown-item" href="@Url.Action("ExportHostelManageReport")?@Html.Raw(baseQs)&format=3" target="_blank"><i class="ti ti-file-description me-1"></i>PDF</a></li>
+                </ul>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <!-- Everything below is ONE GET form. Submitting it (search enter / Filter
+                     button) reloads this same page with querystring params that the
+                     [HttpGet] action model-binds straight into HotelReportSearchRequest. -->
+                <form method="get" asp-action="HostelManageReport" id="filterForm"
+                      class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <input type="hidden" name="Mode" value="@req.Mode" />
+                    <input type="hidden" name="PageSize" value="@req.PageSize" />
+                    <input type="hidden" name="PageNumber" value="1" />
+
+                    <!-- Search box -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text"
+                               name="SearchText"
+                               value="@req.SearchText"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Hostel Name, Room Title, Room Type..."
+                               style="min-width: 320px;" />
+                    </div>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <a class="btn btn-light btn-md me-2 fw-medium" href="@Url.Action("HostelManageReport")">Reset</a>
+                                    <button type="submit" class="btn text-primary fs-6 fw-medium">Filter</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany" name="CompanyId"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions" name="SessionId"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Hostel</label>
+                                        <select class="form-select form-control select2" name="HostelID" data-placeholder="Select Hostel">
+                                            <option value="">All</option>
+                                            @foreach (var h in Model.Hostels ?? new List<HostelViewModel>())
+                                            {
+                                                <option value="@h.HostelID" selected="@(req.HostelID == h.HostelID)">@h.HostelName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Hostel Type</label>
+                                        <select class="form-select form-control select2" name="HostelTypeID" data-placeholder="Select Hostel Type">
+                                            <option value="">All</option>
+                                            @foreach (var ht in Model.HostelTypes ?? new List<HostelTypeModel>())
+                                            {
+                                                <option value="@ht.HostelTypeID" selected="@(req.HostelTypeID == ht.HostelTypeID)">@ht.HostelTypeName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Room Type</label>
+                                        <select class="form-select form-control select2" name="RoomTypeID" data-placeholder="Select Room Type">
+                                            <option value="">All</option>
+                                            @foreach (var rt in Model.RoomTypes ?? new List<RoomTypeViewModel>())
+                                            {
+                                                <option value="@rt.RoomTypeID" selected="@(req.RoomTypeID == rt.RoomTypeID)">@rt.RoomTypeTitle</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Room Cooling Type</label>
+                                        <select class="form-select form-control select2" name="RoomCoolingTypeId" data-placeholder="Select Cooling Type">
+                                            <option value="">All</option>
+                                            @foreach (var ct in Model.RoomCoolingTypes ?? new List<RoomCoolingType>())
+                                            {
+                                                <option value="@ct.RoomCoolingTypeId" selected="@(req.RoomCoolingTypeId == ct.RoomCoolingTypeId)">@ct.RoomCoolingTypeName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3" style="display:none;">
+                                        <label class="form-label mb-1">Status</label>
+                                        <select class="form-select form-control select2" name="IsActive" data-placeholder="Select Status">
+                                            <option value="">All</option>
+                                            <option value="true" selected="@(req.IsActive == true)">Active</option>
+                                            <option value="false" selected="@(req.IsActive == false)">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3" id="grpAsOnDate" style="@(req.Mode == "RATE" ? "" : "display:none;")">
+                                        <label class="form-label mb-1">As On Date</label>
+                                        <input type="date" class="form-control" name="AsOnDate"
+                                               value="@(req.AsOnDate.HasValue ? req.AsOnDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active filter badges — rendered server-side from the current querystring,
+         each "x" is a plain link to the same page with that one param dropped. -->
+    @{
+        var badges = new List<(string Label, string Text, string Key)>();
+        if (!string.IsNullOrWhiteSpace(req.SearchText)) badges.Add(("Search", req.SearchText, "SearchText"));
+        if (hostelName != null) badges.Add(("Hostel", hostelName, "HostelID"));
+        if (hostelTypeName != null) badges.Add(("Hostel Type", hostelTypeName, "HostelTypeID"));
+        if (roomTypeName != null) badges.Add(("Room Type", roomTypeName, "RoomTypeID"));
+        if (coolingName != null) badges.Add(("Cooling", coolingName, "RoomCoolingTypeId"));
+        if (req.Mode == "RATE" && req.AsOnDate.HasValue) badges.Add(("As On", req.AsOnDate.Value.ToString("yyyy-MM-dd"), "AsOnDate"));
+    }
+    <div class="col-xl-12" id="activeFilterBadges" style="@(badges.Any() ? "display:block;" : "display:none;")">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2">
+                    @foreach (var b in badges)
+                    {
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1">
+                            @b.Label: @b.Text
+                            <a href="@buildLink(b.Key, null)" class="text-primary" style="text-decoration:none;">
+                                <i class="ti ti-x ms-1" style="font-size:10px;"></i>
+                            </a>
+                        </span>
+                    }
+                </div>
+                @if (badges.Any())
+                {
+                    <a class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                       href="@Url.Action("HostelManageReport")">
+                        <i class="ti ti-trash me-1"></i>Clear All
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table (server-rendered, no JS row-building) -->
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0" id="tblHostelManage">
+                        <thead>
+                            <tr>
+                                <th>Hostel</th>
+                                <th>Room</th>
+                                <th>Hostel Intake</th>
+                                <th>Total Rooms</th>
+                                <th>Total Beds</th>
+                                <th>Available Capacity</th>
+                                <th>Rent Per Bed</th>
+                                <th>beds</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblBody">
+                            @if (Model.Items != null && Model.Items.Any())
+                            {
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr class="item-row">
+                                        <td>
+                                            <span><b>Name:</b> @item.HostelName</span><br />
+                                            <span><b>Type:</b> @item.HostelTypeName</span>
+                                        </td>
+                                        <td>
+                                            <span><b>Name:</b> @item.RoomTitle</span><br />
+                                            <span><b>Room Type:</b> @item.RoomCoolingTypeName</span><br />
+                                            <span><b>Room Occupancy Type:</b> @item.RoomType</span>
+                                        </td>
+                                        <td>@item.HostelIntake</td>
+                                        <td>@item.TotalRoomsAdded</td>
+                                        <td>@item.TotalBedsAdded</td>
+                                        <td>@item.AvailableCapacity</td>
+                                        <td>@item.CostPerBed</td>
+                                        <td>@item.Beds</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="8" class="text-center text-muted py-4">No records found.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination — plain links carrying the current filters + a new PageNumber -->
+                    @if (totalPages > 1)
+                    {
+                        var startRec = Model.TotalRecords == 0 ? 0 : ((req.PageNumber - 1) * Model.PageSize) + 1;
+                        var endRec = Math.Min(req.PageNumber * Model.PageSize, Model.TotalRecords);
+                        int startPg = Math.Max(1, req.PageNumber - 2);
+                        int endPg = Math.Min(totalPages, startPg + 4);
+                        startPg = Math.Max(1, endPg - 4);
+
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3" id="paginationWrap">
+                            <div class="text-muted small" id="recordInfo">
+                                Showing <strong>@startRec</strong> &ndash; <strong>@endRec</strong> of <strong>@Model.TotalRecords</strong> records
+                            </div>
+                            <nav aria-label="Hostel manage report pagination">
+                                <ul class="pagination pagination-sm mb-0" id="pagerList">
+                                    <li class="page-item @(req.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="@buildLink("PageNumber", "1")"><i class="ti ti-chevrons-left"></i></a>
+                                    </li>
+                                    <li class="page-item @(req.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="@buildLink("PageNumber", (req.PageNumber - 1).ToString())"><i class="ti ti-chevron-left"></i></a>
+                                    </li>
+                                    @for (int pg = startPg; pg <= endPg; pg++)
+                                    {
+                                        <li class="page-item @(pg == req.PageNumber ? "active" : "")">
+                                            <a class="page-link" href="@buildLink("PageNumber", pg.ToString())">@pg</a>
+                                        </li>
+                                    }
+                                    <li class="page-item @(req.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link" href="@buildLink("PageNumber", (req.PageNumber + 1).ToString())"><i class="ti ti-chevron-right"></i></a>
+                                    </li>
+                                    <li class="page-item @(req.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link" href="@buildLink("PageNumber", totalPages.ToString())"><i class="ti ti-chevrons-right"></i></a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/assets/js/HostelManageReport.js"></script>
+}

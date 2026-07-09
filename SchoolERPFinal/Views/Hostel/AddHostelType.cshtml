@@ -33,22 +33,28 @@
 
                     <div class="row">
 
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Hostel Type Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="txtHostelTypeName"
                                    value="@Model.EditHostelType?.HostelTypeName"
-                                   placeholder="e.g. 1st Class" autocomplete="off">
+                                   placeholder="e.g. Girls Hostel" autocomplete="off">
                             <div class="invalid-feedback" id="errTxtHostelTypeName"></div>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Display Name </label>
+                            <input type="text" class="form-control" id="txtDisplayLabel"
+                                   value="@Model.EditHostelType?.DisplayLabel"
+                                   placeholder="e.g. Girls Hostel" autocomplete="off">
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">
                                 Gender <span class="text-danger">*</span>
                             </label>
 
                             <select asp-for="EditHostelType.Gender" class="form-select ddlGender">
                                 <option value="">-- Select Gender --</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
+                                <option value="Male" selected="@(Model.EditHostelType?.Gender == "Male")">Male</option>
+                                <option value="Female" selected="@(Model.EditHostelType?.Gender == "Female")">Female</option>
                             </select>
 
                             <div class="invalid-feedback" id="errDdlGender"></div>

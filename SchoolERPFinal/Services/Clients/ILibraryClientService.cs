@@ -47,7 +47,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <returns>
         /// API response indicating whether the operation succeeded.
         /// </returns>
-        Task<ApiResponse<bool>> ToggleBookStatusAsync(int id);
+        Task<ApiResponse<bool>> ToggleBookStatusAsync(StatusUpdateRequest request);
 
         Task<ApiResponse<List<LibraryMemberViewModel>>> GetMemberListAsync(
     string memberType,
@@ -98,7 +98,7 @@ namespace SchoolERP.Net.Services.Clients
             /// <summary>
             /// Records the return of an issued book.
             /// </summary>
-            Task<ApiResponse<bool>> ReturnBook(int issueId, DateTime returnDate);
+            Task<ApiResponse<bool>> ReturnBook(ReturnBookIssue req);
 
             /// <summary>
             /// Retrieves detailed information about a library member.
@@ -115,6 +115,17 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> DeleteMemberExAsync(
             int id,
             int? studentId,
-            int? staffId);
+            int? staffId, string? modeType);
+
+        /// <summary>
+        /// Retrieves a paginated list of classes based on the specified search criteria.
+        /// Automatically resolves the current user's Company and Session if they are not provided.
+        /// </summary>
+        Task<ApiResponse<PagedResult<BookViewModel>>> GetAllLibraryWithPageAsync(LibrarySearchRequest request);
+        Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllStudentsMembershipWithPageAsync(StudentsMembershipSearchRequest request);
+        Task<ApiResponse<LibraryMember>> GetLibraryMemberByID(int id);
+        Task<ApiResponse<PagedResult<StaffLibraryMember>>> GetAllStaffMembershipWithPageAsync(StaffLibraryMemberSearchModel request);
+        Task<ApiResponse<PagedResult<IssueReturnViewModel>>> GetAllIssuedBooksWithPageIndexAsync(IssueBookSearchModel request);
+        Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllLibraryMemberWithPageIndexAsync(MemberSearchModel request);
     }
 }
