@@ -11,7 +11,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Retrieves a list of all classes for a specific school and academic session.
         /// </summary>
-        List<MstClassViewModel> GetAllClasses(int companyId, int sessionId, bool includeDeleted = false);
+        List<MstClassViewModel> GetAllClasses(int companyId, int sessionId, bool includeDeleted = false, int? staffID = null);
 
         /// <summary>
         /// Finds and returns the details of a specific class using its unique ID.

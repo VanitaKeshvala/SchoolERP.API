@@ -1,147 +1,420 @@
-
+﻿@model SchoolERP.Shared.Models.StudentAttendancePageViewModel
+@using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Attendance";
+    int totalPages = Model.PageSize > 0
+                  ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                  : 0;
+    var p = Model.Permissions;
 }
 
+<style>
+    .attendance-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .attendance-table thead th {
+        white-space: nowrap;
+        vertical-align: middle;
+        font-size: 13px;
+        font-weight: 600;
+        color: #364159;
+        padding: 10px 12px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+        /* sortable column headers: label + icon inline, not stacked */
+        .attendance-table thead th.sortable {
+            cursor: pointer;
+        }
+
+            .attendance-table thead th.sortable .th-inner {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .attendance-table thead th.sortable .sort-icon {
+                font-size: 11px;
+                color: #94a3b8;
+                line-height: 1;
+            }
+
+        /* status columns: label on top, checkbox centered below, consistent width */
+        .attendance-table thead th.status-col {
+            text-align: center;
+            min-width: 90px;
+        }
+
+            .attendance-table thead th.status-col .status-col-inner {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+            }
+
+                .attendance-table thead th.status-col .status-col-inner span {
+                    font-size: 13px;
+                    font-weight: 600;
+                }
+
+                .attendance-table thead th.status-col .status-col-inner input[type="checkbox"] {
+                    width: 16px;
+                    height: 16px;
+                    margin: 0;
+                    cursor: pointer;
+                }
+
+        .attendance-table thead th.note-col {
+            text-align: right;
+            min-width: 220px;
+        }
+
+    .attendance-table tbody td {
+        vertical-align: middle;
+        padding: 8px 12px;
+    }
+
+    :is(.fas,.far,.fab,.fa-solid,.fa-regular,.fa-brands,.fa-classic,.fa):before {
+        content: none !important;
+    }
+</style>
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
         <h6 class="fw-bold mb-0">Student Attendance</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1">
-        <button id="btnSaveAttendance" class="btn btn-success d-inline-flex align-items-center">
-            <i class="ti ti-cloud me-1"></i>Save Attendance
-        </button>
+        @if (p.CanAdd)
+        {
+            <button id="btnSaveAttendance" class="btn btn-success d-inline-flex align-items-center">
+                <i class="ti ti-cloud me-1"></i>Save
+            </button>
+        }
     </div>
 </div>
 <!-- End Page Header -->
 <!-- start row -->
 
 <div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-tbl-outer mb-2">
+
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 ">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearch"
-                               placeholder="Search students..." style="min-width: 220px;">
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Student Name, Admission No..."
+                               style="min-width: 320px;" />
                     </div>
-                    @* <input type="text" id="txtSearch" class="form-control w-25 me-3" placeholder="Search students..." onkeyup="filterAttendanceTable()" /> *@
-                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
-                        <div class="dropdown">
-                            <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
-                                <i class="ti ti-filter text-gray-5 me-1"></i>Filters
-                            </a>
-                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
-                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                    <h6 class="mb-0 fw-bold">
-                                        Select Criteria
-                                    </h6>
-                                    <div class="d-flex align-items-center justify-content-end">
-                                        <!-- <a href="javascript:void(0);" class="btn btn-light btn-md me-2 fw-medium" id="close-filter">Close</a> -->
-                                        <button type="button" id="btnFilterSearch" class="btn text-primary fs-6">Filter</button>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="Attendance" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="classId" id="hdnClassId" value=@Model.ClassId />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value=@Model.CompanyId />
+                        <input type="hidden" name="sectionId" id="hdnSectionID" value=@Model.SectionID />
+                        <input type="hidden" name="studentId" id="hdnStudentId" value=@Model.StudentId />
+                        <input type="hidden" name="date" id="hdnAttendanceDate" value=@Model.AttendanceDate />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-2 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Apply</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Attendance Date</label>
+                                        <input type="date" id="attendanceDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">
+                                            Class<span class="text-danger">*</span>
+                                        </label>
+                                        <select id="classSelect" class="form-select form-control select2" required>
+                                            <option value="">Select Class</option>
+                                            @if (Model.Classes != null)
+                                            {
+                                                foreach (var c in Model.Classes)
+                                                {
+                                                    <option value="@c.ClassID">@c.ClassName</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">
+                                            Section<span class="text-danger">*</span>
+                                        </label>
+                                        <select id="sectionSelect" class="form-select form-control select2" required>
+                                            <option value="">Select Section</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">
+                                            Student
+                                        </label>
+                                        <select id="sectionStudent" class="form-select form-control select2" required>
+                                            <option value="">Select Student</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <form id="filterForm">
-                                    <div class="filter-body pb-0">
-                                        <div class="mb-3">
-                                            <label class="form-label mb-1">
-                                                Class<span class="text-danger">*</span>
-                                            </label>
-                                            <select id="classSelect" class="form-select form-control select2" required>
-                                                <option value="">Select Class</option>
-                                                @if (ViewBag.ClassList != null)
-                                                {
-                                                    foreach (var c in ViewBag.ClassList)
-                                                    {
-                                                        <option value="@c.ClassID">@c.ClassName</option>
-                                                    }
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label mb-1">
-                                                Section<span class="text-danger">*</span>
-                                            </label>
-                                            <select id="sectionSelect" class="form-select form-control select2" required>
-                                                <option value="">Select Section</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </form>
                             </div>
+
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Active filter badges -->
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">
             <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
-                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
-                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
         </div>
     </div>
 
+
+
     <div class="col-xl-12">
         <div class="card shadow-tbl">
             <div class="card-header d-flex justify-content-between align-items-center">
 
-                    <div>
-                        <label class="form-label mb-1">Attendance Date</label>
-                        <input type="date" id="attendanceDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
-                    </div>
-                    <div class="text-end">
-                        <label class="form-label mb-1">Set attendance for all Students as</label>
-
-                    <div>
-                        <input type="radio" class="btn-check set-all" name="options-base" id="option5" data-status="1">
-                        <label class="btn btn-outline-success" for="option5">Present</label>
-
-                        <input type="radio" class="btn-check set-all" name="options-base" id="option6" data-status="2">
-                        <label class="btn btn-outline-warning" for="option6">Late</label>
-
-                        <input type="radio" class="btn-check set-all" name="options-base" id="option7" data-status="3">
-                        <label class="btn btn-outline-danger" for="option7">Absent</label>
-
-                        <input type="radio" class="btn-check set-all" name="options-base" id="option8" data-status="4">
-                        <label class="btn btn-outline-info" for="option8">Half Day</label>
-
-                        <input type="radio" class="btn-check set-all" name="options-base" id="option9" data-status="5">
-                        <label class="btn btn-outline-secondary" for="option9">Holiday</label>
-                    </div>
+                <div class="text-muted small">
+                    <i class="ti ti-info-circle me-1"></i>Tip: use the checkbox in each column header to mark that status for every student below.
                 </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-nowrap mb-0">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>
-                                    <div style="white-space: nowrap;">Admission No</div>
-                                </th>
-                                <th>Role No</th>
-                                <th>Name</th>
-                                <th>Attendance</th>
-                                <th>Date</th>
-                                <th>Source</th>
-                                <th class="text-end">Note</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceTableBody">
-                            <tr>
-                                <td colspan="8" class="text-center">Select filters and click search to load students.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                    <div class="attendance-table-wrap">
+                        <table class="table attendance-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable">
+                                        <span class="th-inner">S.No <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                    <th class="sortable">
+                                        <span class="th-inner">Admission No <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                    <th class="sortable">
+                                        <span class="th-inner">Roll No <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                    <th class="sortable">
+                                        <span class="th-inner">Name <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+
+                                    <th class="status-col">
+                                        <div class="status-col-inner">
+                                            <span>Present</span>
+                                            <input type="checkbox" class="form-check-input select-all-col" data-status="1" title="Mark all Present">
+                                        </div>
+                                    </th>
+                                    <th class="status-col">
+                                        <div class="status-col-inner">
+                                            <span>Late</span>
+                                            <input type="checkbox" class="form-check-input select-all-col" data-status="2" title="Mark all Late">
+                                        </div>
+                                    </th>
+                                    <th class="status-col">
+                                        <div class="status-col-inner">
+                                            <span>Absent</span>
+                                            <input type="checkbox" class="form-check-input select-all-col" data-status="3" title="Mark all Absent">
+                                        </div>
+                                    </th>
+                                    <th class="status-col">
+                                        <div class="status-col-inner">
+                                            <span>Half Day</span>
+                                            <input type="checkbox" class="form-check-input select-all-col" data-status="4" title="Mark all Half Day">
+                                        </div>
+                                    </th>
+                                    <th class="status-col">
+                                        <div class="status-col-inner">
+                                            <span>Leave</span>
+                                            <input type="checkbox" class="form-check-input select-all-col" data-status="5" title="Mark all Leave">
+                                        </div>
+                                    </th>
+
+                                    <th class="sortable">
+                                        <span class="th-inner">Date <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                    <th class="sortable">
+                                        <span class="th-inner">Source <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                    <th class="note-col sortable">
+                                        <span class="th-inner">Note <i class="sort-icon">&#8597;</i></span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBody">
+                                @if (Model.StudentAttendanceModel != null && Model.StudentAttendanceModel.Any())
+                                {
+                                    @foreach (var c in Model.StudentAttendanceModel)
+                                    {
+                                        bool isPresent = c.AttendanceStatus == 1 || c.AttendanceStatus == null;
+                                        bool isLate = c.AttendanceStatus == 2;
+                                        bool isAbsent = c.AttendanceStatus == 3;
+                                        bool isHalfDay = c.AttendanceStatus == 4;
+                                        bool isLeave = (c.AttendanceStatus == 5) || (c.IsStudentLeaveAdd == true);
+                                        <tr class="item-row attendance-row" data-student-id="@c.StudentID" onclick="selectItem(@c.AttendanceID, this)" style="cursor: pointer;">
+                                            <td>@c.AttendanceID</td>
+                                            <td>@c.AdmissionNo</td>
+                                            <td>@c.RollNo</td>
+                                            <td>@c.StudentName</td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="1" checked="@(isPresent ? "checked" : null)">
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="2" checked="@(isLate ? "checked" : null)">
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="3" checked="@(isAbsent ? "checked" : null)">
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="4" checked="@(isHalfDay ? "checked" : null)">
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="5" checked="@(isLeave ? "checked" : null)">
+                                            </td>
+                                            <td>@(Model.AttendanceDate?.ToString("yyyy-MM-dd"))</td>
+                                            <td>Manual</td>
+                                            <td class="text-end" onclick="event.stopPropagation();">
+                                                <input type="text" style="width:200px" class="form-control attendance-note" value="@(string.IsNullOrWhiteSpace(c.Note) ? c.Reason : c.Note)" />
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="12" class="text-center py-4">
+                                            <span class="text-muted">No records found. Select filters and click search to load students.</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
+
                 </div>
             </div>
             <!-- end card-body -->
@@ -152,257 +425,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            $('.select2').select2({ dropdownParent: $('#filter-dropdown') });
-
-            // Stop dropdown from closing when clicking inside
-            $('#filter-dropdown').on('click', function (e) {
-                e.stopPropagation();
-            });
-
-            $('#classSelect').on('change', function () {
-                const classId = $(this).val();
-                if (classId) {
-                    $.get('/Attendance/GetSectionsByClass', { classId: classId }, function (res) {
-                        if (res.success) {
-                            let html = '<option value="">Select Section</option>';
-                            res.data.forEach(s => {
-                                html += `<option value="${s.sectionID}">${s.sectionName}</option>`;
-                            });
-                            $('#sectionSelect').html(html).trigger('change');
-                        }
-                    });
-                }
-            });
-
-            $('#btnFilterSearch').on('click', function (e) {
-                e.preventDefault();
-                loadAttendanceList();
-            });
-
-            $('#attendanceDate').on('change', function () {
-                const classId = $('#classSelect').val();
-                const sectionId = $('#sectionSelect').val();
-                if (classId && sectionId) {
-                    loadAttendanceList();
-                } else {
-                    renderFilterBadges();
-                }
-            });
-
-            $('#txtSearch').on('keyup', function () {
-                filterAttendanceTable();
-            });
-
-            $('.set-all').on('change', function () {
-                const status = $(this).data('status');
-                $(`input[type="radio"][value="${status}"]`).prop('checked', true);
-            });
-
-            $('#btnSaveAttendance').on('click', function () {
-                const classId = $('#classSelect').val();
-                const sectionId = $('#sectionSelect').val();
-                const date = $('#attendanceDate').val();
-
-                if (!classId || !sectionId || !date) {
-                    Swal.fire('Error', 'Please select all filters first', 'error');
-                    return;
-                }
-
-                const attendanceData = [];
-                $('#attendanceTableBody tr').each(function () {
-                    const studentId = $(this).attr('data-student-id');
-                    if (studentId) {
-                        const status = $(this).find('input[type="radio"]:checked').val();
-                        const note = $(this).find('.attendance-note').val();
-                        attendanceData.push({ 
-                            StudentID: parseInt(studentId), 
-                            Status: parseInt(status), 
-                            Note: note 
-                        });
-                    }
-                });
-
-                if (attendanceData.length === 0) {
-                    Swal.fire('Info', 'No students found to mark attendance', 'info');
-                    return;
-                }
-
-                const req = {
-                    classId: parseInt(classId),
-                    sectionId: parseInt(sectionId),
-                    attendanceDate: date,
-                    attendanceData: attendanceData
-                };
-
-                $.ajax({
-                    url: '/Attendance/SaveAttendance',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(req),
-                    success: function (res) {
-                        if (res.success) {
-                            Swal.fire('Success', res.message, 'success');
-                        } else {
-                            Swal.fire('Error', res.message, 'error');
-                        }
-                    }
-                });
-            });
-        });
-
-        function loadAttendanceList() {
-            const classId = $('#classSelect').val();
-            const sectionId = $('#sectionSelect').val();
-            const date = $('#attendanceDate').val();
-
-            if (!classId || !sectionId || !date) {
-                Swal.fire('Error', 'Please select class, section and date', 'error');
-                return;
-            }
-
-            $.get('/Attendance/GetAttendanceList', { classId: classId, sectionId: sectionId, date: date }, function (res) {
-                if (res.success) {
-                    let html = '';
-                    if (res.data.length === 0) {
-                        html = '<tr><td colspan="8" class="text-center">No students found for selected criteria.</td></tr>';
-                    } else {
-                        res.data.forEach((s, index) => {
-                            html += `
-                                <tr data-student-id="${s.studentID}" class="attendance-row">
-                                    <td>${index + 1}</td>
-                                    <td>${s.admissionNo}</td>
-                                    <td>${s.rollNo || '-'}</td>
-                                    <td>${s.studentName}</td>
-                                    <td>
-                                        <div class="d-flex gap-2">
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="1" ${s.attendanceStatus == 1 ? 'checked' : ''}>
-                                                <label class="form-check-label">Present</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="2" ${s.attendanceStatus == 2 ? 'checked' : ''}>
-                                                <label class="form-check-label">Late</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="3" ${s.attendanceStatus == 3 ? 'checked' : ''}>
-                                                <label class="form-check-label">Absent</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="4" ${s.attendanceStatus == 4 ? 'checked' : ''}>
-                                                <label class="form-check-label">Half Day</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input type="radio" class="form-check-input" name="atd_${s.studentID}" value="5" ${s.attendanceStatus == 5 ? 'checked' : ''}>
-                                                <label class="form-check-label">Holiday</label>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>${date}</td>
-                                    <td>Manual</td>
-                                    <td class="text-end">
-                                        <input type="text" style="width:200px" class="form-control attendance-note" value="${s.note || ''}">
-                                    </td>
-                                </tr>`;
-                        });
-                    }
-                    $('#attendanceTableBody').html(html);
-                    renderFilterBadges();
-                    $('.filter-dropdown').removeClass('show'); // Hide dropdown after filtering
-                }
-            });
-        }
-
-        // --- Filter Badges Logic ---
-        function filterAttendanceTable() {
-            const search = document.getElementById('txtSearch').value.toLowerCase();
-            document.querySelectorAll('.attendance-row').forEach(row => {
-                const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(search) ? '' : 'none';
-            });
-            renderFilterBadges();
-        }
-
-        function renderFilterBadges() {
-            const container = document.getElementById('badgeContainer');
-            const mainContainer = document.getElementById('activeFilterBadges');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filters = [
-                { id: 'txtSearch', label: 'Search', type: 'text' },
-                { id: 'classSelect', label: 'Class', type: 'select' },
-                { id: 'sectionSelect', label: 'Section', type: 'select' },
-                { id: 'attendanceDate', label: 'Date', type: 'date' }
-            ];
-
-            let activeCount = 0;
-
-            filters.forEach(f => {
-                const el = document.getElementById(f.id);
-                if (!el) return;
-
-                let value = el.value;
-                let text = '';
-
-                if (f.type === 'text') {
-                    if (value.trim()) {
-                        text = value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'select') {
-                    if (value && value !== 'all' && value !== '') {
-                        const selectedOption = el.options[el.selectedIndex];
-                        text = selectedOption ? selectedOption.text : value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'date') {
-                   // Only show if different from today maybe? or just show it
-                   if (value) {
-                       text = value;
-                       activeCount++;
-                   }
-                }
-
-                if (text) {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
-                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
-                    container.appendChild(badge);
-                }
-            });
-
-            if (activeCount > 0) {
-                mainContainer.style.display = 'block';
-            } else {
-                mainContainer.style.display = 'none';
-            }
-        }
-
-        function removeFilter(filterId) {
-            const el = document.getElementById(filterId);
-            if (!el) return;
-
-            if (el.tagName === 'INPUT') {
-                el.value = '';
-                if (filterId === 'txtSearch') filterAttendanceTable();
-                else loadAttendanceList();
-            } else {
-                el.value = '';
-                loadAttendanceList();
-            }
-        }
-
-        function resetAllFilters() {
-            document.getElementById('txtSearch').value = '';
-            document.getElementById('classSelect').value = '';
-            document.getElementById('sectionSelect').value = '';
-            // Reset date to today
-            document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
-            
-            filterAttendanceTable();
-            loadAttendanceList();
-        }
-    </script>
+    <script src="~/assets/js/Attendance.js"></script>
 }

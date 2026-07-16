@@ -709,8 +709,9 @@ namespace SchoolERP.Net.Controllers
                     int staffid = res.Data.Result;
                     var photoResult = await _photoService.SaveBase64PhotoAsync(
                         req.PhotoBase64,
-                        req.PhotoDocName ?? "photo.jpg",
+                        req.PhotoDocName ?? "photo.jpg",                        
                         PhotoModule.Staff,
+                        FolderNameModule.Profile,
                         req.StaffID
                     );
                     if (photoResult.Success) 

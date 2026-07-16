@@ -32,16 +32,16 @@ namespace SchoolERP.API.Services
         public List<MstClassViewModel> GetAllClasses(
             int companyId,
             int sessionId,
-            bool includeDeleted = false)
+            bool includeDeleted = false,int? staffID=null)
         {
             using var conn = new SqlConnection(
                     _configuration.GetConnectionString("DefaultConnection"));
 
             var parameters = new DynamicParameters();
             parameters.Add("@CompanyID", companyId);
-            parameters.Add("@SessionID", sessionId);
+            parameters.Add("@SessionID", sessionId);            
             parameters.Add("@IncludeDeleted", includeDeleted);
-
+            parameters.Add("@StaffID", staffID);
             var result= conn.Query<MstClassViewModel>(
                 "sp_Class_GetAll",
                 parameters,

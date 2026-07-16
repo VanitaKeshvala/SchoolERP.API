@@ -298,11 +298,67 @@ builder.Services.AddHttpClient<IPostalCodeClienService, PostalCodeClienService>(
 {
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);
-}); builder.Services.AddHttpClient<IWeeklyHolidaysSettingClientService, WeeklyHolidaysSettingClientService>(client =>
+});
+builder.Services.AddHttpClient<IWeeklyHolidaysSettingClientService, WeeklyHolidaysSettingClientService>(client =>
 {
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);
-}); 
+});
+builder.Services.AddHttpClient<ILibraryBudgetClientService, LibraryBudgetClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IPublisherClientService, PublisherClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IAuthorClientService, AuthorClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibraryLanguageClientService, LibraryLanguageClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibraryCategoryClientService, LibraryCategoryClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibrarySubjectClientService, LibrarySubjectClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibraryCategorySubjectClientService, LibraryCategorySubjectClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibraryDocumentTypeClientService, LibraryDocumentTypeClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibraryDocumentStatusClientService, LibraryDocumentStatusClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibrarySupplierClientService, LibrarySupplierClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILibrarySeriesClientService, LibrarySeriesClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
 builder.Services.AddHttpClient("SchoolERPApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

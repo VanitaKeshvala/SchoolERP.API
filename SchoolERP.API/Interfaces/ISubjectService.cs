@@ -36,5 +36,7 @@ namespace SchoolERP.API.Interfaces
         Task<(bool Success, string Message)> CopySubjectToSession(CopyRequest req);
 
         Task<List<Dropdowbinding>> SubjectsDropdowBinding(DropdowRequest request);
+
+        List<DropdownModel> GetSubjectGropBySubjectDropdownList(int subjectGroupId);
     }
 }

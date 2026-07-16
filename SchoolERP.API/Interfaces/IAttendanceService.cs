@@ -1,4 +1,5 @@
 ﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -22,5 +23,8 @@ namespace SchoolERP.API.Interfaces
         /// for a specific student and academic year.
         /// </summary>
         StudentAttendanceHistoryViewModel GetStudentAttendanceHistory(int studentId, int year, int companyId);
+
+        Task<PagedResult<StudentAttendanceViewModel>> GetAllStudentAttendanceWithPage(StudentAttendanceSearchRequest req);
+        Task<PagedResult<StudentAttendanceViewModel>> GetAllStudentAttendanceReportWithPage(StudentAttendanceSearchRequest req);
     }
 }

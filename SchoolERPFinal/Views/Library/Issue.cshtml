@@ -18,16 +18,15 @@
     <div class="d-flex gap-1">
         @if(p.CanAdd)
         {
-            <a href="/Library/AddIssueBook/@Model.LibraryMemberID" class="btn btn-primary top-btn"><i class="ti ti-plus"></i> Add</a>
-            <!-- <button class="btn btn-info"><i
-            class="ti ti-pencil me-1"></i>Edit</button> -->
+            <a href="/Library/AddIssueBook/@Model.LibraryMemberID" class="btn btn-primary top-btn d-none"><i class="ti ti-plus"></i> Add</a>
+           
         }
-        @* @if (p.CanEdit)
+        @if (p.CanEdit)
         {
-            <button data-bs-toggle="modal" data-bs-target="#return" class="btn btn-teal top-btn">
+            <a href="/Library/AddIssueBookReturn?libraryMemberID=@Model.LibraryMemberID" class="btn btn-teal top-btn d-none">
                 <i class="ti ti-share-3 me-1"></i>Return
-            </button>
-        } *@
+            </a>
+        }
         @if(p.CanPrint)
         {
             <a href="#" class="btn btn-secondary top-btn"><i class="ti ti-printer me-1"></i> Print</a>

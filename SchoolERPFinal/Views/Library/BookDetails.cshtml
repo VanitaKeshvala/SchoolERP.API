@@ -1,0 +1,218 @@
+﻿@model SchoolERP.Shared.Models.BookDetailsResult
+@{
+    ViewData["Title"] = "Book Details";
+    var b = Model.Book!;   // controller already guarantees non-null before returning this view
+
+    int totalQty = b.TotalQty ?? 0;
+    int issuedQty = b.IssuedQty ?? 0;
+    int availableQty = Math.Max(
+    0,
+    b.CurrentlyAvailableQty ?? (totalQty - issuedQty)
+        );
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <h6 class="fw-bold mb-0">Book details</h6>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <a href="/Library/AddBooks/@b.BookID" class="btn btn-info d-inline-flex align-items-center top-btn">
+            <i class="ti ti-pencil me-1"></i>Edit
+        </a>
+        <a href="/Library/Books" class="btn btn-secondary d-inline-flex align-items-center top-btn">
+            <i class="ti ti-arrow-left me-1"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-tbl mb-3 p-2">
+    <div class="card-body">
+        <div class="row g-4">
+            <!-- Cover image -->
+            <div class="col-md-2">
+                <div class="border rounded d-flex align-items-center justify-content-center bg-light"
+                     style="width:100%; max-width:160px; height:220px; overflow:hidden;">
+                    @if (!string.IsNullOrWhiteSpace(b.CoverPageImage))
+                    {
+                        <img src="@b.CoverPageImage" alt="@b.BookTitle" class="img-fluid" style="max-height:220px; object-fit:cover;" />
+                    }
+                    else
+                    {
+                        <i class="ti ti-book-2 fs-1 text-muted"></i>
+                    }
+                </div>
+            </div>
+
+            <!-- Title, authors, stat cards, key-value grid -->
+            <div class="col-md-10">
+                <h5 class="fw-bold mb-1">@b.BookTitle</h5>
+                @if (!string.IsNullOrWhiteSpace(b.SubTitle))
+                {
+                    <p class="text-muted mb-1">@b.SubTitle</p>
+                }
+
+                <p class="text-muted mb-3">Author:- @b.AuthorNames</p>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <div class="bg-light rounded p-3">
+                            <div class="text-muted small">Total copies</div>
+                            <div class="fs-4 fw-bold">@totalQty</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-light rounded p-3">
+                            <div class="text-muted small">Available</div>
+                            <div class="fs-4 fw-bold text-success">@availableQty</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-light rounded p-3">
+                            <div class="text-muted small">Issued</div>
+                            <div class="fs-4 fw-bold text-danger">@issuedQty</div>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width:140px;">Publisher</td>
+                            <td>@(b.PublisherName ?? "-")</td>
+                            <td class="text-muted" style="width:120px;">ISBN</td>
+                            <td>@(b.ISBNNo ?? "-")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Category</td>
+                            <td>@(b.CategoryName ?? "-")</td>
+                            <td class="text-muted">Subject</td>
+                            <td>@(b.SubjectName ?? "-")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Document type</td>
+                            <td>@(b.DocumentName ?? "-")</td>
+                            <td class="text-muted">Series</td>
+                            <td>@(b.SeriesName ?? "-")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Class no</td>
+                            <td>@(b.ClassNo ?? "-")</td>
+                            <td class="text-muted">Rack no</td>
+                            <td>@(b.RackNo ?? "-")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Book no</td>
+                            <td>@(b.BookNo ?? "-")</td>
+                            <td class="text-muted">Price</td>
+                            <td>@(b.BookPrice.HasValue ? b.BookPrice.Value.ToString("C2") : "-")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accessioned copies -->
+<div class="card shadow-tbl mb-3">
+    <div class="card-header bg-white fw-bold">Accessioned copies</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nowrap mb-0">
+                <thead>
+                    <tr>
+                        <th>Accession no</th>
+                        <th>Bill no</th>
+                        <th>Bill date</th>
+                        <th>Location</th>
+                        <th>Supplier</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (b.Accessions != null && b.Accessions.Any())
+                    {
+                        @foreach (var a in b.Accessions)
+                        {
+                            <tr>
+                                <td>@a.AccessionNo</td>
+                                <td>@a.BillNo</td>
+                                <td>@(a.BillDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>@(a.Location ?? "-")</td>
+                                <td>@(a.SupplierName ?? "-")</td>
+                                <td>@(a.Price.HasValue ? a.Price.Value.ToString("C2") : "-")</td>
+                                <td>
+                                    @if (a.Status == 1)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger">Issued</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success">Available</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">No accessioned copies found.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Issue history -->
+<div class="card shadow-tbl mb-3">
+    <div class="card-header bg-white fw-bold">Issue history</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nowrap mb-0">
+                <thead>
+                    <tr>
+                        <th>Accession no</th>
+                        <th>Student</th>
+                        <th>Issue date</th>
+                        <th>Due date</th>
+                        <th>Return date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.IssueHistory != null && Model.IssueHistory.Any())
+                    {
+                        @foreach (var h in Model.IssueHistory)
+                        {
+                            <tr>
+                                <td>@h.AccessionNo</td>
+                                <td>@h.StudentId</td>
+                                <td>@(h.IssueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>@(h.DueDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>@(h.ReturnDate?.ToString("dd MMM yyyy") ?? "-")</td>
+                                <td>
+                                    @if (h.Status == 1)
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning">Not returned</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success">Returned</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No issue history for this book.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

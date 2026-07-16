@@ -42,10 +42,10 @@ namespace SchoolERP.API.Controllers
             return Ok(ApiResponse<List<MstSectionViewModel>>.SuccessResponse(data));
         }
 
-        [HttpGet("GetByClass/{classId}")]
-        public IActionResult GetByClass(int classId)
+        [HttpGet("GetByClass")]
+        public IActionResult GetByClass(int classId, int? staffID = null)
         {
-            var data = _sectionService.GetSectionsByClass(classId);
+            var data = _sectionService.GetSectionsByClass(classId,staffID);
             return Ok(ApiResponse<List<MstSectionViewModel>>.SuccessResponse(data));
         }
 

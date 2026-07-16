@@ -1,5 +1,12 @@
+﻿@model SchoolERP.Shared.Models.StudentAttendancePageViewModel
+@using System.Security.Claims
+@using System.Text.Json
 @{
     ViewData["Title"] = "Attendance Report";
+    var p = Model.Permissions;
+    int totalPages = Model.PageSize > 0
+                  ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                  : 0;
 }
 
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
@@ -14,71 +21,132 @@
 </div>
 
 <div class="row">
-    <div class="col-md-12">
-        <div class="card shadow-sm mb-2">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" style="min-width: 220px;" placeholder="Search report..." />
+                        <input type="text"
+                        name="search"
+                        id="txtSearchInput"
+                        value="@Model.SearchTerm"
+                        class="form-control border-0 ps-2"
+                        placeholder="Search by Student Name, Admission No..."
+                        style="min-width: 320px;" />
                     </div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="Report" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="classId" id="hdnClassId" value=@Model.ClassId />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value=@Model.CompanyId />
+                        <input type="hidden" name="sectionId" id="hdnSectionID" value=@Model.SectionID />
+                        <input type="hidden" name="studentId" id="hdnStudentId" value=@Model.StudentId />
+                        <input type="hidden" name="date" id="hdnAttendanceDate" value=@Model.AttendanceDate />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                    </form>
+
                     <div class="dropdown">
-                        <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <a href="#" id="btnFilterToggle"
+                        class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
-                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
-                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
-                                <h6 class="mb-0 fw-bold ms-3">Select Criteria</h6>
-                                <div class="d-flex align-items-center justify-content-end me-2">
-                                    <button type="button" id="btnFilterSearch" class="btn text-primary fs-6 fw-medium">Filter</button>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-2 shadow-tbl"
+                        id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Apply</button>
                                 </div>
                             </div>
-                            <div class="filter-body pb-0 p-3">
-                                <form id="filterForm">
-                                    <div class="mb-3">
-                                        <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                        id="ddlFilterCompany"
+                                        data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Attendance Date</label>
+                                        <input type="date" id="attendanceDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">
+                                            Class<span class="text-danger">*</span>
+                                        </label>
                                         <select id="classSelect" class="form-select form-control select2" required>
                                             <option value="">Select Class</option>
-                                            @if (ViewBag.ClassList != null)
+                                            @if (Model.Classes != null)
                                             {
-                                                foreach (var c in ViewBag.ClassList)
+                                                foreach (var c in Model.Classes)
                                                 {
                                                     <option value="@c.ClassID">@c.ClassName</option>
                                                 }
                                             }
                                         </select>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">
+                                            Section<span class="text-danger">*</span>
+                                        </label>
                                         <select id="sectionSelect" class="form-select form-control select2" required>
                                             <option value="">Select Section</option>
                                         </select>
                                     </div>
-                                    <div class="mb-3">
-                                        <label class="form-label mb-1">Date<span class="text-danger">*</span></label>
-                                        <input type="date" id="attendanceDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">
+                                            Student
+                                        </label>
+                                        <select id="sectionStudent" class="form-select form-control select2" required>
+                                            <option value="">Select Student</option>
+                                        </select>
                                     </div>
-                                </form>
+                                </div>
                             </div>
+
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Active filter badges -->
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">
             <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
-                <span class="text-muted small fw-bold ms-2 me-2"><i class="ti ti-filter-check me-1"></i>Active Filters:</span>
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
-                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none" id="btnResetAllFilters" onclick="resetAllFilters()">
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
         </div>
     </div>
+
+
 
     <div class="col-md-12">
         <div class="card shadow-tbl">
@@ -87,7 +155,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th>S.No</th>
                                 <th>Admission No</th>
                                 <th>Roll No</th>
                                 <th>Student Name</th>
@@ -97,14 +165,130 @@
                             </tr>
                         </thead>
                         <tbody id="reportTableBody">
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
-                                    <i class="ti ti-info-circle fs-2 d-block mb-2"></i>
-                                    Select filters and click Filter to load report.
-                                </td>
-                            </tr>
+
+                            @if (Model.StudentAttendanceModel != null && Model.StudentAttendanceModel.Any())
+                            {
+                                @foreach (var c in Model.StudentAttendanceModel)
+                                {
+
+                                    <tr class="item-row attendance-row" data-student-id="@c.StudentID" onclick="selectItem(@c.AttendanceID, this)" style="cursor: pointer;">
+                                        <td>@c.AttendanceID</td>
+                                        <td>@c.AdmissionNo</td>
+                                        <td>@c.RollNo</td>
+                                        <td>@c.StudentName</td>
+                                        <td>
+                                            @if(c.AttendanceStatus==1)
+                                            {
+                                                <span class="badge bg-success">Present</span>
+                                            }
+                                            else if (c.AttendanceStatus == 2)
+                                            {
+                                                <span class="badge bg-warning">Late</span>
+                                            }
+                                            else if (c.AttendanceStatus == 3)
+                                            {
+                                                <span class="badge bg-danger">Absent</span>
+                                            }
+                                            else if (c.AttendanceStatus == 4)
+                                            {
+                                                <span class="badge bg-info">Half Day</span>
+                                            }
+                                            else if (c.AttendanceStatus == 5)
+                                            {
+                                                <span class="badge bg-secondary">Leave</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark">N/A</span>
+                                            }
+                                        </td>
+                                        <td>@(Model.AttendanceDate?.ToString("yyyy-MM-dd"))</td>
+                                        <td>@c.Note</td>
+                                        
+                                    </tr>
+                                    }
+                                }
+                                else
+                                {
+                                <tr>
+                                    <td colspan="12" class="text-center py-4">
+                                        <span class="text-muted">Select filters and click Filter to load report.</span>
+                                    </td>
+                                </tr>
+                                }
                         </tbody>
+                            
+                       
                     </table>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&classId=@Model.ClassId&sectionId=@Model.SectionID&date=@Model.AttendanceDate&studentId=@Model.StudentId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
+
                 </div>
             </div>
         </div>
@@ -112,194 +296,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        $(document).ready(function () {
-            $('.select2').select2({ dropdownParent: $('#filter-dropdown') });
-
-            $('#classSelect').on('change', function () {
-                const classId = $(this).val();
-                if (classId) {
-                    $.get('/Attendance/GetSectionsByClass', { classId: classId }, function (res) {
-                        if (res.success) {
-                            let html = '<option value="">Select Section</option>';
-                            res.data.forEach(s => {
-                                html += `<option value="${s.sectionID}">${s.sectionName}</option>`;
-                            });
-                            $('#sectionSelect').html(html).trigger('change');
-                            renderFilterBadges();
-                        }
-                    });
-                }
-            });
-
-            renderFilterBadges();
-
-            // Real-time Search
-            $("#txtSearchInput").on("keyup", function() {
-                var value = $(this).val().toLowerCase();
-                $("#reportTableBody tr").filter(function() {
-                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-                });
-                renderFilterBadges();
-            });
-
-            // Prevent dropdown closure when interacting with select2
-            $('#filter-dropdown').on('click', function (e) {
-                e.stopPropagation();
-            });
-
-            // Bind filter button click
-            $('#btnFilterSearch').on('click', function (e) {
-                e.preventDefault();
-                loadReport();
-            });
-
-            // Bind date change
-            $('#attendanceDate').on('change', function () {
-                const classId = $('#classSelect').val();
-                const sectionId = $('#sectionSelect').val();
-                if (classId && sectionId) {
-                    loadReport();
-                } else {
-                    renderFilterBadges();
-                }
-            });
-        });
-
-        // --- Filter Badges Logic ---
-        function renderFilterBadges() {
-            const container = document.getElementById('badgeContainer');
-            const mainContainer = document.getElementById('activeFilterBadges');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const filters = [
-                { id: 'txtSearchInput', label: 'Search', type: 'text' },
-                { id: 'classSelect', label: 'Class', type: 'select' },
-                { id: 'sectionSelect', label: 'Section', type: 'select' },
-                { id: 'attendanceDate', label: 'Date', type: 'text' }
-            ];
-
-            let activeCount = 0;
-
-            filters.forEach(f => {
-                const el = document.getElementById(f.id);
-                if (!el) return;
-
-                let value = el.value;
-                let text = '';
-
-                if (f.type === 'text') {
-                    if (value.trim()) {
-                        text = value;
-                        activeCount++;
-                    }
-                } else if (f.type === 'select') {
-                    if (value && value !== 'all' && value !== '') {
-                        const selectedOption = el.options[el.selectedIndex];
-                        if (selectedOption && selectedOption.value !== "") {
-                            text = selectedOption.text;
-                            activeCount++;
-                        }
-                    }
-                }
-
-                if (text) {
-                    const badge = document.createElement('span');
-                    badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
-                    badge.innerHTML = `${f.label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${f.id}')" style="font-size: 10px;"></i>`;
-                    container.appendChild(badge);
-                }
-            });
-
-            if (activeCount > 0) {
-                mainContainer.style.display = 'block';
-            } else {
-                mainContainer.style.display = 'none';
-            }
-        }
-
-        function removeFilter(filterId) {
-            const el = document.getElementById(filterId);
-            if (!el) return;
-
-            if (el.tagName === 'INPUT' && filterId === 'txtSearchInput') {
-                el.value = '';
-                $(el).trigger('keyup');
-            } else {
-                el.value = '';
-                if (filterId === 'classSelect') {
-                    $('#sectionSelect').html('<option value="">Select Section</option>');
-                }
-                if (window.jQuery && jQuery(el).data('select2')) {
-                    jQuery(el).trigger('change.select2');
-                }
-                loadReport();
-            }
-        }
-
-        function resetAllFilters() {
-            document.getElementById('txtSearchInput').value = '';
-            document.getElementById('classSelect').value = '';
-            document.getElementById('sectionSelect').value = '';
-            // Reset date to today?
-            document.getElementById('attendanceDate').value = '@DateTime.Now.ToString("yyyy-MM-dd")';
-            
-            $('.select2').trigger('change.select2');
-            $('#txtSearchInput').trigger('keyup');
-            renderFilterBadges();
-        }
-
-        function loadReport() {
-            const classId = $('#classSelect').val();
-            const sectionId = $('#sectionSelect').val();
-            const date = $('#attendanceDate').val();
-
-            if (!classId || !sectionId || !date) {
-                showToast('Please select class, section and date', 'error');
-                return;
-            }
-
-            $('#reportTableBody').html('<tr><td colspan="7" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>');
-
-            $.get('/Attendance/GetAttendanceList', { classId: classId, sectionId: sectionId, date: date }, function (res) {
-                if (res.success) {
-                    let html = '';
-                    if (res.data.length === 0) {
-                        html = '<tr><td colspan="7" class="text-center py-5 text-danger">No attendance records found for selected criteria.</td></tr>';
-                    } else {
-                        res.data.forEach((s, index) => {
-                            console.log(s);
-                            let statusBadge = '';
-                            switch (s.attendanceStatus) {
-                                case 1: statusBadge = '<span class="badge bg-success">Present</span>'; break;
-                                case 2: statusBadge = '<span class="badge bg-warning">Late</span>'; break;
-                                case 3: statusBadge = '<span class="badge bg-danger">Absent</span>'; break;
-                                case 4: statusBadge = '<span class="badge bg-info">Half Day</span>'; break;
-                                case 5: statusBadge = '<span class="badge bg-secondary">Holiday</span>'; break;
-                                default: statusBadge = '<span class="badge bg-light text-dark">N/A</span>';
-                            }
-
-                            html += `
-                                <tr>
-                                    <td>${index + 1}</td>
-                                    <td>${s.admissionNo}</td>
-                                    <td>${s.rollNo || '-'}</td>
-                                    <td class="fw-medium">${s.studentName}</td>
-                                    <td>${statusBadge}</td>
-                                    <td>${date}</td>
-                                    <td class="text-muted">${s.note || '-'}</td>
-                                </tr>`;
-                        });
-                    }
-                    $('#reportTableBody').html(html);
-                    renderFilterBadges();
-                    const toggle = document.getElementById('btnFilterToggle');
-                    if (toggle) {
-                        bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
-                    }
-                }
-            });
-        }
-    </script>
+    <script src="~/assets/js/AttendanceReport.js"></script>
 }

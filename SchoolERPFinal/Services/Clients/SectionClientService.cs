@@ -17,9 +17,9 @@ namespace SchoolERP.Net.Services.Clients
             return await GetAsync<List<MstSectionViewModel>>($"api/SectionApi/GetAll?includeDeleted={includeDeleted}&sessionId={sessionId}&companyId={companyId}");
         }
 
-        public async Task<ApiResponse<List<MstSectionViewModel>>> GetByClassAsync(int classId)
+        public async Task<ApiResponse<List<MstSectionViewModel>>> GetByClassAsync(int classId, int? staffID = null)
         {
-            return await GetAsync<List<MstSectionViewModel>>($"api/SectionApi/GetByClass/{classId}");
+            return await GetAsync<List<MstSectionViewModel>>($"api/SectionApi/GetByClass?classId={classId}&staffID={staffID}");
         }
 
         public async Task<ApiResponse<MstSectionViewModel>> GetByIDAsync(int id)

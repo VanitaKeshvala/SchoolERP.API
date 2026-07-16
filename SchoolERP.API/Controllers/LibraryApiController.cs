@@ -5,6 +5,7 @@ using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SchoolERP.API.Controllers
 {
@@ -71,19 +72,16 @@ namespace SchoolERP.API.Controllers
         /// Returns success status and operation message.
         /// </returns>
         [HttpPost("UpsertBook")]
-        public IActionResult UpsertBook([FromBody] BookUpsertRequest req)
+        public async Task<IActionResult> UpsertBook([FromBody] BookUpsertRequest req)
         {
             var companyId = GetCompanyId();
             var userId = GetUserId();
-
-            var result = _libraryService.UpsertBook(req, companyId, userId);
-
-            return Ok(new ApiResponse<bool>
+            if (req.CompanyID == null)
             {
-                Success = result.Success,
-                Message = result.Message,
-                Data = result.Success
-            });
+                req.CompanyID = GetCompanyId();
+            }
+            var result =await _libraryService.UpsertBook(req, req.CompanyID.Value, userId);
+            return Ok(new { result });
         }
 
         /// <summary>
@@ -549,6 +547,497 @@ namespace SchoolERP.API.Controllers
                 var data = await _libraryService.GetAllLibraryMemberWithPageIndex(request);
                 return Ok(ApiResponse<PagedResult<LibraryMemberViewModel>>.SuccessResponse(data));
 
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+
+        #region Bind AlL Library Master Table DropDwon 
+        [HttpGet("GetLibraryDocumentTypeDropdownList")]
+        public IActionResult GetLibraryDocumentTypeDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryDocumentTypeDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+        [HttpGet("GetLibraryDocumentStatusDropdownList")]
+        public IActionResult GetLibraryDocumentStatusDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryDocumentStatusDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+        [HttpGet("GetLibraryCategoryDropdownList")]
+        public IActionResult GetLibraryCategoryDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryCategoryDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibraryLanguageDropdownList")]
+        public IActionResult GetLibraryLanguageDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryLanguageDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibrarySeriesDropdownList")]
+        public IActionResult GetLibrarySeriesDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibrarySeriesDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibrarySupplierDropdownList")]
+        public IActionResult GetLibrarySupplierDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibrarySupplierDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibraryBudgetDropdownList")]
+        public IActionResult GetLibraryBudgetDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryBudgetDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibraryPublisherDropdownList")]
+        public IActionResult GetLibraryPublisherDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryPublisherDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetLibrarySubjectDropdownList")]
+        public IActionResult GetLibrarySubjectDropdownList(int companyId, int? categoryId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibrarySubjectDropdownList(companyId, categoryId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("SearchBookTitle")]
+        public async Task<IActionResult> SearchBookTitle([FromQuery] string term)
+        {
+            try
+            {
+                if (term == null)
+                    return BadRequest(new ApiResponse
+                    {
+                        Result = 0,
+                        Message = "Valid search books title are required."
+                    });
+
+                var response = await _libraryService.SearchBookTitle(term);
+                return Ok(response);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        [HttpGet("GetLibraryAuthorDropdownList")]
+        public IActionResult GetLibraryAuthorDropdownList(int companyId)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.GetLibraryAuthorDropdownList(companyId, userId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+        #endregion
+
+        [HttpPost("UpsertBooksFrontPageAttachmentFile")]
+        public IActionResult UpsertBooksFrontPageAttachmentFile([FromBody] BooksAttachmentUpsertRequest req)
+        {
+            try
+            {
+                int userId = GetUserId();
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _libraryService.UpsertBooksFrontPageAttachmentFile(req, userId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+
+        [HttpPost("GetAllAccessionWithPage")]
+        public async Task<IActionResult> GetAllAccessionWithPage([FromBody] LibrarySearchRequest request)
+        {
+            try
+            {
+                int userId = GetUserId();
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.CompanyID == 0)
+                    return Ok(ApiResponse<List<AccessionDetailsModel>>.SuccessResponse(new List<AccessionDetailsModel>()));
+
+                var data = await _libraryService.GetAllAccessionWithPage(request);
+                return Ok(ApiResponse<PagedResult<AccessionDetailsModel>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetAccessionById")]
+        public IActionResult GetAccessionById(int id,int companyId)
+        {
+            try
+            {
+                var result = _libraryService.GetAccessionById(id, companyId);
+
+                return Ok(new ApiResponse<AccessionDetailsModel>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        [HttpGet("GetAccessionByNo")]
+        public IActionResult GetAccessionByNo(string accessionNo, int companyid)
+        {
+            try
+            {
+                var result = _libraryService.GetAccessionByNo(accessionNo, companyid);
+
+                return Ok(new ApiResponse<AccessionDetailsModel>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetIssueNo")]
+        public async Task<IActionResult> GetIssueNo(int companyid)
+        {
+            try
+            {
+                var result =await _libraryService.GetIssueNo(companyid);
+
+                return Ok(new ApiResponse<IssueNoResponse>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("UpsertAccessionStatus")]
+        public IActionResult UpsertAccessionStatus([FromBody] AccessionStatusUpsertRequest req)
+        {
+            try
+            {
+                int userId = GetUserId();
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _libraryService.UpsertAccessionStatus(req, userId);                
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAccessionForLabels")]
+        public async Task<IActionResult> GetAccessionForLabels(AccessionSearchRequest req)
+        {
+            try
+            {
+                var result =await _libraryService.GetAccessionForLabels(req);
+
+                return Ok(new ApiResponse<List<AccessionDetailsModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
+        }
+
+        [HttpPost("SaveIssueBook")]
+        public  IActionResult SaveIssueBook([FromBody] LibraryIssueSaveRequest req)
+        {
+            var companyId = GetCompanyId();
+            var userId = GetUserId();
+            if (req.CompanyID == null)
+            {
+                req.CompanyID = GetCompanyId();
+            }
+            var result = _libraryService.SaveIssueBook(req,userId);
+            return Ok(ApiResponse<object>.SuccessResponse(new
+            {
+                result.success,
+                result.message
+            }));
+        }
+
+        [HttpPost("ReturnIssueBook")]
+        public IActionResult ReturnIssueBook([FromBody] LibraryReturnRequest req)
+        {
+            var companyId = GetCompanyId();
+            var userId = GetUserId();
+            if (req.CompanyID == null)
+            {
+                req.CompanyID = GetCompanyId();
+            }
+            var result = _libraryService.ReturnIssueBook(req, userId);
+            return Ok(ApiResponse<object>.SuccessResponse(new
+            {
+                result.success,
+                result.message
+            }));
+        }
+
+        [HttpGet("GetBookDetails")]
+        public async Task<IActionResult> GetBookDetails(int bookId)
+        {
+            try
+            {
+                var result = await _libraryService.GetBookDetails(bookId);
+                if (result.Book == null)
+                    return Ok(new { success = false, message = "Book not found." });
+                //BookDetailsResult
+                return Ok(new ApiResponse<BookDetailsResult>
+                {
+                    Success = true,
+                    Data = result
+                });
+               // return Ok(new { success = true, data = result.Book, issueHistory = result.IssueHistory });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message=ex.Message});
+            }
+            
+        }
+
+        [HttpPost("AddStudentsMembershipBulkWithCards")]
+        public IActionResult AddStudentsMembershipBulkWithCards(
+           [FromBody] BulkMembershipRequest req,
+           int companyId,
+           int userId)
+        {
+            var address = string.Empty;
+            var result = _libraryService.AddStudentsMembershipBulkWithCards(
+                req,
+                companyId,
+                userId, address);
+
+            return Ok(ApiResponse<object>.SuccessResponse(new
+            {
+                result.success,
+                result.message
+            }));
+        }
+
+
+        [HttpGet("SearchMember")]
+        public IActionResult SearchMember(int companyId, string memberType, string? searchText)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.SearchMember(companyId, memberType, searchText);
+
+                return Ok(new ApiResponse<List<LibraryMemberSearchResult>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("SearchAccessionNo")]
+        public IActionResult SearchAccessionNo(int companyId, string? searchText)
+        {
+            try
+            {
+                int userId = GetUserId();
+                var result = _libraryService.SearchAccessionNo(companyId, searchText);
+
+                return Ok(new ApiResponse<List<AccessionDetailsModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
             }
             catch (Exception ex)
             {

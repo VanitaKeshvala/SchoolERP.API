@@ -127,11 +127,7 @@ namespace SchoolERP.API.Controllers
                     companyId,
                     userId);
 
-                return Ok(new ApiResponse<object>
-                {
-                    Success = result.Success,
-                    Message = result.Message
-                });
+                return Ok(new { result });
             }
             catch (Exception ex)
             {
@@ -197,6 +193,79 @@ namespace SchoolERP.API.Controllers
                 throw;
             }
 
+        }
+
+        [HttpGet]
+        [Route("GetLeaveApplicationsById")]
+        public IActionResult GetLeaveApplicationsById(
+           int? leaveAppId,
+           int? companyId)
+        {
+            try
+            {
+
+                var result = _studentLeaveService.GetLeaveApplicationsById(
+                    leaveAppId,
+                    companyId);
+
+                return Ok(new ApiResponse<StudentLeaveViewModel>
+                {
+                    Success = true,
+                    Data = result,
+                    Message = "Data retrieved successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<StudentLeaveViewModel>
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// Updates/replaces the attachment file for an existing student leave application
+        /// without affecting the other leave application fields.
+        /// </summary>
+        /// <param name="req">
+        /// Request payload containing the leave application ID and the new attachment
+        /// (file data, type, and name).
+        /// </param>
+        /// <param name="userId">ID of the user performing the update (for audit/history).</param>
+        /// <returns>
+        /// A tuple indicating whether the update succeeded (<c>success</c>) and a corresponding
+        /// user-friendly <c>message</c>.
+        /// </returns>
+        [HttpPost("UpsertLeaveApplicationAttachmentFile")]
+        public IActionResult UpsertLeaveApplicationAttachmentFile([FromBody] LeaveApplicationAttachmentUpsertRequest req)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                var (success, message) = _studentLeaveService.UpsertLeaveApplicationAttachmentFile(req, GetUserId());
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("DeleteLeaveApplication")]
+        public IActionResult DeleteLeaveApplication(List<int> ids,int companyId)
+        {
+            try
+            {
+                var res = _studentLeaveService.DeleteLeaveApplication(ids, GetUserId(), companyId);
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }            
         }
     }
 }

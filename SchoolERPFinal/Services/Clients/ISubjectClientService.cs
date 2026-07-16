@@ -13,5 +13,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
         Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
         Task<ApiResponse<List<Dropdowbinding>>> SubjectsDropdowBindAsync(DropdowRequest request);
+        Task<ApiResponse<List<DropdownModel>>> GetSubjectGropBySubjectDropdownList(int subjectGroupId);
     }
 }

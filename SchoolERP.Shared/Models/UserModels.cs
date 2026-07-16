@@ -25,6 +25,8 @@
         public int? DashboardID { get; set; }
         public string Token { get; set; } = string.Empty;
         public string? DashboardURL { get; set; }
+        public int? StaffID { get; set; }
+        public int? StudentID { get; set; }
 
 
     }

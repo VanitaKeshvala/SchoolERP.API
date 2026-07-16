@@ -412,6 +412,7 @@ namespace SchoolERP.Net.Controllers
                         photoBase64,
                         photoName ?? "photo.jpg",
                         PhotoModule.Student,
+                        FolderNameModule.Profile,
                         studentid
                     );
                 }
@@ -423,6 +424,7 @@ namespace SchoolERP.Net.Controllers
                         photoFatherPhotoBase64,
                         fatherPhotoType ?? "photo.jpg",
                         PhotoModule.Parent,
+                        FolderNameModule.Profile,
                         studentid
                     );
                 }
@@ -433,6 +435,7 @@ namespace SchoolERP.Net.Controllers
                             photoMotherPhotoBase64,
                             motherPhotoType ?? "photo.jpg",
                             PhotoModule.Parent,
+                            FolderNameModule.Profile,
                             studentid
                     );
                 }
@@ -444,6 +447,7 @@ namespace SchoolERP.Net.Controllers
                        photoGuardianPhotoBase64,
                        guardianPhotoType ?? "photo.jpg",
                        PhotoModule.Parent,
+                       FolderNameModule.Profile,
                        studentid
                    );
                 }

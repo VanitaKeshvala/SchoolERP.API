@@ -296,5 +296,12 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<PagedResult<StudentHouseViewModel>>("api/StudentInformationApi/GetStudentHouseList", request);
         }
+
+        public Task<ApiResponse<List<StudentDropDwonBindViewModel>>> GetStudentBindAsync(StudentDropDwonBindRequestModel request)
+        {
+            return PostAsync<List<StudentDropDwonBindViewModel>>(
+                "api/StudentInformationApi/GetStudentBind",
+                request);
+        }
     }
 }

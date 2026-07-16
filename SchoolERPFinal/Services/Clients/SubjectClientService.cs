@@ -47,5 +47,11 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<List<Dropdowbinding>>("api/SubjectApi/SubjectsDropdowBind", request);
         }
+
+        public async Task<ApiResponse<List<DropdownModel>>> GetSubjectGropBySubjectDropdownList(int subjectGroupId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/SubjectApi/GetSubjectGropBySubjectDropdownList?subjectGroupId={subjectGroupId}");
+        }
     }
 }

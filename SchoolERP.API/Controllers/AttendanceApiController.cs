@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolERP.API.Interfaces;
+using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 
@@ -95,12 +96,12 @@ namespace SchoolERP.API.Controllers
         {
             try
             {
-                int companyId = Convert.ToInt32(User.FindFirst("CompanyID")?.Value ?? "0");
+                //int companyId = Convert.ToInt32(User.FindFirst("CompanyID")?.Value ?? "0");
                 int userId = Convert.ToInt32(User.FindFirst("UserID")?.Value ?? "0");
 
                 var result = _attendanceService.SaveBulkAttendance(
                     request,
-                    companyId,
+                    request.CompanyID,
                     userId);
 
                 return Ok(new ApiResponse<object>
@@ -117,6 +118,36 @@ namespace SchoolERP.API.Controllers
                     Message = ex.Message
                 });
             }
+        }
+
+        [HttpPost("GetAllStudentAttendanceWithPage")]
+        public async Task<IActionResult> GetAllStudentAttendanceWithPage([FromBody] StudentAttendanceSearchRequest request)
+        {
+            try
+            {                
+                var data = await _attendanceService.GetAllStudentAttendanceWithPage(request);
+                return Ok(ApiResponse<PagedResult<StudentAttendanceViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        [HttpPost("GetAllStudentAttendanceReportWithPage")]
+        public async Task<IActionResult> GetAllStudentAttendanceReportWithPage([FromBody] StudentAttendanceSearchRequest request)
+        {
+            try
+            {
+                var data = await _attendanceService.GetAllStudentAttendanceReportWithPage(request);
+                return Ok(ApiResponse<PagedResult<StudentAttendanceViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
     }
 }

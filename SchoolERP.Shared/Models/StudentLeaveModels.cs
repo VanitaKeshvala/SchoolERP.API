@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SchoolERP.Shared.Models.Common;
+using System;
 
 namespace SchoolERP.Shared.Models
 {
@@ -20,6 +21,7 @@ namespace SchoolERP.Shared.Models
         public DateTime ApplyDate { get; set; }
         public string? AttachmentName { get; set; }
         public string? AttachmentType { get; set; }
+        public string? Attachment { get; set; }
         public int HasAttachment { get; set; }
 
         public int Result { get; set; }       // maps to RESULT
@@ -45,7 +47,7 @@ namespace SchoolERP.Shared.Models
         public DateTime ToDate { get; set; }
         public DateTime ApplyDate { get; set; }
         public string? Reason { get; set; }
-        public byte[]? Attachment { get; set; }
+        public string? Attachment { get; set; }
         public string? AttachmentType { get; set; }
         public string? AttachmentName { get; set; }
         public int Status { get; set; }
@@ -80,4 +82,23 @@ namespace SchoolERP.Shared.Models
         public int? Status { get; set; }
     }
 
+    public class StudentLeaveAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
+        public StudentLeaveViewModel? EditStudentLeave { get; set; } = new StudentLeaveViewModel();
+    }
+
+    public class UpsertLeaveApplicationResponse
+    {
+        public SpLeaveApplicationResult Result { get; set; }
+    }
+    public class LeaveApplicationAttachmentUpsertRequest
+    {
+        public int LeaveAppId { get; set; }
+        public string? Attachment { get; set; }
+        public string? FileName { get; set; }
+        public string? FileType { get; set; }
+        public int? CompanyId { get; set; }
+    }
 }

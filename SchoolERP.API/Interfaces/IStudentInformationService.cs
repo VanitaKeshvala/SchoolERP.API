@@ -63,5 +63,7 @@ namespace SchoolERP.API.Interfaces
         (bool Success, string Message) UpdateStudentProfile(ProfileRequest req);
 
         Task<PagedResult<StudentHouseViewModel>> GetStudentHouseList(SubjectSearchRequest req);
+
+        Task<List<StudentDropDwonBindViewModel>> GetStudentBind(StudentDropDwonBindRequestModel req);
     }
 }

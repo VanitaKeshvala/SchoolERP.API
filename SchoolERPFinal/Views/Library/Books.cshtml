@@ -13,10 +13,20 @@
     int totalPages = Model.PageSize > 0
                    ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
                    : 0;
+
+    // Common query-string tail so every pagination link keeps all active filters.
+    // NOTE: kept as a local function so any future filter only needs adding here once.
+    string PageLink(int pg) =>
+        $"?pageIndex={pg}&pageSize={Model.PageSize}&search={Model.SearchTerm}" +
+        $"&companyId={Model.CompanyId}&publisherId={Model.PublisherId}" +
+        $"&authorId={Model.AuthorId}&subjectId={Model.SubjectId}" +
+        $"&categoryId={Model.CategoryId}&languageId={Model.LanguageId}" +
+        $"&seriesId={Model.SeriesId}&documentId={Model.DocumentId}" +
+        $"&isActive={Model.IsActiveFilter}&sortColumn={Model.SortColumn}&sortDir={Model.SortDir}";
 }
 <style>
     .dt-buttons {
-    display: none !important;
+        display: none !important;
     }
 </style>
 
@@ -61,7 +71,7 @@
         }
         @if (p.CanAdd)
         {
-            <a href="/Library/ImportBook" class="btn btn-warning btn-sm top-btn">
+            <a href="/Library/ImportBook" class="btn btn-warning btn-sm top-btn d-none">
                 <i class="ti ti-file-import me-1"></i>Import
             </a>
         }
@@ -78,7 +88,7 @@
                     <li><a class="dropdown-item" href="javascript:void(0)" onclick="triggerExport(3)"><i class="ti ti-file-description me-1"></i>PDF</a></li>
                 </ul>
             </div>
-        } 
+        }
 
     </div>
 </div>
@@ -99,7 +109,7 @@
                                id="txtSearchInput"
                                value="@Model.SearchTerm"
                                class="form-control border-0 ps-2"
-                               placeholder="Search by class, section..."
+                               placeholder="Search by title, ISBN, book no..."
                                style="min-width: 320px;" />
                     </div>
 
@@ -108,9 +118,19 @@
                         <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
                         <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
                         <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
-                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
-                        <input type="hidden" name="sectionID" id="hdnSectionID" value="" />
                         <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="@Model.CompanyId" />
+                        <input type="hidden" name="publisherId" id="hdnPublisherId" value="@Model.PublisherId" />
+                        <input type="hidden" name="authorId" id="hdnAuthorId" value="@Model.AuthorId" />
+                        <input type="hidden" name="subjectId" id="hdnSubjectId" value="@Model.SubjectId" />
+                        <input type="hidden" name="categoryId" id="hdnCategoryId" value="@Model.CategoryId" />
+                        <input type="hidden" name="languageId" id="hdnLanguageId" value="@Model.LanguageId" />
+                        <input type="hidden" name="seriesId" id="hdnSeriesId" value="@Model.SeriesId" />
+                        <input type="hidden" name="documentId" id="hdnDocumentId" value="@Model.DocumentId" />
+                        <input type="hidden" name="isActive" id="hdnIsActive" value="@Model.IsActiveFilter" />
+                        <input type="hidden" name="sortColumn" id="hdnSortColumn" value="@Model.SortColumn" />
+                        <input type="hidden" name="sortDir" id="hdnSortDir" value="@Model.SortDir" />
                     </form>
 
                     <div class="dropdown">
@@ -132,7 +152,7 @@
                             </div>
 
                             <div class="filter-body pb-0">
-                                <div class="row">                                   
+                                <div class="row">
                                     <div class="col-md-12 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
@@ -145,6 +165,106 @@
                                                     @c.SchoolName
                                                 </option>
                                             }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Publisher</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterPublisher"
+                                                data-placeholder="Select publisher">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.Publishers ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.PublisherId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Author</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterAuthor"
+                                                data-placeholder="Select author">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.Authors ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.AuthorId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Category</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCategory"
+                                                data-placeholder="Select category">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.Categories ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.CategoryId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Subject</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSubject"
+                                                data-placeholder="Select subject">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.Subjects ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.SubjectId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Language</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterLanguage"
+                                                data-placeholder="Select language">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.Languages ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.LanguageId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Series</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSeries"
+                                                data-placeholder="Select series">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.SeriesList ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.SeriesId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Document type</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterDocumentType"
+                                                data-placeholder="Select document type">
+                                            <option value="">All</option>
+                                            @foreach (var x in Model.DocumentTypes ?? new())
+                                            {
+                                                <option value="@x.Id" selected="@(Model.DocumentId == x.Id)">@x.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Status</label>
+                                        <select class="form-select form-control select2" id="ddlFilterIsActive" data-placeholder="Select status">
+                                            <option value="">All</option>
+                                            <option value="true" selected="@(Model.IsActiveFilter == true)">Active</option>
+                                            <option value="false" selected="@(Model.IsActiveFilter == false)">Inactive</option>
                                         </select>
                                     </div>
                                 </div>
@@ -185,14 +305,12 @@
                                 <th style="width: 50px;">Select</th>
                                 <th>Book Title</th>
                                 <th>Book No</th>
-                                <th>Author</th>
-                                <th>Publisher</th>
-                                <th>Rack No</th>
-                                <th>Qty</th>
-                                <th>Available</th>
+                                <th>Publisher Name</th>
+                                <th>Author Names</th>
                                 <th>Price</th>
                                 <th>Post Date</th>
                                 <th>Status</th>
+
                             </tr>
                         </thead>
                         <tbody>
@@ -206,14 +324,15 @@
                                                    class="form-check-input student-checkbox" onclick="selectItem(@c.BookID, this)"
                                                    value="@c.BookID">
                                         </td>
-                                        <td>@c.BookTitle</td>
+                                        <td>
+                                            <a href="/Library/BookDetails/@c.BookID" target="_blank" class="btn btn-sm btn-white border px-2 py-1" title="Set Accession Status">
+                                                @c.BookTitle
+                                            </a>
+                                        </td>
                                         <td>@c.BookNo</td>
-                                        <td>@c.Author</td>
-                                        <td>@c.Publisher</td>
-                                        <td>@c.RackNo</td>
-                                        <td>@c.TotalQty</td>
-                                        <td>@c.AvailableQty</td>
-                                        <td>@c.BookPrice</td>
+                                        <td>@c.PublisherName</td>
+                                        <td>@c.AuthorNames</td>
+                                        <td>@c.Price</td>
                                         <td>@c.PostDate?.ToString("dd MMM yyyy")</td>
                                         <td>
                                             @if (p.CanEdit)
@@ -241,7 +360,7 @@
                                 </tr>
                             }
                         </tbody>
-                        
+
                     </table>
                     <!-- ── Pagination ─────────────────────────────────────────────── -->
                     @if (totalPages > 1)
@@ -262,16 +381,14 @@
 
                                     <!-- First -->
                                     <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
-                                        <a class="page-link"
-                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                        <a class="page-link" href="@PageLink(1)">
                                             <i class="ti ti-chevrons-left"></i>
                                         </a>
                                     </li>
 
                                     <!-- Prev -->
                                     <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
-                                        <a class="page-link"
-                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                        <a class="page-link" href="@PageLink(Model.PageNumber - 1)">
                                             <i class="ti ti-chevron-left"></i>
                                         </a>
                                     </li>
@@ -285,23 +402,20 @@
                                     @for (int pg = start; pg <= end; pg++)
                                     {
                                         <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
-                                            <a class="page-link"
-                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">@pg</a>
+                                            <a class="page-link" href="@PageLink(pg)">@pg</a>
                                         </li>
                                     }
 
                                     <!-- Next -->
                                     <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
-                                        <a class="page-link"
-                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                        <a class="page-link" href="@PageLink(Model.PageNumber + 1)">
                                             <i class="ti ti-chevron-right"></i>
                                         </a>
                                     </li>
 
                                     <!-- Last -->
                                     <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
-                                        <a class="page-link"
-                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId">
+                                        <a class="page-link" href="@PageLink(totalPages)">
                                             <i class="ti ti-chevrons-right"></i>
                                         </a>
                                     </li>
@@ -317,14 +431,14 @@
     </div>
 </div>
 
-<!-- Add/Edit Modal -->
+<!-- Add/Edit Modal (unchanged) -->
 <div class="modal fade" id="upsertModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header d-flex justify-content-between align-items-center">
                 <h5 class="modal-title" id="modalTitle">Add Book</h5>
                 <div>
-                    
+
                     <button class="btn btn-success btn-sm" onclick="saveData()">
                         <i class="ti ti-cloud me-1"></i>Save
                     </button>
@@ -390,6 +504,6 @@
 
 @section Scripts {
     <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
-    <script src="~/assets/js/Books.js">        
+    <script src="~/assets/js/Books.js">
     </script>
 }

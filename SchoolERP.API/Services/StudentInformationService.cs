@@ -941,6 +941,34 @@ namespace SchoolERP.API.Services
             }
         }
 
+        public async Task<List<StudentDropDwonBindViewModel>> GetStudentBind(StudentDropDwonBindRequestModel req) 
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@CLASSID", req.ClassID);
+                param.Add("@SECTIONID", req.SectionID);
+                param.Add("@USERID", req.UserId);
+
+                var result = conn.Query<StudentDropDwonBindViewModel>(
+                    "SP_STUDENT_BINDDROPDOWNLIST",
+                    param,
+                    commandType: CommandType.StoredProcedure).ToList() ;
+
+                return result;
+            }
+            catch (Exception)
+            {
+                return new List<StudentDropDwonBindViewModel>();
+            }
+        }
+
         /// <summary>
         /// Retrieves all timeline records associated with the specified student.
         /// Timeline records may include activities, notes, events,

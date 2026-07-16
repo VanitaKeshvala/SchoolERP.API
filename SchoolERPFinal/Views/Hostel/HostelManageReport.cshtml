@@ -70,7 +70,7 @@
     <div>
         <h6 class="fw-bold mb-0">Hostel Manage Report</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanPrint)
         {
             <a class="btn btn-secondary d-inline-flex align-items-center top-btn"
@@ -113,14 +113,13 @@
                     <input type="hidden" name="PageNumber" value="1" />
 
                     <!-- Search box -->
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
                                name="SearchText"
                                value="@req.SearchText"
-                               class="form-control border-0 ps-2"
-                               placeholder="Search by Hostel Name, Room Title, Room Type..."
-                               style="min-width: 320px;" />
+                               class="form-control border-0 ps-2 search-input-responsive"
+                               placeholder="Search by Hostel Name, Room Title, Room Type..."/>
                     </div>
 
                     <div class="dropdown">

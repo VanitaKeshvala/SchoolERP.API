@@ -32,73 +32,140 @@ namespace SchoolERP.Net.Controllers.Api
         [HttpGet("GetAll")]
         public IActionResult GetAll(bool includeDeleted = false)
         {
-            int userId = GetCurrentUserId();
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+            try
+            {
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
 
-            if (companyId == 0 || sessionId == 0)
-                return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(new List<HomeworkViewModel>()));
+                if (companyId == 0 || sessionId == 0)
+                    return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(new List<HomeworkViewModel>()));
 
-            var data = _service.GetAll(companyId, sessionId, includeDeleted);
-            return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(data));
+                var data = _service.GetAll(companyId, sessionId, includeDeleted);
+                return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpGet("GetByID/{id}")]
         public IActionResult GetByID(int id)
         {
-            var data = _service.GetByID(id);
-            if (data == null) return NotFound(ApiResponse<HomeworkViewModel>.ErrorResponse("Homework not found"));
-            return Ok(ApiResponse<HomeworkViewModel>.SuccessResponse(data));
+            try
+            {
+                var data = _service.GetByID(id);
+                if (data == null) return NotFound(ApiResponse<HomeworkViewModel>.ErrorResponse("Homework not found"));
+                return Ok(ApiResponse<HomeworkViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("Upsert")]
         public async Task<IActionResult> Upsert([FromBody] HomeworkUpsertRequest request)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            int userId = GetCurrentUserId();
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
 
-            var isCreate = request.HomeworkID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add homework." });
-            if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit homework." });
+                var isCreate = request.HomeworkID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit homework." });
 
-            int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-            int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
 
-            if (companyId == 0 || sessionId == 0)
-                return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+                if (companyId == 0 || sessionId == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
 
-            var (success, message) = _service.Upsert(request, companyId, sessionId, userId);
-            return Ok(new { success, message });
+                var response = _service.Upsert(request, companyId, sessionId, userId);
+                return Ok(ApiResponse<dynamic>.SuccessResponse(response));
+                //return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
-        [HttpPost("Delete/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpPost("Delete")]
+        public async Task<IActionResult> Delete(List<int> ids)
         {
-            if (!await _menuPerm.Has(User, MenuPath, "Delete"))
-                return Ok(new { success = false, message = "You do not have permission to delete homework." });
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Delete"))
+                    return Ok(new { success = false, message = "You do not have permission to delete homework." });
 
-            int userId = GetCurrentUserId();
-            var (success, message) = _service.Delete(id, userId);
-            return Ok(new { success, message });
+                int userId = GetCurrentUserId();
+                var (success, message) = _service.Delete(ids, userId);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("ToggleStatus")]
-        public async Task<IActionResult> ToggleStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!await _menuPerm.Has(User, MenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to change status." });
+            try
+            {
+                if (!await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to change status." });
 
-            int userId = GetCurrentUserId();
-            var (success, message) = _service.ToggleStatus(id, isActive, userId);
-            return Ok(new { success, message });
+                int userId = GetCurrentUserId();
+                var (success, message) = _service.ToggleStatus(request);
+                return Ok(new { success, message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         private int GetCurrentUserId()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+            
         }
+
+
+        [HttpPost("GetAllHomeWorkWithPage")]
+        public async Task<IActionResult> GetAllHomeWorkWithPage([FromBody] SearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(new List<HomeworkViewModel>()));
+                var data = await _service.GetAllHomeWorkWithPage(request);
+                return Ok(ApiResponse<PagedResult<HomeworkViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message});
+            }
+        }
+
     }
 }

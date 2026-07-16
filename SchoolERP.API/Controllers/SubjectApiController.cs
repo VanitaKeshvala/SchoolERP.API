@@ -140,5 +140,25 @@ namespace SchoolERP.API.Controllers.Api
             }
 
         }
+
+        [HttpGet("GetSubjectGropBySubjectDropdownList")]
+        public IActionResult GetSubjectGropBySubjectDropdownList(int subjectGroupId)
+        {
+            try
+            {
+                var result = _subjectService.GetSubjectGropBySubjectDropdownList(subjectGroupId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
     }
 }

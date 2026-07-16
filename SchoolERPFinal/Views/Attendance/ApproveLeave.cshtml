@@ -25,12 +25,12 @@
     <div>
         <h6 class="fw-bold mb-0">Approve Leave</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanAdd)
         {
-            <button class="btn btn-primary d-inline-flex align-items-center top-btn" data-bs-toggle="modal" data-bs-target="#addLeaveModal" onclick="resetForm()">
-                <i class="ti ti-plus me-1"></i> Add Leave Request
-            </button>
+            <a href="/Attendance/AddLeaveRequest" class="btn btn-primary d-inline-flex align-items-center top-btn">
+                <i class="ti ti-plus me-1"></i> Add
+            </a>
         }
         @if (p.CanEdit)
         {
@@ -44,11 +44,9 @@
             <button id="btnDelete" class="btn btn-danger top-btn" disabled onclick="handleDeleteAction()">
                 <i class="ti ti-trash me-1"></i> Delete
             </button>
-            
-        }
 
-        
-        
+        }        
+
         @if (p.CanPrint)
         {
             <button class="btn btn-secondary d-inline-flex align-items-center top-btn" onclick="triggerExport(4)">
@@ -70,7 +68,7 @@
             </div>
         }
 
-        
+
     </div>
 </div>
 
@@ -83,15 +81,14 @@
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
 
                     <!-- ── Search box (name="search" so form submits it) ── -->
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
-                               name="search"
-                               id="txtSearchInput"
-                               value="@Model.SearchTerm"
-                               class="form-control border-0 ps-2"
-                               placeholder="Search by class, section..."
-                               style="min-width: 320px;" />
+                        name="search"
+                        id="txtSearchInput"
+                        value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2 search-input-responsive"
+                        placeholder="Search by Student Name, Admission No..."/>
                     </div>
 
                     <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
@@ -107,19 +104,19 @@
 
                     <div class="dropdown">
                         <a href="#" id="btnFilterToggle"
-                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
 
-                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
-                             id="filter-dropdown">
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-2 shadow-tbl"
+                        id="filter-dropdown">
 
                             <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
                                 <div class="d-flex align-items-center justify-content-end">
                                     <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Apply</button>
                                 </div>
                             </div>
 
@@ -128,8 +125,8 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
-                                                id="ddlFilterCompany"
-                                                data-placeholder="Select company">
+                                        id="ddlFilterCompany"
+                                        data-placeholder="Select company">
                                             <option value="">All</option>
                                             @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
                                             {
@@ -139,7 +136,7 @@
                                             }
                                         </select>
                                     </div>
-                                    <div class="mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Class</label>
                                         <select id="classSelect" class="form-select form-control select2">
                                             <option value="">All Classes</option>
@@ -152,13 +149,13 @@
                                             }
                                         </select>
                                     </div>
-                                    <div class="mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Section</label>
                                         <select id="sectionSelect" class="form-select form-control select2">
                                             <option value="">All Sections</option>
                                         </select>
                                     </div>
-                                    <div class="mb-0">
+                                    <div class="col-md-6 mb-0">
                                         <label class="form-label mb-1">Status</label>
                                         <select id="statusSelect" class="form-select form-control select2">
                                             <option value="0">Pending</option>
@@ -187,13 +184,13 @@
                 </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
                 <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
-                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
         </div>
     </div>
-           
+
 
     <div class="col-md-12">
         <div class="card shadow-tbl">
@@ -203,7 +200,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 50px;">Select</th>
-                                <th>#</th>
+                                <th>S.No</th>
                                 <th>Student Name</th>
                                 <th>Admission No</th>
                                 <th>Class (Section)</th>
@@ -223,8 +220,8 @@
                                     <tr class="item-row" onclick="selectItem(@c.LeaveAppID, this)" style="cursor: pointer;">
                                         <td class="ps-4 text-center">
                                             <input type="checkbox" name="selectedClass"
-                                                   class="form-check-input student-checkbox" onclick="selectItem(@c.LeaveAppID, this)"
-                                                   value="@c.LeaveAppID">
+                                            class="form-check-input student-checkbox" onclick="selectItem(@c.LeaveAppID, this)"
+                                            value="@c.LeaveAppID">
 
                                         </td>
                                         <td>@c.LeaveAppID</td>
@@ -234,7 +231,29 @@
                                         <td>@c.FromDate.ToString("dd MMM yyyy")</td>
                                         <td>@c.ToDate.ToString("dd MMM yyyy")</td>
                                         <td>@c.Reason</td>
-                                        <td>@c.AttachmentName</td>
+                                        <td>
+                                            @if(p.CanView)
+                                            {
+                                                @if (c.Attachment != null && c.Attachment.Length > 0)
+                                                {
+                                                    <a href="/Attendance/DownloadAttachment/@c.LeaveAppID" target="_blank" class="btn btn-sm btn-white border px-2 py-1" title="@c.AttachmentName">
+                                                        <i class="ti ti-paperclip fs-5"></i>
+                                                    </a>
+                                                    <a href="@c.Attachment" target="_blank" class="btn btn-sm btn-white border px-2 py-1" title="View Attachment">
+                                                        <i class="ti ti-eye fs-5"></i>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted fs-7">-</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fs-7">-</span>
+                                            }
+                                        
+                                        </td>
                                         <td>@c.ApplyDate.ToString("dd MMM yyyy")</td>
                                         <td>
                                             @if(c.Status == 0) 
@@ -336,93 +355,7 @@
     </div>
 </div>
 
-<!-----Add Leave Request Modal------>
-<div class="modal fade" id="addLeaveModal">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header d-flex justify-content-between align-items-center">
-                <h5 class="modal-title" id="modalTitle">Add Leave Request</h5>
-                <div>
-                    <button class="btn btn-success" id="btnSaveLeave"><i class="ti ti-cloud me-1"></i> Save</button>
-                    <button class="btn btn-danger" data-bs-dismiss="modal"><i class="ti ti-x me-1"></i> Close</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <form id="leaveForm">
-                    <input type="hidden" id="leaveAppId" value="0" />
-                    <div class="row">
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">Class <span class="text-danger">*</span></label>
-                            <select id="modalClassSelect" class="form-select select2-modal" required>
-                                <option value="">Select Class</option>
-                                @if (ViewBag.ClassList != null)
-                                {
-                                    foreach (var c in ViewBag.ClassList)
-                                    {
-                                        <option value="@c.ClassID">@c.ClassName</option>
-                                    }
-                                }
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">Section <span class="text-danger">*</span></label>
-                            <select id="modalSectionSelect" class="form-select select2-modal" required>
-                                <option value="">Select Section</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">Student Name <span class="text-danger">*</span></label>
-                            <select id="modalStudentSelect" class="form-select select2-modal" required>
-                                <option value="">Select Student</option>
-                            </select>
-                        </div>
 
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">Apply Date</label>
-                            <input type="date" id="applyDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
-                        </div>
-
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">From Date</label>
-                            <input type="date" id="fromDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
-                        </div>
-
-                        <div class="col-12 col-md-4 mb-3">
-                            <label class="form-label">To Date <span class="text-danger">*</span></label>
-                            <input type="date" id="toDate" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
-                        </div>
-
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">Reason</label>
-                            <textarea id="reason" class="form-control" rows="3"></textarea>
-                        </div>
-
-                        <div class="col-12 col-md-12 mb-3">
-                            <label class="form-label d-block">Leave Status <span class="text-danger">*</span></label>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" class="form-check-input" name="leaveStatus" id="pen" value="0" checked>
-                                <label for="pen" class="form-check-label">Pending</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" class="form-check-input" name="leaveStatus" id="app" value="1">
-                                <label for="app" class="form-check-label">Approve</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" class="form-check-input" name="leaveStatus" id="disap" value="2">
-                                <label for="disap" class="form-check-label">Disapprove</label>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-12 mb-3">
-                            <label class="form-label">Attach Document</label>
-                            <input type="file" id="attachFile" class="form-control">
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 @section Scripts {
     <script src="~/assets/js/ApproveLeave.js"></script>

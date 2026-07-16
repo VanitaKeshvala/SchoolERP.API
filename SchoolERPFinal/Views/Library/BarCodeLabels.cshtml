@@ -1,0 +1,233 @@
+﻿@using System.Security.Claims
+@using System.Text.Json
+@model SchoolERP.Shared.Models.BarCodeLabelsPageViewModel
+@{
+    ViewData["Title"] = "Barcode Labels";
+    var p = Model.Permissions;
+}
+
+<style>
+    /* ===== Label preview / print grid — scoped to this page ===== */
+    .label-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--cols, 5), 1fr);
+        gap: 0;
+        border-top: 1px solid #e3e6ea;
+        border-left: 1px solid #e3e6ea;
+    }
+
+    .label-cell {
+        border-right: 1px solid #e3e6ea;
+        border-bottom: 1px solid #e3e6ea;
+        padding: 12px 6px 8px;
+        text-align: center;
+        min-height: 110px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 2px;
+    }
+
+        .label-cell.empty {
+            background: repeating-linear-gradient(45deg, #f8f9fa, #f8f9fa 6px, #f1f3f5 6px, #f1f3f5 12px);
+        }
+
+        .label-cell .lbl-header {
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: .5px;
+            color: #495057;
+        }
+
+        .label-cell .lbl-desc {
+            font-size: 10px;
+            color: #495057;
+            line-height: 1.15;
+            padding: 0 4px;
+        }
+
+        .label-cell svg {
+            max-width: 100%;
+        }
+
+    #tblAccBody input.desc-input {
+        border: 1px solid transparent;
+        background: transparent;
+        width: 100%;
+        font-size: 12.5px;
+        padding: 2px 4px;
+        border-radius: 4px;
+    }
+
+        #tblAccBody input.desc-input:hover,
+        #tblAccBody input.desc-input:focus {
+            border-color: #ced4da;
+            background: #fff;
+        }
+
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .card {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
+</style>
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2 no-print">
+    <div>
+        <h6 class="fw-bold mb-0">Barcode Labels</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <button class="btn btn-success top-btn" onclick="printLabels()">
+            <i class="ti ti-printer me-1"></i> Print
+        </button>
+        <a href="/Library/Accession" class="btn btn-secondary top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ===== Left column: generator + list ===== -->
+    <div class="col-xl-5 no-print">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Add Accession No — Range</h6>
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label fw-semibold">From</label>
+                        <input type="text" class="form-control" id="txtRangeFrom" placeholder="e.g. BM00000200">
+                    </div>
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label fw-semibold">To</label>
+                        <input type="text" class="form-control" id="txtRangeTo" placeholder="e.g. BM00000220">
+                    </div>
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="showRange()">
+                            <i class="ti ti-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="my-2">
+
+                <h6 class="fw-bold mb-3">Add Accession No — Single</h6>
+                <div class="row">
+                    <div class="col-md-9 mb-3">
+                        <label class="form-label fw-semibold">Accession No</label>
+                        <input type="text" class="form-control" id="txtSingleAcc"
+                               placeholder="Scan or type accession no" autocomplete="off">
+                        <div class="invalid-feedback" id="errSingleAcc"></div>
+                    </div>
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button class="btn btn-info w-100 text-white" onclick="addSingleAcc()">
+                            <i class="ti ti-plus me-1"></i>Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-tbl-outer">
+            <div class="card-body p-0">
+                <div class="d-flex align-items-center justify-content-between px-3 pt-3">
+                    <h6 class="fw-bold mb-0">
+                        Accession No List
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" id="lblListCount">0</span>
+                    </h6>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearList()">
+                        <i class="ti ti-trash me-1 mb-1"></i>Clear All
+                    </button>
+                </div>
+                <div class="table-responsive mt-2" style="max-height:380px; overflow-y:auto;">
+                    <table class="table table-nowrap mb-0" id="tblAccList">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" class="form-check-input" id="chkSelectAll" checked onchange="toggleAll(this)">
+                                </th>
+                                <th style="width:50px;">S.No</th>
+                                <th>Accession No</th>
+                                <th>Description</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblAccBody">
+                            <tr id="rowEmptyState">
+                                <td colspan="5" class="text-center py-4 text-muted">No accession numbers added yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Right column: print settings + preview ===== -->
+    <div class="col-xl-7">
+        <div class="card shadow-tbl-outer mb-2 no-print">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Print Settings</h6>
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-semibold">No. of Copies</label>
+                        <input type="number" class="form-control" id="txtCopies" min="1" value="1">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-semibold">Start Row</label>
+                        <input type="number" class="form-control" id="txtStartRow" min="1" value="1">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-semibold">Start Column</label>
+                        <input type="number" class="form-control" id="txtStartCol" min="1" value="1">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-semibold">Columns / Row</label>
+                        <input type="number" class="form-control" id="txtCols" min="1" max="8" value="5">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Label Header</label>
+                        <input type="text" class="form-control" id="txtLabelHeader" value="FIMS">
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex align-items-end">
+                        <button class="btn btn-success w-100" onclick="renderLabels()">
+                            <i class="ti ti-layout-grid me-1"></i>Generate Labels
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-tbl-outer">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 no-print">Preview</h6>
+                <div id="printArea">
+                    <div id="emptyPreview" class="text-center text-muted py-5">
+                        <i class="ti ti-barcode fs-1 d-block mb-2"></i>
+                        Add accession numbers and click <strong>Generate Labels</strong> to preview.
+                    </div>
+                    <div id="labelGrid" class="label-grid" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+        window.CURRENT_COMPANY_ID = @Model.CompanyId;
+    </script>
+
+    <script src="~/assets/plugins/sweetalert/sweetalert2.all.min.js"></script>
+    <script src="~/js/JsBarcode.all.min.js"></script>
+    <script src="~/assets/js/BarcodeLabels.js"></script>
+}

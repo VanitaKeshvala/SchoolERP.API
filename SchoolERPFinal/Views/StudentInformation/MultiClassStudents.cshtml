@@ -29,38 +29,52 @@
     <div class="col-md-12">
         <div class="card shadow-tbl-outer mb-2">
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white" style="min-width: 300px;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 filter-toolbar">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
+
                         <i class="fas fa-search search-icon-input"></i>
-                        <input type="text" class="form-control border-0 ps-2" id="txtSearchInput" placeholder="Search by name or roll no..." />
+                        <input type="text" class="form-control border-0 ps-2 search-input-responsive"
+                        id="txtSearchInput" placeholder="Search by name or roll no..." />
                     </div>
-                    <div class="d-flex align-items-center flex-wrap gap-2">
+
+                    <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0 filter-actions-wrap">
                         <div class="dropdown">
-                            <a href="#" class="btn btn-white border btn-lg d-inline-flex align-items-center" data-bs-toggle="dropdown">
+                            <a href="#" id="btnFilterToggle" class="btn btn-white border rounded btn-md text-dark fs-14 d-flex align-items-center fw-normal" data-bs-toggle="dropdown">
                                 <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                             </a>
-                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0">
-                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                            <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                     <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                    <button type="button" class="btn text-primary fs-6" onclick="fetchStudents()">Filter</button>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                        <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                            <i class="ti ti-filter me-1"></i>Apply
+                                        </button>
+                                        <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                            <i class="ti ti-x"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="filter-body p-3">
+                                <div class="filter-body pb-0 p-3">
                                     <div class="mb-3">
                                         <label class="form-label mb-1">Class</label>
-                                        <select id="ddlFilterClass" class="form-select select2">
-                                            <option value="">Select Class</option>
+                                        <select name="classId" id="ddlFilterClass" class="form-select form-control select2">
+                                            <option value="">All Classes</option>
+                                           
                                         </select>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label mb-1">Section</label>
-                                        <select id="ddlFilterSection" class="form-select select2">
-                                            <option value="">Select Section</option>
+                                        <select name="sectionId" id="ddlFilterSection" class="form-select form-control select2">
+                                            <option value="">All Sections</option>
+                                            
                                         </select>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                       
+                    </div>                  
                 </div>
             </div>
         </div>
@@ -110,6 +124,30 @@
             $('#ddlFilterClass').on('change', function () {
                 loadSectionsByClass($(this).val(), '#ddlFilterSection');
             });
+
+
+                    // Prevent Bootstrap's outside-click auto-close from firing
+        // when interacting with Select2 (or anything) inside the filter panel
+        $('#filter-dropdown').on('click', function (e) {
+            e.stopPropagation();
+        });
+
+        // Select2 dropdown list itself renders inside #filter-dropdown via dropdownParent,
+        // but also add a safety net directly on document for select2 result clicks
+        $(document).on('click', '.select2-results__option, .select2-selection', function (e) {
+            e.stopPropagation();
+        });
+                // Initialize Select2 scoped to the filter dropdown container
+        $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+            $('#ddlFilterClass, #ddlFilterSection').each(function () {
+                if ($(this).hasClass('select2-hidden-accessible')) {
+                    $(this).select2('destroy');
+                }
+            });
+            $('#ddlFilterClass').select2({ dropdownParent: $('#filter-dropdown'), width: '100%' });
+            $('#ddlFilterSection').select2({ dropdownParent: $('#filter-dropdown'), width: '100%' });
+        });
+
         });
 
         async function loadInitialData() {

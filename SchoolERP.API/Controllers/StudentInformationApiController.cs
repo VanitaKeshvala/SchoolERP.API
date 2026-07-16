@@ -539,5 +539,19 @@ namespace SchoolERP.API.Controllers
             }
             
         }
+
+        [HttpPost("GetStudentBind")]
+        public async Task<IActionResult> GetStudentBind(StudentDropDwonBindRequestModel req)
+        {
+            try
+            {
+                var data = await _studentService.GetStudentBind(req);
+                return Ok(new { success = true, data });
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }            
+        }
     }
 }

@@ -46,10 +46,10 @@ namespace SchoolERP.Net.Services.Clients
         /// </summary>
         /// <param name="request">Leave application details.</param>
         /// <returns>Operation result.</returns>
-        public async Task<ApiResponse<object>> UpsertLeaveApplication(
+        public async Task<ApiResponse<UpsertLeaveApplicationResponse>> UpsertLeaveApplication(
             StudentLeaveUpsertRequest request)
         {
-            return await PostAsync<object>(
+            return await PostAsync<UpsertLeaveApplicationResponse>(
                 "api/StudentLeaveApi/UpsertLeaveApplication",
                 request);
         }
@@ -64,6 +64,44 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await _httpClient.GetAsync(
                 $"api/StudentLeaveApi/GetLeaveAttachment?leaveAppId={leaveAppId}");
+        }
+
+        public async Task<ApiResponse<StudentLeaveViewModel>> GetLeaveApplicationsById(
+            int? leaveAppId,
+            int? companyId)
+        {
+            string url =
+                $"api/StudentLeaveApi/GetLeaveApplicationsById?leaveAppId={leaveAppId}&companyId={companyId}";
+
+            return await GetAsync<StudentLeaveViewModel>(url);
+        }
+
+        /// <summary>
+        /// Updates/replaces the attachment file for an existing student leave application
+        /// without affecting the other leave application fields.
+        /// </summary>
+        /// <param name="req">
+        /// Request payload containing the leave application ID and the new attachment
+        /// (file data, type, and name).
+        /// </param>
+        /// <param name="userId">ID of the user performing the update (for audit/history).</param>
+        /// <returns>
+        /// A tuple indicating whether the update succeeded (<c>success</c>) and a corresponding
+        /// user-friendly <c>message</c>.
+        /// </returns>
+        public Task<ApiResponse<dynamic>> UpsertLeaveApplicationAttachmentFileAsync(LeaveApplicationAttachmentUpsertRequest req)
+           => PostAsync<dynamic>("api/StudentLeaveApi/UpsertLeaveApplicationAttachmentFile", req);
+
+        /// <summary>
+        /// Deletes multiple students.
+        /// </summary>
+        /// <param name="studentIds">List of Student IDs.</param>
+        /// <returns>Operation status and message.</returns>
+        public Task<ApiResponse<object>> DeleteLeaveApplicationAsync(List<int> studentIds, int companyId)
+        {
+            return PostAsync<object>(
+           $"api/StudentLeaveApi/DeleteLeaveApplication?companyId={companyId}",
+           studentIds);
         }
     }
 }

@@ -5,6 +5,7 @@ using SchoolERP.Net.Services.Clients;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SchoolERP.Net.Helpers;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -15,7 +16,8 @@ namespace SchoolERP.Net.Controllers
         private readonly ISubjectGroupClientService _subjectGroupClient;
         private readonly ISubjectClientService _subjectClient;
         private readonly IUserMenuPermissionClientService _menuPerm;
-
+        private readonly ICompanyClientService _companyService;
+        private readonly ISessionClientService _sessionService;
         private const string MenuPath = "/Homework/Add";
 
         public HomeworkController(
@@ -23,6 +25,8 @@ namespace SchoolERP.Net.Controllers
             IClassClientService classClient, 
             ISubjectGroupClientService subjectGroupClient,
             ISubjectClientService subjectClient,
+            ICompanyClientService companyService,
+            ISessionClientService sessionService,
             IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
         {
             _homeworkClient = homeworkClient;
@@ -30,24 +34,112 @@ namespace SchoolERP.Net.Controllers
             _subjectGroupClient = subjectGroupClient;
             _subjectClient = subjectClient;
             _menuPerm = menuPerm;
+            _companyService = companyService;
+            _sessionService = sessionService;
         }
 
-        public async Task<IActionResult> Add()
+        private async Task<int> GetCompanyId()
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Homework/Add"
-           );
-            var homeworksResponse = await _homeworkClient.GetAllAsync();
-            var classesResponse = await _classClient.GetAllAsync();
-
-            var model = new HomeworkPageViewModel
+            var response = await _companyService.GetUserCurrentCompanyAsync();
+            return response?.Data ?? 0;
+        }
+        private async Task<int> GetSessionId()
+        {
+            if (CurrentSessionId == null)
             {
-                Homeworks = homeworksResponse.Success ? homeworksResponse.Data : new List<HomeworkViewModel>(),
-                Classes = classesResponse.Success ? classesResponse.Data : new List<MstClassViewModel>()
-            };
-            model.Permissions = perms;
-            return View(model);
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
+        }
+        public async Task<IActionResult> Index(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID,string mode)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Homework/Index"
+               );
+
+                var request = new SearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    Mode=mode
+                };
+
+                var sessionId = await GetSessionId();
+                var classesResponse = _homeworkClient.GetAllHomeWorkWithPageAsync(request);
+
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+
+                await Task.WhenAll(classesResponse, sessionTask, companiesTask);
+
+                var pagedResult = await classesResponse;
+
+                var model = new HomeworkPageViewModel
+                {
+                    Homeworks = pagedResult.Success ? pagedResult.Data.Data : new List<HomeworkViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionId
+                };
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<IActionResult> Add(int? id)
+        {
+
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Homework/Add"
+               );
+                var model = new HomeworkAddViewModel();
+                var classes = await _classClient.GetAllAsync(false,await GetSessionId(),await GetCompanyId());
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _homeworkClient.GetByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.Homeworks = response.Data;
+                        model.EditHomeworks = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditHomeworks = null;
+                }
+                model.Classes = classes.Data;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            
         }
 
         #region Homework API Proxy Endpoints
@@ -62,7 +154,7 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSubjectGroupByID(int id)
         {
-            var res = await _subjectGroupClient.GetByIDAsync(id);
+            var res = await _subjectClient.GetSubjectGropBySubjectDropdownList(id);
             return Json(res);
         }
 
@@ -102,23 +194,47 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteHomework(int id)
+        public async Task<IActionResult> DeleteHomework([FromBody] List<int> ids)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
-                return Json(new { success = false, message = "You do not have permission to delete homework." });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Delete")).Data)
+                    return Json(new { success = false, message = "You do not have permission to delete homework." });
 
-            var res = await _homeworkClient.DeleteAsync(id);
-            return Json(res);
+                var res = await _homeworkClient.DeleteAsync(ids);
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleHomeworkStatus(int id, bool isActive)
+        public async Task<IActionResult> ToggleHomeworkStatus([FromBody] StatusUpdateRequest request)
         {
-            if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "You do not have permission to change homework status." });
+            try
+            {
+                if (!(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to change homework status." });
 
-            var res = await _homeworkClient.ToggleStatusAsync(id, isActive);
-            return Json(res);
+                var res = await _homeworkClient.ToggleStatusAsync(request);
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            
         }
 
         #endregion

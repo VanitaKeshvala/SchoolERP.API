@@ -29,7 +29,7 @@ namespace SchoolERP.Net.Services.Clients
         /// <returns>
         /// API response indicating whether the operation succeeded.
         /// </returns>
-        Task<ApiResponse<bool>> UpsertBookAsync(BookUpsertRequest request);
+        Task<ApiResponse<UpsertBookResponse>> UpsertBookAsync(BookUpsertRequest request);
 
         /// <summary>
         /// Deletes a library book.
@@ -127,5 +127,37 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<PagedResult<StaffLibraryMember>>> GetAllStaffMembershipWithPageAsync(StaffLibraryMemberSearchModel request);
         Task<ApiResponse<PagedResult<IssueReturnViewModel>>> GetAllIssuedBooksWithPageIndexAsync(IssueBookSearchModel request);
         Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllLibraryMemberWithPageIndexAsync(MemberSearchModel request);
+
+        #region All Libary Master Table Dropdwonbind
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryDocumentTypeDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryDocumentStatusDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryCategoryDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryLanguageDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibrarySupplierDropdownList(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibrarySeriesDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryBudgetDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryPublisherDropdownListAsync(int companyId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibrarySubjectDropdownListAsync(int companyId, int categoryId);
+        Task<ApiResponse<List<DropdownModel>>> GetLibraryAuthorDropdownListAsync(int companyId);
+        Task<ApiResponse<List<BookViewModel>>> SearchBookTitleAsync(string term);
+        #endregion
+
+        Task<ApiResponse<dynamic>> UpsertBooksFrontPageAttachmentFileAsync(BooksAttachmentUpsertRequest req);
+        Task<ApiResponse<PagedResult<AccessionDetailsModel>>> GetAllAccessionWithPageAsync(LibrarySearchRequest request);
+        Task<ApiResponse<AccessionDetailsModel>> GetAccessionById(int id, int companyId);
+        Task<ApiResponse<AccessionDetailsModel>> GetAccessionByNo(string accessionNo, int companyid);
+        Task<ApiResponse<SpResult>> UpsertAccessionStatusAsync(AccessionStatusUpsertRequest req);
+        Task<ApiResponse<List<AccessionDetailsModel>>> GetAccessionForLabelsAsync(AccessionSearchRequest request);
+        Task<ApiResponse<IssueNoResponse>> GetIssueNoAsync(int companyID);
+        Task<ApiResponse<SpResult>> SaveIssueBook(LibraryIssueSaveRequest request);
+        Task<ApiResponse<object>> ReturnIssueBook(LibraryReturnRequest request);
+        Task<ApiResponse<BookDetailsResult>> GetBookDetailsAsync(int bookId);
+        Task<ApiResponse<object>> AddStudentsMembershipBulkWithCards(
+            BulkMembershipRequest request,
+            int companyId,
+            int userId);
+
+        Task<ApiResponse<List<LibraryMemberSearchResult>>> SearchMemberAsync(int companyId, string memberType, string? searchText);
+        Task<ApiResponse<List<AccessionDetailsModel>>> SearchAccessionNoAsync(int companyId, string? searchText);
     }
 }

@@ -6,6 +6,13 @@ namespace SchoolERP.Shared.Models
 {
     public class HomeworkViewModel
     {
+        public int RESULT { get; set; }
+        public string MESSAGE { get; set; }
+        public int TOTALRECORDS { get; set; }
+        public int TOTALPAGES { get; set; }
+        public int CURRENTPAGE { get; set; }
+        public int PAGESIZE { get; set; }
+
         public int HomeworkID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -63,6 +70,24 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<HomeworkViewModel> Homeworks { get; set; } = new List<HomeworkViewModel>();
+        public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+        public int? SectionID { get; set; }
+    }
+
+    public class HomeworkAddViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public HomeworkViewModel Homeworks { get; set; } = new HomeworkViewModel();
+        public HomeworkViewModel EditHomeworks { get; set; } = new HomeworkViewModel();
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
     }
 }

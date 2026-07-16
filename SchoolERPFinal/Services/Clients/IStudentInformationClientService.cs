@@ -51,5 +51,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<SpResult>> UpdateStudentProfileAsync(ProfileRequest req);
 
         Task<ApiResponse<PagedResult<StudentHouseViewModel>>> GetStudentHouseListAsync(SubjectSearchRequest request);
+        Task<ApiResponse<List<StudentDropDwonBindViewModel>>> GetStudentBindAsync(StudentDropDwonBindRequestModel request);
     }
 }

@@ -21,6 +21,9 @@ namespace SchoolERP.Net.Controllers
         private readonly IStudentLeaveClientService _leaveService;
         private readonly IStudentInformationClientService _studentService;
 
+        private readonly IConfiguration _configuration;
+        private readonly IPhotoUploadService _photoService;
+        private readonly IWebHostEnvironment _environment;
         public AttendanceController(
             IAttendanceClientService service,
             IClassClientService classService,
@@ -28,7 +31,8 @@ namespace SchoolERP.Net.Controllers
             ICompanyClientService companyService,
             ISessionClientService sessionService,
             IStudentLeaveClientService leaveService,
-            IStudentInformationClientService studentService, PermissionHelper permHelper) : base(permHelper)
+            IStudentInformationClientService studentService, PermissionHelper permHelper,
+            IConfiguration configuration, IPhotoUploadService photoService, IWebHostEnvironment environment) : base(permHelper)
         {
             _service = service;
             _classService = classService;
@@ -37,9 +41,17 @@ namespace SchoolERP.Net.Controllers
             _sessionService = sessionService;
             _leaveService = leaveService;
             _studentService = studentService;
+            _configuration = configuration;
+            _photoService = photoService;
+            _environment = environment;
         }
 
         private int GetUserId() => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value ?? "0");
+        private int GetStaffID()
+        {
+            var staffClaim = User.FindFirst("StaffID")?.Value;
+            return int.TryParse(staffClaim, out var staffId) ? staffId : 0;
+        }
         private async Task<int> GetCompanyId()
         {
             var response = await _companyService.GetUserCurrentCompanyAsync();
@@ -53,10 +65,65 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'Attendance' marking page where teachers can mark students as Present, Absent, or Late.
         /// </summary>
-        public async Task<IActionResult> Attendance()
+        [HttpGet]
+        public async Task<IActionResult> Attendance(int? classId, int? sectionId, DateTime? date,
+        int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? studentId)
         {
-            ViewBag.ClassList =(await _classService.GetAllAsync()).Data;
-            return View();
+
+            var model = new StudentAttendancePageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Attendance/ApproveLeave"
+               );
+
+                var request = new StudentAttendanceSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    ClassID = classId ?? null,
+                    SectionID = sectionId ?? null,
+                    StudentID = studentId,
+                    AttendanceDate = date ?? DateTime.Now
+                };
+                var staffID = GetStaffID();
+                var sessionId = await GetSessionId();
+                var classesResponse = _service.GetAllStudentAttendanceWithPageAsync(request);
+                var companiesTask = _companyService.GetAllAsync();
+                var classList = await _classService.GetAllAsync(false,await GetSessionId(),await GetCompanyId(), staffID);
+                await Task.WhenAll(classesResponse, companiesTask);
+
+                var pagedResult = await classesResponse;
+
+                model = new StudentAttendancePageViewModel
+                {
+                    StudentAttendanceModel = pagedResult.Success ? pagedResult.Data.Data : new List<StudentAttendanceViewModel>(),
+                    Classes = classList.Data ?? new(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SectionID = sectionId,
+                    ClassId = classId
+                };
+                model.Permissions = perms;
+                return View(model);
+
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
         }
 
         [HttpGet]
@@ -69,26 +136,90 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> SaveAttendance([FromBody] AttendanceUpsertRequest req)
         {
-            var result =await _service.SaveBulkAttendanceAsync(req);
-            return Json(new { success = result.Success, message = result.Message });
+            try
+            {
+                req.CompanyID = await GetCompanyId();
+                var result = await _service.SaveBulkAttendanceAsync(req);
+                return Json(new { success = result.Success, message = result.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }            
         }
 
         [HttpGet]
         public async Task<IActionResult> GetSectionsByClass(int classId)
         {
-            var data =(await _sectionService.GetByClassAsync(classId)).Data;
+            var staffId = GetStaffID();
+            var data =(await _sectionService.GetByClassAsync(classId, staffId)).Data;
             return Json(new { success = true, data });
         }
 
         /// <summary>
         /// Shows the 'Attendance Report' page to see how many students were present on specific dates.
         /// </summary>
-        public async Task<IActionResult> Report()
+        
+        [HttpGet]
+        public async Task<IActionResult> Report(int? classId, int? sectionId, DateTime? date,
+       int? pageIndex,
+       int? pageSize,
+       string? search,
+       int? companyId,
+       int? studentId)
         {
-            ViewBag.ClassList = (await _classService.GetAllAsync()).Data;
-            return View();
-        }
 
+            var model = new StudentAttendancePageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Attendance/ApproveLeave"
+               );
+
+                var request = new StudentAttendanceSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    ClassID = classId ?? null,
+                    SectionID = sectionId ?? null,
+                    StudentID = studentId,
+                    AttendanceDate = date ?? DateTime.Now
+                };
+                var staffId = GetStaffID();
+                var sessionId = await GetSessionId();
+                var classesResponse = _service.GetAllStudentAttendanceWithPageAsync(request);
+                var companiesTask = _companyService.GetAllAsync();
+                var classList = await _classService.GetAllAsync(false,await GetSessionId(),await GetCompanyId(),staffId);
+                await Task.WhenAll(classesResponse, companiesTask);
+
+                var pagedResult = await classesResponse;
+
+                model = new StudentAttendancePageViewModel
+                {
+                    StudentAttendanceModel = pagedResult.Success ? pagedResult.Data.Data : new List<StudentAttendanceViewModel>(),
+                    Classes = classList.Data ?? new(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SectionID = sectionId,
+                    ClassId = classId
+                };
+                model.Permissions = perms;
+                return View(model);
+
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+        }
         /// <summary>
         /// Shows the 'Approve Leave' page where administrators can review and approve student leave requests.
         /// </summary>
@@ -105,7 +236,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/StudentInformation/DisabledStudents"
+                   "/Attendance/ApproveLeave"
                );
 
                 var request = new StudentLeaveSearchRequest
@@ -118,11 +249,11 @@ namespace SchoolERP.Net.Controllers
                     SectionID = sectionId ?? null,
                     Status=status
                 };
-
+                var staffId = GetStaffID();
                 var sessionId = await GetSessionId();
                 var classesResponse = _service.GetAllLeaveApplicationsWithPageAsync(request);
                 var companiesTask = _companyService.GetAllAsync();
-                var classList = await _classService.GetAllAsync();
+                var classList = await _classService.GetAllAsync(false,await GetSessionId(),await GetCompanyId(), staffId);
                 await Task.WhenAll(classesResponse, companiesTask);
 
                 var pagedResult = await classesResponse;
@@ -152,6 +283,43 @@ namespace SchoolERP.Net.Controllers
             
         }
 
+
+        //Add Leave Request
+        public async Task<IActionResult> AddLeaveRequest(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Attendance/AddLeaveRequest"
+               );
+                var staffId = GetStaffID();
+                var sessionId = await GetSessionId();
+                var classResponce = await _classService.GetAllAsync(false, await GetSessionId(), await GetCompanyId(), staffId);
+                var model = new StudentLeaveAddViewModel();
+
+
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _leaveService.GetLeaveApplicationsById(id.Value,await GetCompanyId());
+                    if (response.Success)
+                    {                        
+                        model.EditStudentLeave = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditStudentLeave = null;
+                }
+                model.Classes = classResponce.Data;
+                model.Permissions = perms;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
         [HttpGet]
         public async Task<IActionResult> GetLeaveList(int? classId, int? sectionId, int? status)
         {
@@ -169,14 +337,32 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStudentsForLeave(int classId, int sectionId)
         {
-            var response = await _studentService.GetStudentListAsync(classId, sectionId, null);
-            return Json(new { response.Success, response.Data });
+            try
+            {
+                var reqModel = new StudentDropDwonBindRequestModel
+                {
+                    SessionID = await GetSessionId(),
+                    CompanyID = await GetCompanyId(),
+                    ClassID = classId,
+                    SectionID = sectionId,
+                    UserId = GetUserId()
+                };
+                var sessionId = await GetSessionId();
+                var companyId = await GetSessionId();                
+                var response = await _studentService.GetStudentBindAsync(reqModel);
+                return Json(new { response.Success, response.Data });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            
         }
 
         [HttpPost]
         public async Task<IActionResult> UpsertLeave([FromForm] int LeaveAppID, [FromForm] int StudentID, [FromForm] DateTime FromDate, 
                                         [FromForm] DateTime ToDate, [FromForm] DateTime ApplyDate, [FromForm] string? Reason, 
-                                        [FromForm] int Status, IFormFile? Attachment)
+                                        [FromForm] int Status, [FromForm] IFormFile? Attachment)
         {
             var req = new StudentLeaveUpsertRequest
             {
@@ -187,43 +373,96 @@ namespace SchoolERP.Net.Controllers
                 ApplyDate = ApplyDate,
                 Reason = Reason,
                 Status = Status
-            };
-
-            if (Attachment != null)
-            {
-                using (var ms = new MemoryStream())
-                {
-                    Attachment.CopyTo(ms);
-                    req.Attachment = ms.ToArray();
-                    req.AttachmentName = Attachment.FileName;
-                    req.AttachmentType = Attachment.ContentType;
-                }
-            }
+            };           
 
             var result =await _leaveService.UpsertLeaveApplication(req);
-            return Json(new { success = result.Success, message = result.Message });
+
+            if (Attachment != null && Attachment.Length > 0)
+            {
+                long MaxFileSizeMB = _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
+                long maxBytes = MaxFileSizeMB * 1024L * 1024L;
+
+                if (Attachment.Length > maxBytes)
+                {
+                    return Json(new { success = false, message = $"File size exceeds the {MaxFileSizeMB} MB limit." });
+                }
+
+                req.AttachmentName = Attachment.FileName;
+                req.AttachmentType = Attachment.ContentType;
+            }
+            if (result.Data?.Result?.Result == 1) 
+            {
+                int? leaveAppID = result.Data.Result.LeaveAppID;
+                if (Attachment != null && Attachment.Length > 0)
+                {
+                    using var memoryStream = new MemoryStream();
+                    await Attachment.CopyToAsync(memoryStream);
+
+                    byte[] fileBytes = memoryStream.ToArray();
+                    PhotoUploadResult photoResult = new PhotoUploadResult();
+                    if (req.AttachmentName != null)
+                    {
+                        photoResult = await _photoService.SaveBase64PhotoAsync(
+                            Convert.ToBase64String(fileBytes),
+                            req.AttachmentName ?? "photo.jpg",
+                            PhotoModule.LeaveApp,
+                            FolderNameModule.Documents,
+                            leaveAppID.Value
+                        );
+                        var attchment = new LeaveApplicationAttachmentUpsertRequest
+                        {
+                            LeaveAppId = leaveAppID.Value,
+                            Attachment = photoResult.PhotoUrl,
+                            FileName = photoResult.FileName,
+                            FileType = Attachment.ContentType
+
+                        };
+                        var attachment = await _leaveService.UpsertLeaveApplicationAttachmentFileAsync(attchment);
+                    }
+                }
+            }
+                return Json(new { success = result.Success, message = result.Message });
         }
 
         [HttpGet]
         public async Task<IActionResult> DownloadAttachment(int id)
         {
             //var (bytes, fileName, contentType) = await _leaveService.GetLeaveAttachment(id);
-            var response = await _leaveService
-         .GetLeaveAttachment(id);
+           var r = await _leaveService.GetLeaveApplicationsById(id, await GetCompanyId());
 
-            if (!response.IsSuccessStatusCode)
+            if (!r.Success || string.IsNullOrWhiteSpace(r.Data?.Attachment))
                 return NotFound();
 
-            var bytes = await response.Content.ReadAsByteArrayAsync();
+            // Full physical path
+            var filePath = Path.Combine(
+                _environment.WebRootPath,
+                r.Data.Attachment.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
+            );
 
-            var contentType =
-                response.Content.Headers.ContentType?.MediaType
-                ?? "application/octet-stream";
+            if (!System.IO.File.Exists(filePath))
+                return NotFound("File not found.");
 
-            var fileName =
-                response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
-                ?? "Attachment";
-            return File(bytes, contentType ?? "application/octet-stream", fileName ?? "attachment");
+            var fileName = Path.GetFileName(filePath);
+
+            return PhysicalFile(
+                filePath,
+                "application/octet-stream",
+                fileName);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteLeaveApplication([FromBody] List<int> ids)
+        {
+            try
+            {
+                var res = await _leaveService.DeleteLeaveApplicationAsync(ids, await GetCompanyId());
+                return Json(new { success = true, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            
         }
     }
 }

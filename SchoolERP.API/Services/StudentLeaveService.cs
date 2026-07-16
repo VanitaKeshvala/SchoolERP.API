@@ -102,7 +102,7 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Creates a new leave application or updates an existing leave application.
         /// </summary>
-        public (bool Success, string Message) UpsertLeaveApplication(
+        public SpLeaveApplicationResult UpsertLeaveApplication(
             StudentLeaveUpsertRequest req,
             int companyId,
             int userId)
@@ -128,25 +128,19 @@ namespace SchoolERP.API.Services
                 parameters.Add("@CompanyID", companyId);
                 parameters.Add("@UserID", userId);
 
-                var result = conn.QueryFirstOrDefault<dynamic>(
+                var result = conn.QueryFirstOrDefault<SpLeaveApplicationResult>(
                     "sp_Student_LeaveApp_CRUD",
                     parameters,
                     commandType: CommandType.StoredProcedure);
 
-                if (result != null)
-                {
-                    return (
-                        Convert.ToInt32(result.Result) == 1,
-                        Convert.ToString(result.Message)
-                    );
-                }
+                return result;
 
-                return (false, "Failed to save leave application");
+                
             }
             catch (Exception ex)
             {
                 _logger?.LogError(ex, ex.Message);
-                return (false, "Failed to update status");
+                return null;
             }
             
         }
@@ -250,5 +244,123 @@ namespace SchoolERP.API.Services
             }
 
         }
+
+
+        /// <summary>
+        /// Retrieves all student leave applications based on class, section, and status filters.
+        /// </summary>
+        public StudentLeaveViewModel? GetLeaveApplicationsById(int? leaveAppId, int? companyId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+               _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+                parameters.Add("@LEAVEAPPID", leaveAppId);
+                parameters.Add("@COMPANYID", companyId);
+
+
+                return conn.QueryFirst<StudentLeaveViewModel>(
+                    "SP_STUDENT_LEAVEAPP_GETBYID",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, ex.Message);
+                return null;
+            }
+
+        }
+
+
+        /// <summary>
+        /// Updates/replaces the attachment file for an existing student leave application
+        /// without affecting the other leave application fields.
+        /// </summary>
+        /// <param name="req">
+        /// Request payload containing the leave application ID and the new attachment
+        /// (file data, type, and name).
+        /// </param>
+        /// <param name="userId">ID of the user performing the update (for audit/history).</param>
+        /// <returns>
+        /// A tuple indicating whether the update succeeded (<c>success</c>) and a corresponding
+        /// user-friendly <c>message</c>.
+        /// </returns>
+        public (bool success, string message) UpsertLeaveApplicationAttachmentFile(
+     LeaveApplicationAttachmentUpsertRequest req, int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@LEAVEAPPID", req.LeaveAppId);
+                parameters.Add("@ATTACHMENT", req.Attachment);
+                parameters.Add("@ATTACHMENTTYPE", req.FileType);
+                parameters.Add("@ATTACHMENTNAME", req.FileName);
+                parameters.Add("@COMPANYID", req.CompanyId);
+                parameters.Add("@USERID", userId);
+
+                var result = conn.QueryFirstOrDefault<dynamic>(
+                    "SP_STUDENT_LEAVEAPP_UPDATE_ATTACHMENT",
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                );
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
+
+        /// <summary>
+        /// Deletes the specified Leave Application 
+        /// </summary>
+        public (bool Success, string Message) DeleteLeaveApplication(
+            List<int> ids,
+            int userId,int companyId)
+        {
+            try
+            {
+                if (ids == null || !ids.Any())
+                {
+                    return (false, "No leave application selected for deletion.");
+                }
+
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                string id = string.Join(",", ids);
+
+                var param = new DynamicParameters();
+
+                param.Add("@LEAVEAPPIDS", id);
+                param.Add("@COMPANYID", companyId);
+                param.Add("@UserID", userId);
+
+                var result = conn.QueryFirstOrDefault<SpResult>(
+                    "SP_STUDENT_LEAVEAPP_DELETE",
+                    param,
+                    commandType: CommandType.StoredProcedure);
+
+                return (
+                    Convert.ToInt32(result.Result) == 1,
+                    Convert.ToString(result.Message) ?? string.Empty
+                );
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
+
     }
 }

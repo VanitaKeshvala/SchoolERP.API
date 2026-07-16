@@ -7,6 +7,7 @@ using SchoolERP.API.Data;
 using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 using System.Data;
 using static System.Collections.Specialized.BitVector32;
 
@@ -263,6 +264,31 @@ namespace SchoolERP.API.Services
 
             }
             catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public List<DropdownModel> GetSubjectGropBySubjectDropdownList(int subjectGroupId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                var result = conn.Query<DropdownModel>(
+                    "SP_SUBJECTGROUP_GETSUBJECTS",
+                new
+                {
+                        SUBJECTGROUPID = subjectGroupId
+                },
+                    commandType: CommandType.StoredProcedure)
+                    .ToList();
+
+                return result;
+            }
+            catch (Exception)
             {
                 throw;
             }

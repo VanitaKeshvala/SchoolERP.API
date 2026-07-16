@@ -11,7 +11,7 @@
     <div>
         <h6 class="fw-bold mb-0">@(Model.EditAssignments == false ? "Add Hostel" : "Edit Hostel")</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanAdd)
         {
             <button class="btn btn-success top-btn" onclick="saveAssignment()">

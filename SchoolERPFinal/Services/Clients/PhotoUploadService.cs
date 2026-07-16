@@ -25,7 +25,7 @@ namespace SchoolERP.Net.Services.Clients
 
         // ── UPLOAD ────────────────────────────────────────────────
         public async Task<PhotoUploadResult> UploadAsync(
-            IFormFile photo, PhotoModule module, int recordId)
+            IFormFile photo, PhotoModule module, FolderNameModule folderNameModule, int recordId)
         {
             // ── Validate: file present ─────────────────────────
             if (photo == null || photo.Length == 0)
@@ -47,7 +47,7 @@ namespace SchoolERP.Net.Services.Clients
             {
                 // ── Build folder path ──────────────────────────
                 // e.g. wwwroot/Staff/Profile/101/
-                var folderPath = GetFolderPath(module, recordId);
+                var folderPath = GetFolderPath(module, folderNameModule,recordId);
 
                 if (!Directory.Exists(folderPath))
                     Directory.CreateDirectory(folderPath);
@@ -84,7 +84,7 @@ namespace SchoolERP.Net.Services.Clients
                 await photo.CopyToAsync(stream);
 
                 // ── Return relative URL ────────────────────────
-                var relativeUrl = GetRelativeUrl(module, recordId, fileName);
+                var relativeUrl = GetRelativeUrl(module, folderNameModule, recordId, fileName);
 
                 return new PhotoUploadResult
                 {
@@ -101,9 +101,9 @@ namespace SchoolERP.Net.Services.Clients
         }
 
         // ── DELETE EXISTING ───────────────────────────────────────
-        public void DeleteExisting(PhotoModule module, int recordId)
+        public void DeleteExisting(PhotoModule module, FolderNameModule folderNameModule, int recordId)
         {
-            var folderPath = GetFolderPath(module, recordId);
+            var folderPath = GetFolderPath(module, folderNameModule, recordId);
             if (!Directory.Exists(folderPath)) return;
 
             foreach (var file in Directory.GetFiles(folderPath))
@@ -115,21 +115,21 @@ namespace SchoolERP.Net.Services.Clients
 
         // ── GET FOLDER PATH ───────────────────────────────────────
         // e.g. wwwroot/Staff/Profile/101/
-        public string GetFolderPath(PhotoModule module, int recordId)
+        public string GetFolderPath(PhotoModule module, FolderNameModule folderNameModule, int recordId)
         {
             return Path.Combine(
                 _env.WebRootPath,
                 module.ToString(),   // Staff / Student / Employee / User
-                "Profile",
+                folderNameModule.ToString(), //Profile //Documents
                 recordId.ToString()
             );
         }
 
         // ── GET RELATIVE URL ──────────────────────────────────────
         // e.g. /Staff/Profile/101/101.png
-        public string GetRelativeUrl(PhotoModule module, int recordId, string fileName)
+        public string GetRelativeUrl(PhotoModule module, FolderNameModule folderNameModule, int recordId, string fileName)
         {
-            return $"/{module}/Profile/{recordId}/{fileName}";
+            return $"/{module}/{folderNameModule}/{recordId}/{fileName}";
         }
 
         // ── PRIVATE HELPERS ───────────────────────────────────────
@@ -159,6 +159,7 @@ namespace SchoolERP.Net.Services.Clients
            string base64String,
            string originalFileName,
            PhotoModule module,
+           FolderNameModule folderNameModule,
            int recordId)
         {
             try
@@ -192,7 +193,7 @@ namespace SchoolERP.Net.Services.Clients
                 };
 
                 // Use the common PhotoUploadService
-                return await UploadAsync(file, module, recordId);
+                return await UploadAsync(file, module, folderNameModule, recordId);
             }
             catch (Exception ex)
             {

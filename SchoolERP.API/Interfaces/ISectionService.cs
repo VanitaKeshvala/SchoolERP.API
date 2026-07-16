@@ -19,7 +19,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Gets all sections that are linked to a specific class.
         /// </summary>
-        List<MstSectionViewModel> GetSectionsByClass(int classId);
+        List<MstSectionViewModel> GetSectionsByClass(int classId, int? staffID = null);
 
         /// <summary>
         /// Finds and returns the details of a specific section using its unique ID.

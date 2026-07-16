@@ -145,5 +145,127 @@ namespace SchoolERP.API.Services
 
             return result;
         }
+
+        public async Task<PagedResult<StudentAttendanceViewModel>> GetAllStudentAttendanceWithPage(StudentAttendanceSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+                param.Add("@CLASSID", req.ClassID);
+                param.Add("@SECTIONID", req.SectionID);
+                param.Add("@ATTENDANCEDATE", req.AttendanceDate);
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@STUDENTID", req.StudentID);                
+                param.Add("@SEARCHKEYWORD", req.SearchKeyword);
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+
+                var result = (await conn.QueryAsync<StudentAttendanceViewModel>(
+                "SP_ATTENDANCE_STUDENT_LIST_PAGED",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<StudentAttendanceViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<StudentAttendanceViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        public async Task<PagedResult<StudentAttendanceViewModel>> GetAllStudentAttendanceReportWithPage(StudentAttendanceSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+                param.Add("@CLASSID", req.ClassID);
+                param.Add("@SECTIONID", req.SectionID);
+                param.Add("@ATTENDANCEDATE", req.AttendanceDate);
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@STUDENTID", req.StudentID);
+                param.Add("@SEARCHKEYWORD", req.SearchKeyword);
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+
+                var result = (await conn.QueryAsync<StudentAttendanceViewModel>(
+                "SP_ATTENDANCE_STUDENT_REPORT_PAGED",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<StudentAttendanceViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<StudentAttendanceViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
     }
 }

@@ -823,6 +823,7 @@ namespace SchoolERP.Net.Controllers
                                 Convert.ToBase64String(fileBytes),
                                 req.FileName ?? "photo.jpg",
                                 PhotoModule.PostalReceive,
+                                FolderNameModule.Documents,
                                 postalReceiveID.Value
                             );
                             var attchment = new FOPostalReceiveAttachmentUpsertRequest
@@ -1063,6 +1064,7 @@ namespace SchoolERP.Net.Controllers
                                 Convert.ToBase64String(fileBytes),
                                 req.FileName ?? "photo.jpg",
                                 PhotoModule.PostalDispatch,
+                                FolderNameModule.Documents,
                                 postalDispatchId.Value
                             );
                             var attchment = new FOPostalDispatchAttachmentUpsertRequest
@@ -1526,6 +1528,7 @@ namespace SchoolERP.Net.Controllers
                                 Convert.ToBase64String(fileBytes),
                                 req.FileName ?? "photo.jpg",
                                 PhotoModule.VisitorBook,
+                                FolderNameModule.Documents,
                                 visitorBookId.Value
                             );
                             var attchment = new FOVisitorBookAttachmentUpsertRequest

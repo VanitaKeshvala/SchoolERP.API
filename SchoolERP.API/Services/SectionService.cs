@@ -61,13 +61,14 @@ namespace SchoolERP.API.Services
         /// </summary>
         /// <param name="classId">Class ID.</param>
         /// <returns>List of sections for the specified class.</returns>
-        public List<MstSectionViewModel> GetSectionsByClass(int classId)
+        public List<MstSectionViewModel> GetSectionsByClass(int classId,int? staffID=null)
         {
             using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
             var parameters = new DynamicParameters();
             parameters.Add("@ClassID", classId);
+            parameters.Add("@StaffID", staffID);
 
             return conn.Query<MstSectionViewModel>(
                 "sp_Section_GetByClass",

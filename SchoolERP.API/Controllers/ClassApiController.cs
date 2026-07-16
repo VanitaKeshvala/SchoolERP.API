@@ -29,21 +29,23 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpGet("GetAll")]
-        public IActionResult GetAll(bool includeDeleted = false,int? sessionId=null)
+        public IActionResult GetAll(bool includeDeleted = false,int? sessionId=null,int? companyId = null, int? staffID = null)
         {
             try
             {
-                int userId = GetCurrentUserId();
-                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-                //int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                int userId = GetCurrentUserId();                
                 if (sessionId == null)
                 {
                     sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
                 }
+                if (companyId == null)
+                {
+                    companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
                 if (companyId == 0 || sessionId == 0)
                     return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(new List<MstClassViewModel>()));
 
-                var data = _classService.GetAllClasses(companyId, sessionId.Value, includeDeleted);
+                var data = _classService.GetAllClasses(companyId.Value, sessionId.Value, includeDeleted, staffID);
                 return Ok(ApiResponse<List<MstClassViewModel>>.SuccessResponse(data));
             }
             catch (Exception ex)

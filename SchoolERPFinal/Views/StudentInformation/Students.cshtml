@@ -48,7 +48,7 @@
     <div>
         <h6 class="fw-bold mb-0">Student Details</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanAdd)
         {
             <a href="/StudentInformation/StudentAdmission" class="btn btn-primary d-inline-flex align-items-center top-btn">
@@ -110,15 +110,15 @@
                     <input type="hidden" name="page"      value="1" />             @* always reset to page 1 on new filter *@
                     <input type="hidden" name="viewType"  id="hdnViewType" value="@Model.ViewType" />
 
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 filter-toolbar">
 
                         <!-- ── Search Box ─────────────────────────────────── -->
-                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1" style="max-width:420px;">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                             <i class="fas fa-search search-icon-input"></i>
                             <input type="text"
                                    name="search"
                                    id="txtSearchInput"
-                                   class="form-control border-0 ps-2"
+                                   class="form-control border-0 ps-2 search-input-responsive"
                                    placeholder="Search by name, roll, admission..."
                                    value="@Model.SearchTerm"
                                    autocomplete="off" />
@@ -130,11 +130,11 @@
                             }
                         </div>
 
-                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+                        <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0 filter-actions-wrap">
 
                             <!-- ── Filter Dropdown ────────────────────────── -->
                             <div class="dropdown">
-                                <a href="#" class="btn btn-white border btn-lg @(Model.SelectedClassId.HasValue || Model.SelectedSectionId.HasValue ? "text-primary border-primary" : "")"
+                                <a href="#" id="btnFilterToggle" class="btn btn-white border btn-lg @(Model.SelectedClassId.HasValue || Model.SelectedSectionId.HasValue ? "text-primary border-primary" : "")"
                                    data-bs-toggle="dropdown" data-bs-auto-close="outside">
                                     <i class="ti ti-filter me-1"></i>Filters
                                     @if (Model.SelectedClassId.HasValue || Model.SelectedSectionId.HasValue)
@@ -145,12 +145,17 @@
                                     }
                                 </a>
                                 <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
-                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2 px-3">
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                         <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                       
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            <i class="ti ti-filter-check me-1"></i>Apply
-                                        </button>
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                            <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                                <i class="ti ti-filter me-1"></i>Apply
+                                            </button>
+                                            <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                                <i class="ti ti-x"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="filter-body pb-0 p-3">
                                         <!-- Class Filter -->
@@ -696,6 +701,17 @@
 
         $(document).ready(function () {
 
+             $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+                    if (window.innerWidth <= 575) {
+                        $('body').append('<div class="dropdown-backdrop"></div>');
+                    }
+                });
+                $('#btnFilterToggle').on('hidden.bs.dropdown', function () {
+                    $('.dropdown-backdrop').remove();
+                });
+                $(document).on('click', '.dropdown-backdrop', function () {
+                    $('#btnFilterToggle').dropdown('hide');
+                });
             // ── DataTable (export only — no paging/searching, we handle that) ──
             var totalCols  = 9 + @activeCustomFieldsOnTable.Count;
             var exportCols = [];

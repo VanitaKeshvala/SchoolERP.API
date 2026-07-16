@@ -7,7 +7,7 @@ namespace SchoolERP.Net.Services.Clients
 {
     public interface IClassClientService
     {
-        Task<ApiResponse<List<MstClassViewModel>>> GetAllAsync(bool includeDeleted = false, int? sessionId = null);
+        Task<ApiResponse<List<MstClassViewModel>>> GetAllAsync(bool includeDeleted = false, int? sessionId = null, int? companyId = null, int? staffID = null);
         Task<ApiResponse<MstClassViewModel>> GetByIDAsync(int id);
         Task<ApiResponse<dynamic>> UpsertAsync(MstClassUpsertRequest request);
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);

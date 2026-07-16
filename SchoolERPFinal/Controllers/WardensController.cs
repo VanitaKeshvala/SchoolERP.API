@@ -163,6 +163,7 @@ namespace SchoolERP.Net.Controllers
                             request.PhotoBase64,
                             request.PhotoFileName ?? "photo.jpg",
                             PhotoModule.Warden,
+                            FolderNameModule.Profile,
                             WardenId
                         );
                     }

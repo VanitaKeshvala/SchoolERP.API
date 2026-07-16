@@ -604,7 +604,7 @@ namespace SchoolERP.Net.Controllers
             try
             {
                 request.CompanyID = await GetCompanyId();
-                request.SectionID = await GetSessionId();
+                request.SessionID = await GetSessionId();
 
                 var response = await _academicsClient.UpsertClassTeacherAsync(request);
                 return Json(new { success = response.Success, message = response.Message });

@@ -34,12 +34,13 @@
     
 </style>
 
-<div class="sticky-header-wrapper">
+@* sticky-header-wrapper *@
+<div class="">
 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
         <h6 class="fw-bold mb-0">Subjects</h6>
     </div>
-    <div class="d-flex flex-wrap align-items-center gap-1">
+        <div class="d-flex flex-wrap align-items-center gap-1 responsive-btn-group">
         @if (p.CanAdd)
         {
             <a href="/Academics/AddSubject" class="btn btn-primary shadow-sm top-btn" id="btnAddSubject">
@@ -105,18 +106,17 @@
     <div class="col-xl-12">
         <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
 
                     <!-- ── Search box (name="search" so form submits it) ── -->
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
                                name="search"
                                id="txtSearchInput"
                                value="@Model.SearchTerm"
-                               class="form-control border-0 ps-2"
-                               placeholder="Search subjects..."
-                               style="min-width: 320px;" />
+                                   class="form-control border-0 ps-2 search-input-responsive"
+                               placeholder="Search subjects..."/>
                     </div>
 
                     <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
@@ -138,12 +138,18 @@
                         <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
                              id="filter-dropdown">
 
-                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
-                                <div class="d-flex align-items-center justify-content-end">
-                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
-                                </div>
+                                    <div class="d-flex align-items-center justify-content-end">
+                                        <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                        <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                            <i class="ti ti-filter me-1"></i>Apply
+                                        </button>
+                                        <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                            <i class="ti ti-x"></i>
+                                        </button>
+                                    </div>
+                                
                             </div>
 
                             <div class="filter-body pb-0">

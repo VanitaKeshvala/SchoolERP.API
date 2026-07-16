@@ -17,5 +17,13 @@ namespace SchoolERP.Shared.Models
         VisitorBook,
         PostalDispatch,
         PostalReceive,
+        LeaveApp,
+        BookCoverPage,
+    }
+
+    public enum FolderNameModule 
+    {
+        Profile,
+        Documents
     }
 }

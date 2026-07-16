@@ -32,7 +32,7 @@ namespace SchoolERP.Net.Services.Clients
         /// </summary>
         /// <param name="request">Leave application details.</param>
         /// <returns>Operation result.</returns>
-        Task<ApiResponse<object>> UpsertLeaveApplication(
+        Task<ApiResponse<UpsertLeaveApplicationResponse>> UpsertLeaveApplication(
             StudentLeaveUpsertRequest request);
 
         /// <summary>
@@ -41,5 +41,25 @@ namespace SchoolERP.Net.Services.Clients
         /// <param name="leaveAppId">The leave application identifier.</param>
         /// <returns>File response.</returns>
         Task<HttpResponseMessage> GetLeaveAttachment(int leaveAppId);
+        Task<ApiResponse<StudentLeaveViewModel>> GetLeaveApplicationsById(
+            int? leaveAppId,
+            int? companyId);
+
+        /// <summary>
+        /// Updates/replaces the attachment file for an existing student leave application
+        /// without affecting the other leave application fields.
+        /// </summary>
+        /// <param name="req">
+        /// Request payload containing the leave application ID and the new attachment
+        /// (file data, type, and name).
+        /// </param>
+        /// <param name="userId">ID of the user performing the update (for audit/history).</param>
+        /// <returns>
+        /// A tuple indicating whether the update succeeded (<c>success</c>) and a corresponding
+        /// user-friendly <c>message</c>.
+        /// </returns>
+        Task<ApiResponse<dynamic>> UpsertLeaveApplicationAttachmentFileAsync(LeaveApplicationAttachmentUpsertRequest req);
+
+        Task<ApiResponse<object>> DeleteLeaveApplicationAsync(List<int> studentIds, int companyId);
     }
 }

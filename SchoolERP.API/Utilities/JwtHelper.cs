@@ -18,7 +18,7 @@ namespace SchoolERP.API.Utilities
         /// Generates a JWT for the authenticated user.
         /// Claims aligned with TDD 12.7 UserSessionModel.
         /// </summary>
-        public string GenerateToken(string username, string roleName, int userId, int userTypeId, int defaultRoleId, string? userTypeName = null)
+        public string GenerateToken(string username, string roleName, int userId, int userTypeId, int defaultRoleId, string? userTypeName = null,int? staffId=null)
         {
             var securityKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "SchoolERP_Default_Key_1234567890"));
@@ -30,9 +30,10 @@ namespace SchoolERP.API.Utilities
                 new Claim(ClaimTypes.Role,       roleName),
                 // Used by _Layout sidebar permission loader
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim("UserId",              userId.ToString()),
+                new Claim("UserId",              userId.ToString()),                
                 new Claim("UserTypeId",          userTypeId.ToString()),
-                new Claim("DefaultRoleId",       defaultRoleId.ToString())
+                new Claim("DefaultRoleId",       defaultRoleId.ToString()),
+                new Claim("StaffID",              staffId.ToString()),
             };
 
             if (!string.IsNullOrWhiteSpace(userTypeName))

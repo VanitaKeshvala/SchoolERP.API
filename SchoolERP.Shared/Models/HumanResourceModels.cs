@@ -1,3 +1,4 @@
+using SchoolERP.Shared.Models.Common;
 using System;
 using System.Collections.Generic;
 
@@ -62,6 +63,26 @@ namespace SchoolERP.Shared.Models
         public List<MstCompanyViewModel> Companies { get; set; } = new();
         public List<MstClassViewModel> Classs { get; set; } = new();
 
+        // ---- dropdown option lists (id/name lookups for the filter panel) --------
+        public List<DropdownModel> Publishers { get; set; } = new();
+        public List<DropdownModel> Authors { get; set; } = new();
+        public List<DropdownModel> Subjects { get; set; } = new();
+        public List<DropdownModel> Categories { get; set; } = new();
+        public List<DropdownModel> Languages { get; set; } = new();
+        public List<DropdownModel> SeriesList { get; set; } = new();
+        public List<DropdownModel> DocumentTypes { get; set; } = new();
+
+        // ---- currently applied filter values (round-tripped into the query string) ----
+        public int? PublisherId { get; set; }
+        public int? AuthorId { get; set; }
+        public int? SubjectId { get; set; }
+        public int? CategoryId { get; set; }
+        public int? LanguageId { get; set; }
+        public int? SeriesId { get; set; }
+        public int? DocumentId { get; set; }
+        public bool? IsActiveFilter { get; set; }
+        public string SortColumn { get; set; } = "BookID";
+        public string SortDir { get; set; } = "DESC";
         public int TotalRecords { get; set; }
         public int PageNumber { get; set; }
         public int PageSize { get; set; }
@@ -74,6 +95,17 @@ namespace SchoolERP.Shared.Models
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public BookViewModel ItemsBooks { get; set; } = new();
         public BookViewModel EditBooks { get; set; } = new();
+
+        public List<DropdownModel> DocumentType { get; set; } = new();
+        public List<DropdownModel> DocumentStatus { get; set; } = new();
+        public List<DropdownModel> Category { get; set; } = new();
+        public List<DropdownModel> Subject { get; set; } = new();
+        public List<DropdownModel> Language { get; set; } = new();
+        public List<DropdownModel> Publisher { get; set; } = new();
+        public List<DropdownModel> Author { get; set; } = new();
+        public List<DropdownModel> Series { get; set; } = new();
+        public List<DropdownModel> Budget { get; set; } = new();
+        public List<DropdownModel> Supplier { get; set; } = new();
     }
 
     public class HRStudentsMembershipPageViewModel
@@ -90,6 +122,7 @@ namespace SchoolERP.Shared.Models
         public int? CompanyId { get; set; }
         public int? ClassId { get; set; }
         public int? SectionId { get; set; }
+        public string? SessionYear { get; set; }
     }
 
     public class HRStudentsMembershipAddViewModel
@@ -98,6 +131,8 @@ namespace SchoolERP.Shared.Models
         public LibraryMember EditItem { get; set; }
         public int? StudentId { get; set; }
         public int? StaffId { get; set; }
+        public string? CurrentSession { get; set; }
+        public List<MstClassViewModel> Classes { get; set; }
 
     }
 

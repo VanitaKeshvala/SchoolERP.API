@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Select2 ───────────────────────────────────────────────────────
     try {
         if (window.jQuery && typeof jQuery.fn.select2 === 'function') {
-            jQuery('#classSelect, #ddlFilterCompany', '#ddlFilterSection', '#sectionSelect','#statusSelect').select2({
+            jQuery('#classSelect, #ddlFilterCompany', '#ddlFilterSection', '#sectionSelect', '#statusSelect','#modalClassSelect').select2({
                 width: '100%',
                 dropdownParent: jQuery('#filter-dropdown'),
                 allowClear: true,
@@ -188,6 +188,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
         console.warn('Select2 init skipped:', e);
     }
+
+
 
     // ── Keep filter dropdown open while interacting inside ────────────
     document.getElementById('filter-dropdown')?.addEventListener('click', e => e.stopPropagation());
@@ -217,6 +219,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Render badges on load ─────────────────────────────────────────
     renderFilterBadges();
+    var classId = $("#modalClassSelect").val();
+   
+    if (classId > 0)
+    {
+        $('#modalClassSelect').trigger('change').trigger('change.select2');
+        var sectionID = $("#hdnSectionId").val();
+        var studentID = $("#hdnStudentID").val();
+        loadSections(classId, '#modalSectionSelect').then(() => {
+            $('#modalSectionSelect').val(sectionID).trigger('change.select2');
+            return loadStudents(classId, sectionID);
+        }).then(() => {
+            $('#modalStudentSelect').val(studentID).trigger('change.select2');
+        });
+    }
+
+    $('#classSelect').on('change', function () {
+        loadSections($(this).val(), '#modalClassSelect');
+        
+    });
+
+    $('#modalClassSelect').on('change', function () {
+        loadSections($(this).val(), '#modalSectionSelect');
+    });
+
+    $('#modalSectionSelect').on('change', function () {
+        loadStudents($('#modalClassSelect').val(), $(this).val());
+    });
+
+    // Set initial min on page load based on existing fromDate value
+    setToDateMin();
+
+    // Update min whenever fromDate changes
+    $('#fromDate').on('change', function () {
+        setToDateMin();
+
+        // If toDate is already less than the new fromDate, reset/clear it
+        const fromVal = $('#fromDate').val();
+        const toVal = $('#toDate').val();
+        if (fromVal && toVal && toVal < fromVal) {
+            $('#toDate').val(fromVal); // or use '' to clear instead
+        }
+    });
+
+    function setToDateMin() {
+        const fromVal = $('#fromDate').val();
+        if (fromVal) {
+            $('#toDate').attr('min', fromVal);
+        }
+    }
 });
 
 // ========================================
@@ -276,20 +327,10 @@ function initDataTable() {
 
 
 $(document).ready(function () {
-    $('.select2').select2({ dropdownParent: $('#filter-dropdown') });
-    $('.select2-modal').select2({ dropdownParent: $('#addLeaveModal'), width: '100%' });
+    //$('.select2').select2({ dropdownParent: $('#filter-dropdown') });
+    //$('.select2-modal').select2({ dropdownParent: $('#addLeaveModal'), width: '100%' });
 
-    $('#classSelect').on('change', function () {
-        loadSections($(this).val(), '#sectionSelect');
-    });
-
-    $('#modalClassSelect').on('change', function () {
-        loadSections($(this).val(), '#modalSectionSelect');
-    });
-
-    $('#modalSectionSelect').on('change', function () {
-        loadStudents($('#modalClassSelect').val(), $(this).val());
-    });
+    
 
    
 
@@ -304,7 +345,25 @@ $(document).ready(function () {
 });
 
 let selectedId = 0;
-
+const IV = window.InlineFormValidation || {
+    clearMap: (map) => Object.keys(map).forEach(k => {
+        document.getElementById(k)?.classList.remove('is-invalid');
+        const err = document.getElementById(map[k]); if (err) err.textContent = '';
+    }),
+    setFieldError: (id, errId, msg) => {
+        document.getElementById(id)?.classList.add('is-invalid');
+        const err = document.getElementById(errId); if (err) err.textContent = msg;
+    },
+    setNotice: (id, msg) => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = `<div class="alert alert-danger alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    },
+    clearNotice: (id) => { const el = document.getElementById(id); if (el) el.innerHTML = ''; },
+    bindAutoClear: (map) => Object.keys(map).forEach(k => document.getElementById(k)?.addEventListener('input', () => {
+        document.getElementById(k)?.classList.remove('is-invalid');
+        const err = document.getElementById(map[k]); if (err) err.textContent = '';
+    }))
+};
 function selectItem(id, row) {
     selectedId = id;
     document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
@@ -326,22 +385,53 @@ function handleEditAction() {
     }
 }
 
-function handleDeleteAction() {
-    if (selectedId) {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You want to delete this leave application?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                showToast('Delete functionality triggered for ID: ' + selectedId, 'info');
-            }
-        });
+
+async function handleDeleteAction() {
+    
+    let selectedIds = [];
+    $('.student-checkbox:checked').each(function () {
+        selectedIds.push(parseInt($(this).val()));
+    });
+    if (selectedIds.length === 0) {
+        alert("Please select at least one Class.");
+        return;
     }
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You are about to delete this Class record. This action cannot be undone!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete it!',
+        customClass: {
+            confirmButton: 'btn btn-danger me-2',
+            cancelButton: 'btn btn-secondary'
+        },
+        buttonsStyling: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: '/Attendance/DeleteLeaveApplication',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(selectedIds),
+                success: function (res) {
+                    if (res.success) {
+                        Swal.fire('Deleted!', 'Leave application record has been deleted.', 'success')
+                            .then(() => location.reload());
+                    } else {
+                        Swal.fire('Error!', res.message || 'Failed to delete leave application.', 'error');
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                }
+            });
+        }
+    });
 }
+
 
 function resetForm() {
     $('#modalTitle').text('Add Leave Request');
@@ -398,29 +488,18 @@ function loadStudents(classId, sectionId) {
 }
 
 function editLeave(id) {
-    const rowData = $(`#row-${id}`).data('leave-info');
-    if (!rowData) return;
 
-    $('#modalTitle').text('Edit Leave Request');
-    $('#leaveAppId').val(rowData.leaveAppID);
-    $('#reason').val(rowData.reason);
-    $('#applyDate').val(new Date(rowData.applyDate).toISOString().split('T')[0]);
-    $('#fromDate').val(new Date(rowData.fromDate).toISOString().split('T')[0]);
-    $('#toDate').val(new Date(rowData.toDate).toISOString().split('T')[0]);
+    if (id === 0) return;
+    try {
 
-    $(`input[name="leaveStatus"][value="${rowData.status}"]`).prop('checked', true);
+        if (id) {
+            location.href = `/Attendance/AddLeaveRequest/${id}`;
+        }
 
-    // Chained Population
-    $('#modalClassSelect').val(rowData.classID).trigger('change.select2');
+    } catch (err) {
+        console.error(err);
+    }
 
-    loadSections(rowData.classID, '#modalSectionSelect').then(() => {
-        $('#modalSectionSelect').val(rowData.sectionID).trigger('change.select2');
-        return loadStudents(rowData.classID, rowData.sectionID);
-    }).then(() => {
-        $('#modalStudentSelect').val(rowData.studentID).trigger('change.select2');
-    });
-
-    $('#addLeaveModal').modal('show');
 }
 
 function saveLeave() {
@@ -433,9 +512,28 @@ function saveLeave() {
     formData.append('Reason', $('#reason').val());
     formData.append('Status', $('input[name="leaveStatus"]:checked').val());
 
-    const fileInput = $('#attachFile')[0];
-    if (fileInput.files.length > 0) {
-        formData.append('Attachment', fileInput.files[0]);
+
+    const fileInput = document.getElementById('attachFile');
+    if (fileInput.files[0]) {
+        formData.append('attachment', fileInput.files[0]);
+    }
+
+    // ✅ Validate ToDate should not be less than FromDate
+    const fromDateVal = $('#fromDate').val();
+    const toDateVal = $('#toDate').val();
+    if (fromDateVal && toDateVal) {
+        const fromDate = new Date(fromDateVal);
+        const toDate = new Date(toDateVal);
+        if (toDate < fromDate) {
+            showToast('To Date cannot be earlier than From Date', 'error');
+            return;
+        }
+    }
+
+    const reason = document.getElementById('reason').value.trim();
+    if (!reason) {
+        IV.setFieldError('reason', 'errreason', 'Reason is required.');
+        return;
     }
 
     if (!$('#modalStudentSelect').val() || !$('#toDate').val()) {
@@ -451,13 +549,25 @@ function saveLeave() {
         contentType: false,
         success: function (res) {
             if (res.success) {
-                showToast(res.message, 'success');
-                $('#addLeaveModal').modal('hide');
-                $('#leaveForm')[0].reset();
-                $('.select2-modal').val('').trigger('change');
-               
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: res.message,
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-success' },
+                    buttonsStyling: false
+                }).then(() => {
+                    window.location.href = '/Attendance/ApproveLeave';
+                });
             } else {
-                showToast(res.message, 'error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: res.message || 'Failed to save leave.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-danger' },
+                    buttonsStyling: false
+                });
             }
         }
     });
@@ -491,3 +601,39 @@ function updateStatus(id, status) {
         }
     });
 }
+
+
+function removeExistingFile() {
+    document.getElementById('existingFileInfo')?.remove();
+    document.getElementById('hdnRemoveFile').value = 'true';
+    document.getElementById('hdnExistingFile').value = '';
+}
+const maxFileSizeMB = 1;
+const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
+
+document.getElementById('attachFile').addEventListener('change', function () {
+
+    const fileInfo = document.getElementById('fileInfo');
+    const file = this.files[0];
+
+    if (!file) {
+        fileInfo.textContent = '';
+        return;
+    }
+
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    if (file.size > maxFileSizeBytes) {
+        fileInfo.textContent = `File is ${sizeMB} MB. Max allowed size is ${maxFileSizeMB} MB.`;
+        fileInfo.classList.remove('text-muted');
+        fileInfo.classList.add('text-danger');
+        this.value = '';
+    } else {
+        fileInfo.textContent = `Selected file size: ${sizeMB} MB`;
+        fileInfo.classList.remove('text-danger');
+        fileInfo.classList.add('text-muted');
+
+        document.getElementById('hdnRemoveFile').value = 'false';
+        document.getElementById('existingFileInfo')?.remove();
+    }
+});

@@ -69,7 +69,7 @@
 
 
     <!-- Main CSS -->
-    <link rel="stylesheet" href="~/assets/css/style.css" id="app-style">
+    
     <style>
         .sidebar .sidebar-menu > ul > li ul > li.active a .menu-arrow::before {
             border-right: none !important; 
@@ -109,7 +109,7 @@
         }
     </style>
     @RenderSection("Styles", required: false)
-
+    <link rel="stylesheet" href="~/assets/css/style.css" id="app-style">
 </head>
 
 <body>
@@ -1177,7 +1177,25 @@
          * Global Table Sorting
          * Automatically adds sorting to tables with class 'table'
          */
-        $(document).ready(function() {
+        $(document).ready(function() 
+        {
+
+                $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+            if (window.innerWidth <= 575) {
+                $('body').addClass('filter-open').append('<div class="dropdown-backdrop"></div>');
+            }
+        });
+        $('#btnFilterToggle').on('hidden.bs.dropdown', function () {
+            $('body').removeClass('filter-open');
+            $('.dropdown-backdrop').remove();
+        });
+        $(document).on('click', '.dropdown-backdrop', function () {
+            $('#btnFilterToggle').dropdown('hide');
+        });
+        $('#btnCloseFilter').on('click', function () {
+            $('#btnFilterToggle').dropdown('hide');
+        });
+
             document.querySelectorAll('table.table:not(.dataTable)').forEach(table => {
                 if (table.getAttribute('data-manual-sort') === 'true') return;
 
@@ -1258,7 +1276,11 @@
                 });
             });
         });
+
+
     </script>
+
+
 </body>
 
 </html>

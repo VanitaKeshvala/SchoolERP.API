@@ -44,11 +44,9 @@ namespace SchoolERP.Net.Services.Clients
         /// <returns>
         /// API response containing operation result.
         /// </returns>
-        public async Task<ApiResponse<bool>> UpsertBookAsync(BookUpsertRequest request)
+        public async Task<ApiResponse<UpsertBookResponse>> UpsertBookAsync(BookUpsertRequest request)
         {
-            return await PostAsync<bool>(
-                "api/LibraryApi/UpsertBook",
-                request);
+            return await PostAsync<UpsertBookResponse>("api/LibraryApi/UpsertBook",request);
         }
 
         /// <summary>
@@ -261,6 +259,135 @@ namespace SchoolERP.Net.Services.Clients
         public async Task<ApiResponse<PagedResult<LibraryMemberViewModel>>> GetAllLibraryMemberWithPageIndexAsync(MemberSearchModel request)
         {
             return await PostAsync<PagedResult<LibraryMemberViewModel>>($"api/LibraryApi/GetAllLibraryMemberWithPageIndex", request);
+        }
+
+        #region All Libary Master Table Dropdwonbind
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryDocumentTypeDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryDocumentTypeDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryDocumentStatusDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryDocumentStatusDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryCategoryDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryCategoryDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryLanguageDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryLanguageDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibrarySupplierDropdownList(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibrarySupplierDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibrarySeriesDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibrarySeriesDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryBudgetDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryBudgetDropdownList?companyId={companyId}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryPublisherDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryPublisherDropdownList?companyId={companyId}");
+        }
+
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibrarySubjectDropdownListAsync(int companyId, int categoryId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibrarySubjectDropdownList?companyId={companyId}&categoryId={categoryId}");
+        }
+        public async Task<ApiResponse<List<BookViewModel>>> SearchBookTitleAsync(string term)
+        {
+            return await GetAsync<List<BookViewModel>>($"api/LibraryApi/SearchBookTitle?term={term}");
+        }
+        public async Task<ApiResponse<List<DropdownModel>>> GetLibraryAuthorDropdownListAsync(int companyId)
+        {
+            return await GetAsync<List<DropdownModel>>(
+                $"api/LibraryApi/GetLibraryAuthorDropdownList?companyId={companyId}");
+        }
+        #endregion
+
+        public Task<ApiResponse<dynamic>> UpsertBooksFrontPageAttachmentFileAsync(BooksAttachmentUpsertRequest req)
+           => PostAsync<dynamic>("api/LibraryApi/UpsertBooksFrontPageAttachmentFile", req);
+
+
+        public async Task<ApiResponse<PagedResult<AccessionDetailsModel>>> GetAllAccessionWithPageAsync(LibrarySearchRequest request)
+        {
+            return await PostAsync<PagedResult<AccessionDetailsModel>>("api/LibraryApi/GetAllAccessionWithPage", request);
+        }
+        public async Task<ApiResponse<AccessionDetailsModel>> GetAccessionById(int id, int companyId)
+        {
+            return await GetAsync<AccessionDetailsModel>($"api/LibraryApi/GetAccessionById?id={id}&companyId={companyId}");
+        }
+        public async Task<ApiResponse<AccessionDetailsModel>> GetAccessionByNo(string accessionNo, int companyid)
+        {
+            return await GetAsync<AccessionDetailsModel>($"api/LibraryApi/GetAccessionByNo?accessionNo={accessionNo}&companyid={companyid}");
+        }
+
+        public Task<ApiResponse<SpResult>> UpsertAccessionStatusAsync(AccessionStatusUpsertRequest req)
+           => PostAsync<SpResult>("api/LibraryApi/UpsertAccessionStatus", req);
+
+        public async Task<ApiResponse<List<AccessionDetailsModel>>> GetAccessionForLabelsAsync(AccessionSearchRequest request)
+        {
+            return await PostAsync<List<AccessionDetailsModel>>("api/LibraryApi/GetAccessionForLabels", request);
+        }
+
+        public async Task<ApiResponse<IssueNoResponse>> GetIssueNoAsync(int companyID)
+        {
+            return await GetAsync<IssueNoResponse>(
+                $"api/LibraryApi/GetIssueNo?companyID={companyID}");
+        }
+
+        public async Task<ApiResponse<SpResult>> SaveIssueBook(LibraryIssueSaveRequest request)
+        {
+            return await PostAsync<SpResult>(
+                $"api/LibraryApi/SaveIssueBook",request);
+        }
+
+        public async Task<ApiResponse<object>> ReturnIssueBook(LibraryReturnRequest request)
+        {
+            return await PostAsync<object>(
+                $"api/LibraryApi/ReturnIssueBook", request);
+        }
+
+        public async Task<ApiResponse<BookDetailsResult>> GetBookDetailsAsync(int bookId)
+        {
+            return await GetAsync<BookDetailsResult>(
+                $"api/LibraryApi/GetBookDetails?bookId={bookId}");
+        }
+
+        public async Task<ApiResponse<object>> AddStudentsMembershipBulkWithCards(
+            BulkMembershipRequest request,
+            int companyId,
+            int userId)
+        {
+            return await PostAsync<object>(
+                $"api/LibraryApi/AddStudentsMembershipBulkWithCards?companyId={companyId}&userId={userId}",
+                request);
+        }
+
+        public async Task<ApiResponse<List<LibraryMemberSearchResult>>> SearchMemberAsync(int companyId, string memberType, string? searchText)
+        {
+            return await GetAsync<List<LibraryMemberSearchResult>>(
+                $"api/LibraryApi/SearchMember?companyId={companyId}&memberType={memberType}&searchText={Uri.EscapeDataString(searchText ?? string.Empty)}");
+        }
+
+        public async Task<ApiResponse<List<AccessionDetailsModel>>> SearchAccessionNoAsync(int companyId, string? searchText)
+        {
+            return await GetAsync<List<AccessionDetailsModel>>(
+                $"api/LibraryApi/SearchAccessionNo?companyId={companyId}&searchText={Uri.EscapeDataString(searchText ?? string.Empty)}");
         }
     }
 }

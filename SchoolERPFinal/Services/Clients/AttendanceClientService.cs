@@ -58,13 +58,23 @@ namespace SchoolERP.Net.Services.Clients
             AttendanceUpsertRequest request)
         {
             return await PostAsync<object>(
-                "api/Attendance/SaveBulkAttendance",
+                "api/AttendanceApi/SaveBulkAttendance",
                 request);
         }
 
         public async Task<ApiResponse<PagedResult<StudentLeaveViewModel>>> GetAllLeaveApplicationsWithPageAsync(StudentLeaveSearchRequest request)
         {
             return await PostAsync<PagedResult<StudentLeaveViewModel>>($"api/StudentLeaveApi/GetAllLeaveApplicationsWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<StudentAttendanceViewModel>>> GetAllStudentAttendanceWithPageAsync(StudentAttendanceSearchRequest request)
+        {
+            return await PostAsync<PagedResult<StudentAttendanceViewModel>>($"api/AttendanceApi/GetAllStudentAttendanceWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<StudentAttendanceViewModel>>> GetAllStudentAttendanceReportWithPageAsync(StudentAttendanceSearchRequest request)
+        {
+            return await PostAsync<PagedResult<StudentAttendanceViewModel>>($"api/AttendanceApi/GetAllStudentAttendanceReportWithPage", request);
         }
     }
 }

@@ -61,6 +61,8 @@ namespace SchoolERP.API.Services
                         ? user.UserTypeName
                         : string.Empty;
 
+                int? staffId = 17;
+
                 // Generate JWT token for authenticated user
                 user.Token = _jwtHelper.GenerateToken(
                     user.Username,
@@ -68,7 +70,8 @@ namespace SchoolERP.API.Services
                     user.UserID,
                     user.UserTypeID,
                     user.DefaultRoleID,
-                    userTypeName);
+                    userTypeName,
+                    user.StaffID= staffId);
 
                 return Common.ApiResponse<UserSessionModel?>
                     .SuccessResponse(user, loginResult.Message);

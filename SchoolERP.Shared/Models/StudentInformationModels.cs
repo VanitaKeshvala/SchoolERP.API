@@ -238,6 +238,20 @@ namespace SchoolERP.Shared.Models
         public byte[]? DocumentContent { get; set; }
     }
 
+    public class StudentDropDwonBindViewModel
+    {
+        public int StudentID { get; set; }
+        public string? RollNo { get; set; }
+        public string? FullName { get; set; }
+    }
+    public class StudentDropDwonBindRequestModel
+    {
+        public int ClassID { get; set; }
+        public int SectionID { get; set; }
+        public int SessionID { get; set; }
+        public int CompanyID { get; set; }
+        public int UserId { get; set; }
+    }
     public class StudentListViewModel
     {
         public int StudentID { get; set; }

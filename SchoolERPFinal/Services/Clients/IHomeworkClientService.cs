@@ -10,7 +10,8 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<List<HomeworkViewModel>>> GetAllAsync(bool includeDeleted = false);
         Task<ApiResponse<HomeworkViewModel>> GetByIDAsync(int id);
         Task<ApiResponse<dynamic>> UpsertAsync(HomeworkUpsertRequest request);
-        Task<ApiResponse<dynamic>> DeleteAsync(int id);
-        Task<ApiResponse<dynamic>> ToggleStatusAsync(int id, bool isActive);
+        Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
+        Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
+        Task<ApiResponse<PagedResult<HomeworkViewModel>>> GetAllHomeWorkWithPageAsync(SearchRequest request);
     }
 }

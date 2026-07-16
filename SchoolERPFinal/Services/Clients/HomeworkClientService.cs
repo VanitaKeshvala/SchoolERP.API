@@ -27,14 +27,25 @@ namespace SchoolERP.Net.Services.Clients
             return await PostAsync<dynamic>("api/HomeworkApi/Upsert", request);
         }
 
-        public async Task<ApiResponse<dynamic>> DeleteAsync(int id)
+        //public async Task<ApiResponse<dynamic>> DeleteAsync(int id)
+        //{
+        //    return await PostAsync<dynamic>($"api/HomeworkApi/Delete/{id}", null!);
+        //}
+
+
+        public async Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids)
         {
-            return await PostAsync<dynamic>($"api/HomeworkApi/Delete/{id}", null!);
+            return await PostAsync<dynamic>($"api/HomeworkApi/Delete", ids);
         }
 
-        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(int id, bool isActive)
+        public async Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request)
         {
-            return await PostAsync<dynamic>($"api/HomeworkApi/ToggleStatus?id={id}&isActive={isActive}", null!);
+            return await PostAsync<dynamic>($"api/HomeworkApi/ToggleStatus", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<HomeworkViewModel>>> GetAllHomeWorkWithPageAsync(SearchRequest request)
+        {
+            return await PostAsync<PagedResult<HomeworkViewModel>>("api/HomeworkApi/GetAllHomeWorkWithPage", request);
         }
     }
 }
