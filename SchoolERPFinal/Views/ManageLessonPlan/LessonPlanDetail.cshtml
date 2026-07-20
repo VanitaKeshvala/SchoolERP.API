@@ -1,0 +1,267 @@
+﻿@model SchoolERP.Shared.Models.ManageLessonDetailsPlanViewModel
+@using System.Text.Json
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Lesson Plan Detail";
+    var lp = Model.LessonPlanDetails;
+}
+
+@section Styles {
+    <style>
+        .lp-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .lp-detail-table tr {
+                border-bottom: 1px solid #eef0f4;
+            }
+
+                .lp-detail-table tr:last-child {
+                    border-bottom: none;
+                }
+
+            .lp-detail-table td {
+                padding: 10px 4px;
+                font-size: 13.5px;
+                vertical-align: top;
+            }
+
+                .lp-detail-table td.lp-label {
+                    font-weight: 700;
+                    color: #1a1a2e;
+                    width: 190px;
+                    white-space: nowrap;
+                }
+
+                .lp-detail-table td.lp-value {
+                    color: #495057;
+                }
+
+        .comment-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+            .comment-input-row input {
+                flex: 1;
+            }
+
+        .comment-item {
+            background: #f8f9fc;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .comment-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: #dfe3ea;
+        }
+
+        .comment-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .comment-author {
+            font-weight: 700;
+            font-size: 13.5px;
+            color: #1a1a2e;
+        }
+
+        .comment-code {
+            font-weight: 400;
+            color: #6c757d;
+        }
+
+        .comment-text {
+            color: #2b2f38;
+            font-size: 13.5px;
+        }
+
+        .comment-time {
+            font-size: 12px;
+            color: #b5871f;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .comment-empty {
+            color: #adb5bd;
+            font-size: 13px;
+            text-align: center;
+            padding: 20px 0;
+        }
+    </style>
+}
+
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Lesson Plan</h6>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-1">
+        <a href="/Homework/Index" class="btn btn-secondary top-btn">
+            <i class="ti ti-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ── Lesson Plan details ── -->
+    <div class="col-xl-7 mb-3">
+        <div class="card shadow-tbl-outer h-100">
+            <div class="card-header">
+                <h6 class="fw-bold mb-0">Lesson Plan</h6>
+            </div>
+            <div class="card-body">
+                @if (lp != null)
+                {
+                    <table class="lp-detail-table">
+                        <tr>
+                            <td class="lp-label">Class</td>
+                            <td class="lp-value">@lp.ClassName@(!string.IsNullOrEmpty(lp.SectionName) ? $"(section {lp.SectionName})" : "")</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Subject</td>
+                            <td class="lp-value">@lp.SubjectName @(!string.IsNullOrEmpty(lp.SubjectCode) ? $"({lp.SubjectCode})" : "")</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Date</td>
+                            <td class="lp-value">
+                                @lp.PlanDate.ToString("dd-MM-yyyy")
+                                @if (lp.TimeFrom.HasValue && lp.TimeTo.HasValue)
+                                {
+                                    @($"{FormatTime(lp.TimeFrom.Value)} To {FormatTime(lp.TimeTo.Value)}")
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Lesson</td>
+                            <td class="lp-value">@lp.LessonName</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Topic</td>
+                            <td class="lp-value">@lp.TopicName</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Sub Topic</td>
+                            <td class="lp-value">@lp.SubTopic</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">General Objectives</td>
+                            <td class="lp-value">@lp.GeneralObjectives</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Teaching Method</td>
+                            <td class="lp-value">@lp.TeachingMethod</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Previous Knowledge</td>
+                            <td class="lp-value">@lp.PreviousKnowledge</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Comprehensive Questions</td>
+                            <td class="lp-value">@lp.ComprehensiveQuestions</td>
+                        </tr>
+                        <tr>
+                            <td class="lp-label">Presentation</td>
+                            <td class="lp-value">@Html.Raw(lp.Presentation)</td>
+                        </tr>
+                        @if (!string.IsNullOrEmpty(lp.LectureYoutubeUrl))
+                        {
+                            <tr>
+                                <td class="lp-label">Lecture Video (YouTube)</td>
+                                <td class="lp-value"><a href="@lp.LectureYoutubeUrl" target="_blank">@lp.LectureYoutubeUrl</a></td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(lp.LectureVideoPath))
+                        {
+                            <tr>
+                                <td class="lp-label">Lecture Video</td>
+                                <td class="lp-value"><a href="@lp.LectureVideoPath" target="_blank">View Video</a></td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(lp.AttachmentPath))
+                        {
+                            <tr>
+                                <td class="lp-label">Attachment</td>
+                                <td class="lp-value"><a href="@lp.AttachmentPath" target="_blank">View Attachment</a></td>
+                            </tr>
+                        }
+                    </table>
+                }
+                else
+                {
+                    <div class="comment-empty">Lesson plan not found.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Comments ── -->
+    <div class="col-xl-5 mb-3">
+        <div class="card shadow-tbl-outer h-100">
+            <div class="card-header">
+                <h6 class="fw-bold mb-0">Comments</h6>
+            </div>
+            <div class="card-body">
+                <div class="comment-input-row">
+                    <input type="text" id="txtComment" class="form-control" placeholder="Type your comment" />
+                    <button type="button" class="btn btn-dark" id="btnSendComment" onclick="sendComment()">
+                        <span id="btnSendText">Send</span>
+                    </button>
+                </div>
+
+                <div id="commentList">
+                    @if (Model.Comments != null && Model.Comments.Any())
+                    {
+                        foreach (var c in Model.Comments)
+                        {
+                            <div class="comment-item">
+                                <img src="@(string.IsNullOrEmpty(c.CommenterImage) ? "/assets/images/avatar-placeholder.png" : c.CommenterImage)"
+                                     class="comment-avatar" alt="@c.CommenterName" />
+                                <div class="comment-body">
+                                    <div class="comment-text">
+                                        <span class="comment-author">
+                                            @c.CommenterName
+                                            
+                                            -
+                                        </span>
+                                        @c.CommentText
+                                    </div>
+                                </div>
+                                <div class="comment-time">@c.CommentedOn.ToString("dd-MM-yyyy hh:mm tt")</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="comment-empty" id="noCommentsMsg">No comments yet.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string FormatTime(TimeSpan t) => DateTime.Today.Add(t).ToString("h:mm tt");
+}
+
+@section Scripts {
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(Model.Permissions.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(Model.Permissions.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(Model.Permissions.CanDelete);
+        window.currentLessonPlanId = @(Model.HomeworkID ?? 0);
+    </script>
+    <script src="~/assets/js/LessonPlanDetail.js"></script>
+}

@@ -14,6 +14,7 @@ namespace SchoolERP.Shared.Models
         public int SectionID { get; set; }
         public string? SectionName { get; set; }
         public int SubjectID { get; set; }
+        public int SubjectGroupID { get; set; }
         public string? SubjectName { get; set; }
         public int StaffID { get; set; }
         public string? StaffName { get; set; }
@@ -43,6 +44,7 @@ namespace SchoolERP.Shared.Models
         public int TimeTableID { get; set; }
         public int ClassID { get; set; }
         public int SectionID { get; set; }
+        public int SubjectGroupID { get; set; }
         public int SubjectID { get; set; }
         public int StaffID { get; set; }
         public string Day { get; set; } = string.Empty;

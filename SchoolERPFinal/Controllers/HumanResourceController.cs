@@ -47,13 +47,26 @@ namespace SchoolERP.Net.Controllers
         private int GetUserId() => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId"), out var id) ? id : 0;
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyClient.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if (CurrentCompanyId == null)
+            {
+                var response = await _companyClient.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {
-            var response = await _sessionService.GetUserCurrentSessionAsync();
-            return response?.Data ?? 0;
+            if (CurrentSessionId == null)
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
+        }
+        private int? GetStaffID()
+        {
+            var staffClaim = User.FindFirst("StaffID")?.Value;
+            return int.TryParse(staffClaim, out var staffId) ? staffId : null;
         }
 
         /// <summary>
@@ -212,8 +225,9 @@ namespace SchoolERP.Net.Controllers
                );
                 var companyId = await GetCompanyId();
                 var sessionId = await GetSessionId();
-
-                var allStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+                var staffId = GetStaffID();
+                
+                var allStaff = (await _hrClient.GetAllStaffAsync(companyId, sessionId, staffId)).Data;
 
                 // Server-side Filtering
                 if (!string.IsNullOrEmpty(search))
@@ -297,7 +311,9 @@ namespace SchoolERP.Net.Controllers
                    "/HumanResource/DisableStaffs"
                );
                 var model = new HRStaffPageViewModel();
+                var companyId = await GetCompanyId();
                 var sessionId = await GetSessionId();
+                var staffId = GetStaffID();
                 var desigRes = await _hrClient.GetAllDesignationsAsync();
                 model.Designations = desigRes.Success ? desigRes.Data : new List<HRDesignationViewModel>();
 
@@ -307,7 +323,7 @@ namespace SchoolERP.Net.Controllers
                 var rolesRes = await _roleClient.GetAllRolesAsync();
                 model.Roles = rolesRes.Success ? rolesRes.Data : new List<MstRoleViewModel>();
 
-                var staffRes = await _hrClient.GetAllStaffAsync(sessionId);
+                var staffRes = await _hrClient.GetAllStaffAsync(companyId, sessionId, staffId);
                 // Filter DISABLED ONLY
                 model.StaffList = staffRes.Success ? staffRes.Data.Where(s => !s.IsActive).ToList() : new List<HRStaffViewModel>();
                 model.Permissions = perms;
@@ -358,16 +374,17 @@ namespace SchoolERP.Net.Controllers
                    "/HumanResource/ApplyLeave"
                );
                 int userId = GetUserId();
-                int companyId = await GetCompanyId();
-                int sessionId = await GetSessionId();
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+                var staffId = GetStaffID();
 
-                var allStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+                var allStaff = (await _hrClient.GetAllStaffAsync(companyId, sessionId, staffId)).Data;
                 var currentStaff = allStaff.FirstOrDefault(s => s.UserID == userId);
 
                 // Fallback: If not found in current company (often 0 on fresh login), search globally
                 if (currentStaff == null)
                 {
-                    var globalStaff = (await _hrClient.GetAllStaffAsync(sessionId)).Data;
+                    var globalStaff = (await _hrClient.GetAllStaffAsync(companyId, sessionId, staffId)).Data;
                     currentStaff = globalStaff.FirstOrDefault(s => s.UserID == userId);
                 }
 
@@ -416,13 +433,14 @@ namespace SchoolERP.Net.Controllers
                 var perms = await GetPermissions(
                    "/HumanResource/ApproveLeave"
                );
-                int companyId = await GetCompanyId();
-                int sessionId = await GetSessionId();
+                var companyId = await GetCompanyId();
+                var sessionId = await GetSessionId();
+                var staffId = GetStaffID();
 
                 var model = new HRApplyLeavePageViewModel
                 {
                     Leaves = (await _hrClient.GetAllApplyLeaveAsync()).Data,
-                    StaffList = (await _hrClient.GetAllStaffAsync(sessionId)).Data,
+                    StaffList = (await _hrClient.GetAllStaffAsync(companyId, sessionId, staffId)).Data,
                     LeaveTypes = (await _hrClient.GetAllLeaveTypesAsync()).Data
                 };
                 model.Permissions = perms;

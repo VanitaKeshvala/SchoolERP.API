@@ -43,5 +43,17 @@ namespace SchoolERP.Net.Controllers
                 return 0;
             }
         }
+
+        protected int CurrentCompanyId
+        {
+            get
+            {
+                if (Request.Cookies.TryGetValue("CurrentCompanyId", out string val)
+                    && int.TryParse(val, out int id))
+                    return id;
+
+                return 0;
+            }
+        }
     }
 }

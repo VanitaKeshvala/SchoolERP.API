@@ -25,7 +25,7 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> DeleteLeaveTypeAsync(List<int> id);
         Task<ApiResponse<dynamic>> ToggleLeaveTypeStatusAsync(int id, bool isActive);
 
-        Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int sessionID);
+        Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int companyId, int sessionId, int? staffId=null);
         Task<ApiResponse<HRStaffViewModel>> GetStaffByIDAsync(int id);
         Task<ApiResponse<SpResult>> UpsertStaffAsync(HRStaffUpsertRequest req);
         Task<ApiResponse<dynamic>> DeleteStaffAsync(List<int> id);

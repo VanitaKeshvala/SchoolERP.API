@@ -11,6 +11,7 @@ using System;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Net.Helpers;
 using SchoolERP.Shared.Models.Common;
+using System.ComponentModel.Design;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -62,8 +63,12 @@ namespace SchoolERP.Net.Controllers
         private int GetUserId() => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if(CurrentCompanyId == null) 
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {
@@ -88,8 +93,9 @@ namespace SchoolERP.Net.Controllers
                    "/StudentInformation/DisableReason"
                );
 
+                var companyId = await GetCompanyId();
                 var sessionId = await GetSessionId();
-                var response = await _studentService.GetAllDisableReasons(sessionId);
+                var response = await _studentService.GetAllDisableReasons(sessionId, companyId);
                                 
                 model.Items = response.Data ?? new List<StudentDisableReasonViewModel>();
                 model.Permissions = perms;
@@ -165,8 +171,9 @@ namespace SchoolERP.Net.Controllers
             var perms = await GetPermissions(
                 "/StudentInformation/StudentCategory"
             );
+            var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
-            var res = (await _studentService.GetAllStudentCategories(sessionId)).Data;
+            var res = (await _studentService.GetAllStudentCategories(sessionId, companyId)).Data;
             StudentCategoryPageViewModel model= new StudentCategoryPageViewModel();
             model.Items = res;
             model.Permissions = perms;
@@ -199,7 +206,7 @@ namespace SchoolERP.Net.Controllers
 
 
             // Fetch lookup data for dropdowns
-            ViewBag.Categories = (await _studentService.GetAllStudentCategories(sessionId)).Data;
+            ViewBag.Categories = (await _studentService.GetAllStudentCategories(sessionId, companyId)).Data;
             ViewBag.Houses = (await _studentService.GetAllStudentHouses(sessionId)).Data;
             ViewBag.Routes =(await _routeService.GetAllRoutesAsync()).Data;
             ViewBag.PickupPoints =(await _routePickupPointService.GetAllRoutePickupPointsAsync()).Data;
@@ -234,7 +241,7 @@ namespace SchoolERP.Net.Controllers
         {
             var companyId = await GetCompanyId();
             var sessionId =await GetSessionId();
-            var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, searchTerm);
+            var response = await _studentService.GetStudentListAsync(companyId,sessionId, classId, sectionId, searchTerm);
             var students =  new List<StudentListViewModel>();
             if(response.Success != false && response.Data !=null) 
             {
@@ -288,7 +295,7 @@ namespace SchoolERP.Net.Controllers
                 {
                     allFields = allFieldsresponse.Data;
                 }
-                var response = await _studentService.GetStudentListAsync(sessionId, classId, sectionId, search, page, pageSize);
+                var response = await _studentService.GetStudentListAsync(companyId, sessionId, classId, sectionId, search, page, pageSize);
 
                 model.Students = response.Data.Data;
                 model.TotalRecords = response.Data.TotalRecords;
@@ -589,7 +596,7 @@ namespace SchoolERP.Net.Controllers
                 var sessionId =await GetSessionId();
                 var userId =  GetUserId();
 
-                var categories =await _studentService.GetAllStudentCategories(sessionId);
+                var categories =await _studentService.GetAllStudentCategories(sessionId, companyId);
                 var houses =await _studentService.GetAllStudentHouses(sessionId);
 
                 using var reader = new StreamReader(file.OpenReadStream());
@@ -708,8 +715,9 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllDisableReasons()
         {
+            var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
-            var data =await _studentService.GetAllDisableReasons(sessionId);
+            var data =await _studentService.GetAllDisableReasons(sessionId, companyId);
             return Json(new { success = true, data });
         }
 
@@ -752,14 +760,16 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllStudentCategories()
         {
+            var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
-            var data = await _studentService.GetAllStudentCategories(sessionId);
+            var data = await _studentService.GetAllStudentCategories(sessionId, companyId);
             return Json(new { success = true, data });
         }
 
         [HttpPost]
         public async Task<IActionResult> UpsertStudentCategory([FromBody] StudentCategoryUpsertRequest req)
         {
+            req.CompanyID = await GetCompanyId();
             req.SessionID = await GetSessionId();
             var res =await _studentService.UpsertStudentCategory(req);
             return Json(new { success = res.Success, message = res.Message });

@@ -52,8 +52,12 @@ namespace SchoolERP.Net.Controllers
         }
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if (CurrentCompanyId == null)
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {
@@ -63,6 +67,11 @@ namespace SchoolERP.Net.Controllers
                 return response?.Data ?? 0;
             }
             return CurrentSessionId;
+        }
+        private int? GetStaffID()
+        {
+            var staffClaim = User.FindFirst("StaffID")?.Value;
+            return int.TryParse(staffClaim, out var staffId) ? staffId : null;
         }
         /// <summary>
         /// Shows the 'Class' management page where you can define the different grades or classes in the school.
@@ -274,9 +283,38 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetSectionsByClass(int id)
         {
-            var response = await _sectionClient.GetByClassAsync(id);
-            if (!response.Success) return Json(new { success = false, message = response.Message });
-            return Json(new { success = true, data = response.Data });
+            try
+            {
+                var response = await _sectionClient.GetByClassAsync(id);
+
+                var role = User.FindFirst("UserTypeName")?.Value;
+                if (role.Trim() == "Student")
+                {
+                    
+                    var sectionId = int.Parse(User.FindFirst("SectionID")?.Value);
+
+                    var sectionResponse = await _sectionClient.GetByIDAsync(sectionId);
+
+                    if (sectionResponse.Success && sectionResponse.Data != null)
+                    {
+                        // Replace the list inside response.Data with just this one section
+                        response.Data = new List<MstSectionViewModel> { sectionResponse.Data };
+                    }
+                    else
+                    {
+                        // Student has no matching section — return empty list rather than the full unfiltered list
+                        response.Data = new List<MstSectionViewModel>();
+                    }
+                }
+
+                if (!response.Success) return Json(new { success = false, message = response.Message });
+                return Json(new { success = true, data = response.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message});
+            }
+            
         }
 
         [HttpGet]
@@ -366,10 +404,10 @@ namespace SchoolERP.Net.Controllers
                     CompanyID = await GetCompanyId(),
                     SessionID = sessionId
                 };
-
+                var staffId = GetStaffID();
                 var classes = await _classClient.GetAllAsync();
                 var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID, staffId);
                 var subjectGroups = await _subjectGroupClient.GetAllAsync();
 
                 var model = new AddTimeTablePageViewModel
@@ -402,10 +440,10 @@ namespace SchoolERP.Net.Controllers
                     SessionID = sessionId
                 };
 
-
+                var staffId = GetStaffID();
                 var classes = await _classClient.GetAllAsync();
                 var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID, staffId);
                 var subjectGroups = await _subjectGroupClient.GetAllAsync();
 
                 var allSubjects = subjectsResponse.Success ? subjectsResponse.Data : new List<Dropdowbinding>();
@@ -451,25 +489,51 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> ClassTimeTable(int classId = 0, int sectionId = 0)
         {
-            // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
-            var perms = await GetPermissions(
-               "/Academics/ClassTimeTable"
-           );
-            var sessionId = await GetSessionId();
-            var classes = await _classClient.GetAllAsync(false, sessionId);
-            var model = new AddTimeTablePageViewModel
+            try
             {
-                Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
-                SelectedClassId = classId,
-                SelectedSectionId = sectionId
-            };
-            if (classId > 0 && sectionId > 0)
-            {
-                var slots = await _academicsClient.GetTimeTableByClassAsync(classId, sectionId);
-                model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/Academics/ClassTimeTable"
+               );
+                var sessionId = await GetSessionId();
+                var classes = await _classClient.GetAllAsync(false, sessionId);
+                var model = new AddTimeTablePageViewModel
+                {
+                    Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),
+                    SelectedClassId = classId,
+                    SelectedSectionId = sectionId
+                };
+                var role = User.FindFirst("UserTypeName")?.Value;
+                if(role.Trim() == "Student") 
+                {
+                    classId=int.Parse(User.FindFirst("ClassID")?.Value);
+                    sectionId = int.Parse(User.FindFirst("SectionID")?.Value);
+                    model.SelectedClassId = classId;
+                    model.SelectedSectionId = sectionId;
+
+                    var classResponse = await _classClient.GetByIDAsync(classId);
+
+                    if (classResponse.Success && classResponse.Data != null)
+                    {
+                        // Wrap the single record into a list
+                        model.Classes = new List<MstClassViewModel> { classResponse.Data };
+                    }
+                }
+
+                if (classId > 0 && sectionId > 0)
+                {
+                    var slots = await _academicsClient.GetTimeTableByClassAsync(classId, sectionId);
+                    model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
+                }
+                model.Permissions = perms;
+                return View(model);
             }
-            model.Permissions = perms;
-            return View(model);
+            catch (Exception)
+            {
+
+                throw;
+            }
+           
         }
 
         [HttpGet]
@@ -502,12 +566,14 @@ namespace SchoolERP.Net.Controllers
             var perms = await GetPermissions(
                "/Academics/TeacherTimeTable"
            );
-            var staff = await _hrClient.GetAllStaffAsync(sessionId);
+            var companyId = await GetCompanyId();
+            var staffId = GetStaffID();
+            var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
             var model = new TeacherTimeTablePageViewModel
             {
                 Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
-                SelectedStaffId = 0
+                SelectedStaffId = staffId ?? 0
             };
             model.Permissions = perms;
             return View(model);
@@ -516,8 +582,10 @@ namespace SchoolERP.Net.Controllers
         [HttpPost]
         public async Task<IActionResult> TeacherTimeTable(int staffId)
         {
+
             var sessionId = await GetSessionId();
-            var staff = await _hrClient.GetAllStaffAsync(sessionId);
+            var companyId = await GetCompanyId();
+            var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
             var model = new TeacherTimeTablePageViewModel
             {
@@ -562,8 +630,9 @@ namespace SchoolERP.Net.Controllers
                 };
 
                 var sessionId = await GetSessionId();
+                var staffId = GetStaffID();
                 var classes = await _classClient.GetAllAsync(false, sessionId);
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID, staffId);
                 var assignments =  _academicsClient.GetAllClassWithPageAsync(request);
 
 
@@ -872,9 +941,11 @@ namespace SchoolERP.Net.Controllers
                    "/Academics/Class"
                );
                 var sessionId = await GetSessionId();
+                var companyId = await GetCompanyId();
+                var staffId = GetStaffID();
                 var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
                 var classes = await _classClient.GetAllAsync(false, sessionId);
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
                 var model = new AssignClassTeacherAddViewModel
                 {
                     Classes = classes.Success ? classes.Data : new List<MstClassViewModel>(),

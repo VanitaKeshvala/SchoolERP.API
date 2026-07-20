@@ -12,9 +12,9 @@ namespace SchoolERP.Net.Services.Clients
     {
         public StudentInformationClientService(HttpClient httpClient) : base(httpClient) { }
 
-        public Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? sessionId,int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber=null, int? PageSize=null)
+        public Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? companyId,int? sessionId,int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber=null, int? PageSize=null)
         {
-            var url = $"api/StudentInformationApi/GetStudentList?sessionId={sessionId}&classId={classId}&sectionId={sectionId}&searchTerm={searchTerm}&PageNumber={PageNumber}&PageSize={PageSize}";
+            var url = $"api/StudentInformationApi/GetStudentList?companyId={companyId}&sessionId={sessionId}&classId={classId}&sectionId={sectionId}&searchTerm={searchTerm}&PageNumber={PageNumber}&PageSize={PageSize}";
             return GetAsync<PagedResult<StudentListViewModel>>(url);
         }
 
@@ -23,9 +23,9 @@ namespace SchoolERP.Net.Services.Clients
             return GetAsync<StudentDetailsViewModel>($"api/StudentInformationApi/GetByID/{id}");
         }
 
-        public Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID)
+        public Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID, int companyId)
         {
-            return GetAsync<List<StudentDisableReasonViewModel>>($"api/StudentInformationApi/GetAllDisableReasons?sessionID={sessionID}");
+            return GetAsync<List<StudentDisableReasonViewModel>>($"api/StudentInformationApi/GetAllDisableReasons?sessionID={sessionID}&companyId={companyId}");
         }
 
         public Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses(int sessionID)
@@ -33,9 +33,9 @@ namespace SchoolERP.Net.Services.Clients
             return GetAsync<List<StudentHouseViewModel>>($"api/StudentInformationApi/GetAllStudentHouses?sessionID={sessionID}");
         }
 
-        public Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId)
+        public Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId, int companyId)
         {
-            return GetAsync<List<StudentCategoryViewModel>>($"api/StudentInformationApi/GetAllStudentCategories?sessionId={sessionId}");
+            return GetAsync<List<StudentCategoryViewModel>>($"api/StudentInformationApi/GetAllStudentCategories?sessionId={sessionId}&companyId={companyId}");
         }
 
         /// <summary>

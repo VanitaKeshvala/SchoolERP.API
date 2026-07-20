@@ -15,7 +15,15 @@ namespace SchoolERP.Net.Services.Clients
         private static readonly string[] AllowedTypes = {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
         };
-
+        private static readonly string[] AllowedVideoTypes =
+        {
+            "video/mp4",
+            "video/mpeg",
+            "video/quicktime",   // .mov
+            "video/x-msvideo",   // .avi
+            "video/x-ms-wmv",    // .wmv
+            "video/webm"
+        };
         // Max file size: 2MB
         //private const long MaxFileSizeBytes = 2 * 1024 * 1024;
         private long MaxFileSizeBytes =>

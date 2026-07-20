@@ -36,5 +36,10 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<dynamic>($"api/SubjectGroupApi/ToggleStatus", request);
         }
+
+        public async Task<ApiResponse<List<DropdownModel>>> GetAllSubjectByClassandSectionIdAsync(int companyId, int sessionId, int classId, int sectionId)
+        {
+            return await GetAsync<List<DropdownModel>>($"api/SubjectGroupApi/GetAllSubjectByClassandSectionId?companyId={companyId}&sessionId={sessionId}&classId={classId}&sectionId={sectionId}");
+        }
     }
 }

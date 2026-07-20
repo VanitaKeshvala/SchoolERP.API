@@ -87,6 +87,11 @@ builder.Services.AddScoped<ILibraryDocumentTypeService, LibraryDocumentTypeServi
 builder.Services.AddScoped<ILibraryDocumentStatusService, LibraryDocumentStatusService>();
 builder.Services.AddScoped<ILibrarySupplierService, LibrarySupplierService>();
 builder.Services.AddScoped<ILibrarySeriesService, LibrarySeriesService>();
+builder.Services.AddScoped<IDailyAssignmentService, DailyAssignmentService>();
+builder.Services.AddScoped<ILessonPlanService, LessonPlanService>();
+builder.Services.AddScoped<ITopicService, TopicService>();
+builder.Services.AddScoped<IManageLessonPlanService, ManageLessonPlanService>();
+builder.Services.AddScoped<IMediaService, MediaService>();
 
 // Configure API Clients
 var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7237/"; // Default fallback

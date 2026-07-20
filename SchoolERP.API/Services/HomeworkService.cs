@@ -5,6 +5,7 @@ using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Data;
+using System.Text.Json;
 
 namespace SchoolERP.API.Services
 {
@@ -53,7 +54,7 @@ namespace SchoolERP.API.Services
         /// <summary>
         /// Retrieves homework details by homework ID.
         /// </summary>
-        public HomeworkViewModel? GetByID(int id)
+        public HomeworkViewModel? GetByID(int id,int? studentId=null)
         {
             try
             {
@@ -64,7 +65,8 @@ namespace SchoolERP.API.Services
                     "sp_Homework_GetByID",
                     new
                     {
-                        HomeworkID = id
+                        HomeworkID = id,
+                        StudentID=studentId
                     },
                     commandType: CommandType.StoredProcedure
                 );
@@ -120,6 +122,7 @@ namespace SchoolERP.API.Services
                     response.Result = result.RESULT;
                     response.Message = result.MESSAGE;
                     response.TechnicalMessage = result.TECHNICALMESSAGE;
+                    response.Data = result.HomeWorkId;
                 }
 
                 
@@ -132,6 +135,52 @@ namespace SchoolERP.API.Services
             }
             return response;
         }
+
+
+
+        /// <summary>
+        /// Saves a new homework assignment or updates an existing one.
+        /// It records the subject, description, attachment, marks, and submission date.
+        /// </summary>
+        public async Task<ApiResponse> UpsertAttachment(
+            HomeworkAttachmentUpsertRequest request,int userId)
+        {
+            var response = new ApiResponse();
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@HOMEWORKID", request.HomeworkID);
+                parameters.Add("@COMPANYID", request.CompanyID);
+                parameters.Add("@SESSIONID", request.SessionID);
+                parameters.Add("@ATTACHMENTS_JSON", request.AttachmentsJson);
+                parameters.Add("@USERID", userId);
+
+                var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                   "SP_HOMEWORK_ATTACHMENTS_UPSERT",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
+
+                if (result != null)
+                {
+                    response.Result = result.RESULT;
+                    response.Message = result.MESSAGE;
+                    response.TechnicalMessage = result.TECHNICALMESSAGE;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                response.Result = 0;
+                response.Message = "Unable to save hostel type. Please try again.";
+                response.TechnicalMessage = ex.Message;
+            }
+            return response;
+        }
+
 
         /// <summary>
         /// Deletes a homework record by Homework ID.
@@ -239,6 +288,9 @@ namespace SchoolERP.API.Services
                 param.Add("@PAGENUMBER", req.PageNumber);
                 param.Add("@PAGESIZE", req.PageSize);
                 param.Add("@INCLUDEDELETED", 0);
+                param.Add("@ClassID", req.ClassID);
+                param.Add("@SectionID", req.SectionID);
+                param.Add("@STUDENTID", req.StudentId);
 
                 var result = (await conn.QueryAsync<HomeworkViewModel>(
                 "SP_HOMEWORK_GETALLWITHPAGEINDEX",
@@ -281,6 +333,257 @@ namespace SchoolERP.API.Services
             }
         }
 
-       
+        public List<HomeworkAttachmentViewModel> GetAllHomeWorkAttechmentById(int homeWorkId, int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                return conn.Query<HomeworkAttachmentViewModel>(
+                    "SP_HOMEWORK_ATTACHMENT_GETBYHOMEWORKID",
+                    new
+                    {
+                        HOMEWORKID = homeWorkId,
+                        USERID = userId
+                    },
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        #region Home work Submistion flow
+        /// <summary>
+        /// Submission a new homework assignment or updates an existing one.
+        /// It records the subject, description, attachment, marks, and submission date.
+        /// </summary>
+        public async Task<ApiResponse> UpsertSubmission(
+            HomeworkSubmissionUpsertRequest request,int userId)
+        {
+            var response = new ApiResponse();
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@SUBMISSIONID", request.SubmissionID);
+                parameters.Add("@HOMEWORKID", request.HomeworkID);
+                parameters.Add("@COMPANYID", request.CompanyID);
+                parameters.Add("@SESSIONID", request.SessionID);
+                parameters.Add("@STUDENTID", request.StudentID);
+                parameters.Add("@MESSAGE", request.Message);
+                parameters.Add("@SUBMITTEDON", request.SubmittedOn);
+                parameters.Add("@STATUS", request.Status);
+                parameters.Add("@REMARK", request.Remark);
+                parameters.Add("@MARKSOBTAINED", request.MarksObtained);
+                parameters.Add("@EVALUATIONDATE", request.EvaluationDate);
+                parameters.Add("@EVALUATEDBY", userId);
+                parameters.Add("@ISACTIVE", request.IsActive);
+                parameters.Add("@USERID", userId);
+                parameters.Add("@IPADDRESS", request.IPAddress);
+
+                var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                   "SP_HOMEWORK_SUBMISSION_UPSERT",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
+
+                if (result != null)
+                {
+                    response.Result = result.RESULT;
+                    response.Message = result.MESSAGE;
+                    response.TechnicalMessage = result.TECHNICALMESSAGE;
+                    response.Data = result.SubmissionId;
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                response.Result = 0;
+                response.Message = "Unable to save Home Work Submission type. Please try again.";
+                response.TechnicalMessage = ex.Message;
+            }
+            return response;
+        }
+
+
+        /// <summary>
+        /// Submission a new homework assignment or updates an existing one.
+        /// It records the subject, description, attachment, marks, and submission date.
+        /// </summary>
+        public async Task<ApiResponse> UpsertSubmissionAttachment(
+            HomeworkSubmissionAttachmentUpsertRequest request, int userId)
+        {
+            var response = new ApiResponse();
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@SUBMISSIONID", request.SubmissionID);
+                parameters.Add("@ATTACHMENTS_JSON", request.AttachmentsJson);
+                parameters.Add("@USERID", userId);
+
+                var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                   "SP_HOMEWORK_SUBMISSION_ATTACHMENTS_UPSERT",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
+
+                if (result != null)
+                {
+                    response.Result = result.RESULT;
+                    response.Message = result.MESSAGE;
+                    response.TechnicalMessage = result.TECHNICALMESSAGE;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                response.Result = 0;
+                response.Message = "Unable to save hostel type. Please try again.";
+                response.TechnicalMessage = ex.Message;
+            }
+            return response;
+        }
+
+        public async Task<ApiResponse> UpsertEvaluateHomework(
+            HomeworkSubmissionEvaluateUpsertRequest request, int userId)
+        {
+            var response = new ApiResponse();
+            try
+            {
+                using var conn = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var parameters = new DynamicParameters();
+
+                parameters.Add("@HOMEWORKID", request.HomeworkID);
+                parameters.Add("@COMPANYID", request.CompanyID);
+                parameters.Add("@SESSIONID", request.SessionID);
+                parameters.Add("@EVALUATIONDATE", request.EvaluationDate);
+                parameters.Add("@EVALUATEDBY", userId);
+                parameters.Add("@EVALUATIONS_JSON", request.EvaluationsJson);
+                parameters.Add("@USERID", userId);
+                parameters.Add("@IPADDRESS", request.IPAddress);
+
+                var result = await conn.QueryFirstOrDefaultAsync<dynamic>(
+                   "SP_HOMEWORK_SUBMISSION_EVALUATE_UPSERT",
+                   parameters,
+                   commandType: CommandType.StoredProcedure);
+
+                if (result != null)
+                {
+                    response.Result = result.RESULT;
+                    response.Message = result.MESSAGE;
+                    response.TechnicalMessage = result.TECHNICALMESSAGE;
+                    response.Data = result.SubmissionId;
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                response.Result = 0;
+                response.Message = "Unable to save Home Work Submission type. Please try again.";
+                response.TechnicalMessage = ex.Message;
+            }
+            return response;
+        }
+
+        public async Task<PagedResult<HomeworkSubmissionListDto>> GetAllHomeWorkSubmissionWithPage(SearchRequest req)
+        {
+            var response = new PagedResult<HomeworkSubmissionListDto>
+            {
+                Data = new List<HomeworkSubmissionListDto>()
+            };
+
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+                var param = new DynamicParameters();
+                param.Add("@HOMEWORKID", req.HomeWorkId);   // was wrongly bound to req.CompanyID
+                param.Add("@PAGENUMBER", req.PageNumber);
+                param.Add("@PAGESIZE", req.PageSize);
+
+                var result = (await conn.QueryAsync<HomeworkSubmissionListDto>(
+                    "SP_HOMEWORK_SUBMISSION_GETLIST",
+                    param,
+                    commandType: CommandType.StoredProcedure)).ToList();
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TotalRecords ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CurrentPage ?? req.PageNumber.Value;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? req.PageSize;
+
+                // Deserialize each row's Attachments JSON string into AttachmentList
+                foreach (var row in result)
+                {
+                    if (!string.IsNullOrWhiteSpace(row.Attachments))
+                    {
+                        row.AttachmentList = JsonSerializer.Deserialize<List<HomeworkAttachmentDto>>(
+                            row.Attachments,
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                        ) ?? new List<HomeworkAttachmentDto>();
+                    }
+                }
+
+                response.Data = res == 0 ? new List<HomeworkSubmissionListDto>() : result;
+                response.TotalRecords = totalRecords;
+                response.PageNumber = pageIndex;
+                response.PageSize = pageSize;
+                //response.TotalPages = totalRecords > 0 && pageSize > 0
+                //    ? (int)Math.Ceiling((double)totalRecords / pageSize)
+                //    : 0;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.Data = new List<HomeworkSubmissionListDto>();
+                return response;
+            }
+        }
+
+        public List<HomeworkAttachmentViewModel> GetAllHomeWorkSubmissionAttechmentById(int submissionID, int userId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                return conn.Query<HomeworkAttachmentViewModel>(
+                    "TBL_HOMEWORK_SUBMISSION_ATTACHMENTS_GETBYHOMEWORKID",
+                    new
+                    {
+                        SubmissionID = submissionID,
+                        USERID = userId
+                    },
+                    commandType: CommandType.StoredProcedure
+                ).ToList();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+        #endregion
     }
 }

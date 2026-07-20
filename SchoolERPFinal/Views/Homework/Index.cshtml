@@ -71,6 +71,10 @@
                 </ul>
             </div>
         }
+        @if (ViewBag.IsStudent == true)
+        {
+            <a href="/DailyAssignment/index" class="btn btn-primary top-btn">Daily Assignment</a>
+        }
     </div>
 
 </div>
@@ -88,12 +92,12 @@
                     <div class="position-relative border d-flex align-items-center rounded-2 px-3">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
-                        name="search"
-                        id="txtSearchInput"
-                        value="@Model.SearchTerm"
-                        class="form-control border-0 ps-2"
-                        placeholder="Search by Subject Name, Class ..."
-                        style="min-width: 320px;" />
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Subject Name, Class ..."
+                               style="min-width: 320px;" />
                     </div>
                     <!--<input type="text" id="txtSearch" class="form-control w-25 me-3" placeholder="Search..." onkeyup="filterTable()" />-->
                     <ul class="nav nav-pills gap-1">
@@ -118,13 +122,13 @@
 
                     <div class="dropdown d-none">
                         <a href="#" id="btnFilterToggle"
-                        class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
 
                         <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
-                        id="filter-dropdown">
+                             id="filter-dropdown">
 
                             <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
@@ -139,8 +143,8 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
-                                        id="ddlFilterCompany"
-                                        data-placeholder="Select company">
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
                                             <option value="">All</option>
                                             @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
                                             {
@@ -153,8 +157,8 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Session</label>
                                         <select class="form-select form-control select2"
-                                        id="ddlFilterSessions"
-                                        data-placeholder="Select session">
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
                                             <option value="">All</option>
                                             @foreach (var ut in Model.Sessions)
                                             {
@@ -184,7 +188,7 @@
                 </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
                 <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
-                id="btnResetAllFilters" onclick="resetAllFilters()">
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
@@ -197,15 +201,32 @@
                     <table class="table" id="homeworkTable">
                         <thead>
                             <tr>
-                                <th>Select</th>
-                                <th>Class (Section)</th>
-                                <th style="width: 70px;">Subject Group</th>
-                                <th>Subject</th>
-                                <th>Homework Date</th>
-                                <th>Submission Date</th>
-                                <th>Created By</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                @if (ViewBag.IsStudent == true)
+                                {
+                                    <th>Class (Section)</th>
+                                    <th>Subject</th>
+                                    <th>Homework Date</th>
+                                    <th>Submission Date</th>
+                                    <th>Evaluation Date</th>
+                                    <th>Max Marks</th>
+                                    <th>Marks Obtained</th>
+                                    <th>Note</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                }
+                                else
+                                {
+
+                                    <th>Select</th>
+                                    <th>Class (Section)</th>
+                                    <th style="width: 70px;">Subject Group</th>
+                                    <th>Subject</th>
+                                    <th>Homework Date</th>
+                                    <th>Submission Date</th>
+                                    <th>Created By</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -213,35 +234,80 @@
                             {
                                 foreach (var h in Model.Homeworks)
                                 {
-                                    <tr class="item-row" data-active="@h.IsActive" data-submission="@h.SubmissionDate.ToString("yyyy-MM-dd")" onclick="selectItem(@h.HomeworkID, this)" style="cursor: pointer;">
+                                    @if (ViewBag.IsStudent == true)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span>@h.ClassName</span> (@h.SectionName)
+                                            </td>
+                                            <td>@h.SubjectName</td>
+                                            <td>@h.HomeworkDate.ToString("dd MMM yyyy")</td>
+                                            <td>@h.SubmissionDate.ToString("dd MMM yyyy")</td>
+                                            <td>@h.EvaluationDate?.ToString("dd MMM yyyy")</td>
+                                            <td>@h.MaxMarks</td>
+                                            <td>@h.MarkSobtained</td>
+                                            <td>@h.Note</td>
+                                            <td>
+                                                @if (h.Status == 2)
+                                                {
+                                                    <span class="badge bg-secondary">Submitted</span>
+                                                }
+                                                else if (h.Status == 3)
+                                                {
+                                                    <span class="badge bg-success">Evaluated</span>
+                                                }
+                                                else if (h.Status == 4)
+                                                {
+                                                    <span class="badge bg-danger">Late</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Pending</span>
+                                                }
+                                            </td>
+                                            <td> <a href="/Homework/HomeworkDetails/@h.HomeworkID" title="View/Edit"><i class="fa fa-reorder"></i></a></td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr class="item-row" data-active="@h.IsActive" data-submission="@h.SubmissionDate.ToString("yyyy-MM-dd")" onclick="selectItem(@h.HomeworkID, this)" style="cursor: pointer;">
 
-                                        <td>
-                                            <input type="checkbox" name="selectedClass"
-                                            class="form-check-input student-checkbox" onclick="selectItem(@h.HomeworkID, this)"
-                                            value="@h.HomeworkID">
+                                            <td>
+                                                <input type="checkbox" name="selectedClass"
+                                                       class="form-check-input student-checkbox" onclick="selectItem(@h.HomeworkID, this)"
+                                                       value="@h.HomeworkID">
 
-                                        </td>
-                                        <td>
-                                            <span>@h.ClassName</span> (@h.SectionName)
-                                        </td>
-                                        <td>@h.SubjectGroupName</td>
-                                        <td>@h.SubjectName</td>
-                                        <td>@h.HomeworkDate.ToString("dd MMM yyyy")</td>
-                                        <td>@h.SubmissionDate.ToString("dd MMM yyyy")</td>
-                                        <td>@h.CreatedByName</td>
-                                        <td>
-                                            <span class="badge @(h.IsActive ? "bg-success" : "bg-secondary")" asp-permission="View" asp-permission-url="/Homework/Add" asp-permission-negate="true">@(h.IsActive ? "Active" : "Inactive")</span>
-                                        </td>
-                                        <td>
-                                            @if(p.CanEdit)
-                                            {
-                                                <div class="form-check form-switch" onclick="event.stopPropagation()">
-                                                    <input class="form-check-input status-switch" type="checkbox" @(h.IsActive ? "checked" : "") onchange="toggleStatus(@h.HomeworkID, this.checked)">
-                                                </div>
-                                            }
-                                            
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td>
+                                                <span>@h.ClassName</span> (@h.SectionName)
+                                            </td>
+                                            <td>@h.SubjectGroupName</td>
+                                            <td>@h.SubjectName</td>
+                                            <td>@h.HomeworkDate.ToString("dd MMM yyyy")</td>
+                                            <td>@h.SubmissionDate.ToString("dd MMM yyyy")</td>
+                                            <td>@h.CreatedByName</td>
+                                            <td>
+
+                                                @if (p.CanEdit)
+                                                {
+                                                    <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                        <input class="form-check-input status-switch" type="checkbox" @(h.IsActive ? "checked" : "") onchange="toggleStatus(@h.HomeworkID, this.checked)">
+                                                    </div>
+                                                }
+                                                @if (ViewBag.IsStudent == true)
+                                                {
+                                                    <a href="/Homework/HomeworkDetails/@h.HomeworkID" title="View/Edit"><i class="fa fa-reorder"></i></a>
+                                                }
+
+                                            </td>
+                                            <td>
+                                                
+                                                    <a href="/Homework/EvaluateHomework?homeWorkId=@h.HomeworkID" title="View/Edit"><i class="fa fa-reorder"></i></a>
+                                                
+                                            </td>
+                                        </tr>
+                                    }
+
                                 }
                             }
                             else
@@ -448,7 +514,7 @@
 }
 
 @section Scripts {
-    
+
     <script>
         window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
         window.canEdit = @JsonSerializer.Serialize(p.CanEdit);

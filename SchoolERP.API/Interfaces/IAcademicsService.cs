@@ -19,5 +19,6 @@ namespace SchoolERP.API.Interfaces
 
         Task<PagedResult<ClassTeacherViewModel>> GetAllClassTeachersWithPage(AcademicsSearchRequest req);
         Task<PagedResult<StudentPromotionViewModel>> GetForPromotionPageIndex(SearchPromotedStudent req);
+        TimeTableViewModel? GetTimeTableById(int companyId, int sessionId, int timeTableID);
     }
 }

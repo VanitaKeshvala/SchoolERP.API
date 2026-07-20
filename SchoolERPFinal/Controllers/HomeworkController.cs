@@ -6,6 +6,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using SchoolERP.Net.Helpers;
 using SchoolERP.Shared.Models.Common;
+using System.Configuration;
+using System.Text.Json;
+using static System.Collections.Specialized.BitVector32;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace SchoolERP.Net.Controllers
 {
@@ -19,7 +23,9 @@ namespace SchoolERP.Net.Controllers
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
         private const string MenuPath = "/Homework/Add";
-
+        private readonly IConfiguration _configuration;
+        private readonly IPhotoUploadService _photoService;
+        private readonly IWebHostEnvironment _environment;
         public HomeworkController(
             IHomeworkClientService homeworkClient, 
             IClassClientService classClient, 
@@ -27,7 +33,10 @@ namespace SchoolERP.Net.Controllers
             ISubjectClientService subjectClient,
             ICompanyClientService companyService,
             ISessionClientService sessionService,
-            IUserMenuPermissionClientService menuPerm, PermissionHelper permHelper) : base(permHelper)
+            IUserMenuPermissionClientService menuPerm,
+            IConfiguration configuration,
+            IPhotoUploadService photoService,
+            IWebHostEnvironment environment,PermissionHelper permHelper) : base(permHelper)
         {
             _homeworkClient = homeworkClient;
             _classClient = classClient;
@@ -36,6 +45,9 @@ namespace SchoolERP.Net.Controllers
             _menuPerm = menuPerm;
             _companyService = companyService;
             _sessionService = sessionService;
+            _configuration = configuration;
+            _photoService = photoService;
+            _environment = environment;
         }
 
         private async Task<int> GetCompanyId()
@@ -72,8 +84,20 @@ namespace SchoolERP.Net.Controllers
                     SearchKeyword = search,
                     CompanyID = companyId ?? await GetCompanyId(),
                     SessionID = sessionID ?? await GetSessionId(),
-                    Mode=mode
+                    Mode = mode,
+                    StudentId = int.TryParse(User.FindFirst("StudentID")?.Value, out var id)
+                                ? id
+                                : (int?)null
                 };
+
+                //THIS SECTION IF STUDENT LLOADING CHECK ONLY HER CLASS AND SECTION HOME WORK 
+                var role = User.FindFirst("UserTypeName")?.Value;
+                if (role.Trim() == "Student")
+                {
+                    request.ClassID = int.Parse(User.FindFirst("ClassID")?.Value);
+                    request.SectionID = int.Parse(User.FindFirst("SectionID")?.Value);
+                    ViewBag.IsStudent = true;
+                }
 
                 var sessionId = await GetSessionId();
                 var classesResponse = _homeworkClient.GetAllHomeWorkWithPageAsync(request);
@@ -117,19 +141,22 @@ namespace SchoolERP.Net.Controllers
                );
                 var model = new HomeworkAddViewModel();
                 var classes = await _classClient.GetAllAsync(false,await GetSessionId(),await GetCompanyId());
+                
                 if (id.HasValue && id.Value > 0)
                 {
+                    var attechment = await _homeworkClient.GetAllHomeWorkAttechmentByIdAsync(id.Value);
                     var response = await _homeworkClient.GetByIDAsync(id.Value);
                     if (response.Success)
                     {
                         model.Homeworks = response.Data;
                         model.EditHomeworks = response.Data;
                     }
+                    model.EditHomeworks.AttechmetDocument = attechment.Data;
                 }
                 else
                 {
                     model.EditHomeworks = null;
-                }
+                }                
                 model.Classes = classes.Data;
                 model.Permissions = perms;
                 return View(model);
@@ -181,16 +208,80 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UpsertHomework([FromBody] HomeworkUpsertRequest request)
+        public async Task<IActionResult> UpsertHomework([FromForm] HomeworkUpsertRequest request,  List<IFormFile>? attachmentFiles)
         {
-            var isCreate = request.HomeworkID <= 0;
-            if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data    )
-                return Json(new { success = false, message = "You do not have permission to add homework." });
-            if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
-                return Json(new { success = false, message = "You do not have permission to edit homework." });
+            try
+            {
+                request.CompanyID = await GetCompanyId();
+                request.SessionID = await GetSessionId();
+                var isCreate = request.HomeworkID <= 0;
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to edit homework." });
 
-            var res = await _homeworkClient.UpsertAsync(request);
-            return Json(res);
+                var res = await _homeworkClient.UpsertAsync(request);
+                if (res?.Data is JsonElement json)
+                {
+                    // On create, the SP now returns the new ID. On update, we already have it.
+                    int homeworkId = json.GetProperty("data").GetInt32();
+
+                    if (attachmentFiles != null && attachmentFiles.Count > 0)
+                    {
+                        var attachmentRows = new List<object>();
+                        //int currentUserId = await GetCurrentUserId();
+
+                        foreach (var file in attachmentFiles)
+                        {
+                            if (file == null || file.Length == 0) continue;
+
+                            using var memoryStream = new MemoryStream();
+                            await file.CopyToAsync(memoryStream);
+                            byte[] fileBytes = memoryStream.ToArray();
+
+                            var photoResult = await _photoService.SaveBase64PhotoAsync(
+                                Convert.ToBase64String(fileBytes),
+                                file.FileName,
+                                PhotoModule.Homework,          // add this enum value if it doesn't exist yet
+                                FolderNameModule.Documents,
+                                homeworkId
+                            );
+
+                            attachmentRows.Add(new
+                            {
+                                AttachmentID = 0,               // 0 = new row, matches SP contract
+                                AttachmentPath = photoResult.PhotoUrl,
+                                AttachmentName = photoResult.FileName,
+                                AttachmentType = file.ContentType,
+                                IsActive = true,
+                                IsDelete = false
+                            });
+                        }
+
+                        if (attachmentRows.Count > 0)
+                        {
+                            var attachmentRequest = new HomeworkAttachmentUpsertRequest
+                            {
+                                HomeworkID = homeworkId,
+                                CompanyID = request.CompanyID,
+                                SessionID = request.SessionID,
+                                AttachmentsJson = JsonSerializer.Serialize(attachmentRows)                                
+                            };
+
+                            var attachmentRes = await _homeworkClient.UpsertAttachmentAsync(attachmentRequest);
+
+                            
+                        }
+                    }
+                }
+                    //UpsertAttachmentAsync
+                    return Json(res);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+          
         }
 
         [HttpPost]
@@ -238,5 +329,194 @@ namespace SchoolERP.Net.Controllers
         }
 
         #endregion
+
+
+        //Homework Details
+
+        public async Task<IActionResult> HomeworkDetails(int? id) 
+        {
+            try
+            {
+                var perms = await GetPermissions(
+                   "/Homework/HomeworkDetails"
+               );
+                int? studentId = int.TryParse(User.FindFirst("StudentID")?.Value, out var sId)
+                                ? sId
+                                : (int?)null;
+                var model = new HomeWorkAddDetailsViewModel();
+                var homework = await _homeworkClient.GetByIDAsync(id.Value, studentId);
+                if(homework != null) 
+                {
+                    if(homework.Data != null) 
+                    {
+                        if(homework.Data?.SubmissionID != null) 
+                        {
+                            int? submissionID = homework.Data?.SubmissionID;
+                            var homeworksubmission = await _homeworkClient.GetAllHomeWorkSubmissionAttechmentByIdAsync(submissionID);
+                            model.HomeWorkSubmissionAttechment = homeworksubmission.Data;
+
+                        }
+                    }
+                }
+                
+                model.Homeworks = homework.Data;
+                model.Permissions = perms;
+                model.HomeworkID = id;
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<IActionResult> EvaluateHomework(int? homeWorkId, int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID) 
+        {
+            try
+            {
+                var perms = await GetPermissions(
+                  "/Homework/HomeworkDetails"
+              );
+
+                var request = new SearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId(),
+                    HomeWorkId = homeWorkId,
+                    StudentId = int.TryParse(User.FindFirst("StudentID")?.Value, out var id)
+                                ? id
+                                : (int?)null
+                };
+
+                var homeworkResponse =await _homeworkClient.GetAllHomeWorkSubmissionWithPageAsync(request);
+
+                var pagedResult = homeworkResponse;
+                var model = new HomeworkEvaluateViewModel
+                {
+                    HomeworkSubmissions = pagedResult.Success ? pagedResult.Data.Data : new List<HomeworkSubmissionListDto>()                    
+                };
+                var homework = await _homeworkClient.GetByIDAsync(homeWorkId.Value);
+                model.Homeworks = homework.Data;
+                model.Permissions = perms;
+                model.HomeworkID = homeWorkId;
+                //HomeworkSubmissions
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpsertSubmission([FromForm] HomeworkSubmissionUpsertRequest request, List<IFormFile>? attachmentFiles)
+        {
+            try
+            {
+                request.CompanyID = await GetCompanyId();
+                request.SessionID = await GetSessionId();
+                var studentID = int.Parse(User.FindFirst("StudentID")?.Value);
+                request.StudentID = studentID;
+                var isCreate = request.SubmissionID <= 0;
+                
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to edit homework." });
+
+                var res = await _homeworkClient.UpsertSubmissionAsync(request);
+                if (res?.Data is JsonElement json)
+                {
+                    // On create, the SP now returns the new ID. On update, we already have it.
+                    int submissionId = json.GetProperty("data").GetInt32();
+
+                    if (attachmentFiles != null && attachmentFiles.Count > 0)
+                    {
+                        var attachmentRows = new List<object>();
+                        //int currentUserId = await GetCurrentUserId();
+
+                        foreach (var file in attachmentFiles)
+                        {
+                            if (file == null || file.Length == 0) continue;
+
+                            using var memoryStream = new MemoryStream();
+                            await file.CopyToAsync(memoryStream);
+                            byte[] fileBytes = memoryStream.ToArray();
+
+                            var photoResult = await _photoService.SaveBase64PhotoAsync(
+                                Convert.ToBase64String(fileBytes),
+                                file.FileName,
+                                PhotoModule.Homework,          // add this enum value if it doesn't exist yet
+                                FolderNameModule.Documents,
+                                submissionId
+                            );
+
+                            attachmentRows.Add(new
+                            {
+                                AttachmentID = 0,               // 0 = new row, matches SP contract
+                                AttachmentPath = photoResult.PhotoUrl,
+                                AttachmentName = photoResult.FileName,
+                                AttachmentType = file.ContentType,
+                                IsActive = true,
+                                IsDelete = false
+                            });
+                        }
+
+                        if (attachmentRows.Count > 0)
+                        {
+                            var attachmentRequest = new HomeworkSubmissionAttachmentUpsertRequest
+                            {
+                                SubmissionID = submissionId,
+                                CompanyID = request.CompanyID,
+                                SessionID = request.SessionID,
+                                AttachmentsJson = JsonSerializer.Serialize(attachmentRows)
+                            };
+
+                            var attachmentRes = await _homeworkClient.UpsertSubmissionAttachmentAsync(attachmentRequest);
+                        }
+                    }
+                }
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
+
+        [HttpPost]
+        public async Task<IActionResult> UpsertEvaluateHomewor([FromBody] HomeworkSubmissionEvaluateUpsertRequest request)
+        {
+            try
+            {
+                request.CompanyID = await GetCompanyId();
+                request.SessionID = await GetSessionId();
+                var isCreate = request.HomeworkID <= 0;
+
+                if (isCreate && !(await _menuPerm.Has(MenuPath, "Add")).Data)
+                    return Json(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !(await _menuPerm.Has(MenuPath, "Edit")).Data)
+                    return Json(new { success = false, message = "You do not have permission to edit homework." });
+
+                var res = await _homeworkClient.UpsertEvaluateHomeworkAsync(request);
+             
+                return Json(res);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
     }
 }

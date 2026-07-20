@@ -1,0 +1,363 @@
+﻿@model SchoolERP.Shared.Models.LessonSyllabusStatusPageViewModel
+@using System.Security.Claims
+@using System.Text.Json
+
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Manage Syllabus Status";
+
+    // Permission loading for the view
+    int currentUserId = 0;
+    if (User.Identity != null && User.Identity.IsAuthenticated)
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("UserId");
+        if (idClaim != null) int.TryParse(idClaim.Value, out currentUserId);
+    }
+    var p = Model.Permissions;
+    int totalPages = Model.PageSize > 0
+                   ? (int)Math.Ceiling((double)Model.TotalRecords / Model.PageSize)
+                   : 0;
+}
+
+<!-- Page Header -->
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+    <div>
+        <h6 class="fw-bold mb-0">Manage Syllabus Status</h6>
+    </div>
+
+   
+</div>
+<!-- End Page Header -->
+
+<div id="pageNotice"></div>
+
+<!-- start row -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-tbl-outer mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between">
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2"
+                               placeholder="Search by Subject Name, Class ..."
+                               style="min-width: 320px;" />
+                    </div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="ManageSyllabusStatus" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value=@Model.SessionId />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value=@Model.CompanyId />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                        <input type="hidden" id="hdnClassID" name="classID" value="@Model.ClassID" />
+                        <input type="hidden" id="hdnSectionID" name="sectionId" value="@Model.SectionID" />
+                        <input type="hidden" id="hdnSubjectGroupID" name="subjectGroupId" value="@Model.SubjectGroupID" />
+                        <input type="hidden" id="hdnSubjectID" name="subjectId" value="@Model.SubjectID" />
+                    </form>
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
+                             id="filter-dropdown">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Classes</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlClass" onchange="loadSections(this.value)"
+                                                data-placeholder="Select Classes">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Classes)
+                                            {
+                                                <option value="@ut.ClassID" selected="@(Model.ClassID == ut.ClassID)">
+                                                    @ut.ClassName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Section<span class="text-danger">*</span></label>
+                                        <select id="ddlSection" class="form-select form-control" onchange="loadSubjectGroups();">
+                                            <option value="">Select Section</option>
+                                        </select>
+                                        <div class="invalid-feedback" id="errDdlSection"></div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Subject Group<span class="text-danger">*</span></label>
+                                        <select id="ddlSubjectGroup" class="form-select form-control" onchange="loadSubjects(this.value);">
+                                            <option value="">Select Group</option>
+                                        </select>
+                                        <div class="invalid-feedback" id="errDdlSubjectGroup"></div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Subject<span class="text-danger">*</span></label>
+                                        <select id="ddlSubject" class="form-select form-control">
+                                            <option value="">Select Subject</option>
+                                        </select>
+                                        <div class="invalid-feedback" id="errDdlSubject"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active filter badges -->
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-12">
+        <div class="card shadow-tbl">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table" id="homeworkTable">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Lesson Topic</th>
+                                <th>Topic Completion Date</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.LessonSyllabusStatus != null && Model.LessonSyllabusStatus.Any())
+                            {
+                                foreach (var h in Model.LessonSyllabusStatus)
+                                {
+                                    List<TopicResponseModel> Topics = new();
+                                    if (!string.IsNullOrWhiteSpace(h.TopicsJson))
+                                    {
+                                        Topics = JsonSerializer.Deserialize<List<TopicResponseModel>>(h.TopicsJson)
+                                        ?? new List<TopicResponseModel>();
+                                    }
+
+                                    <tr>
+                                        <td>@h.SNo</td>
+                                        <td><strong>@h.LessonName</strong></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    foreach (var t in Topics)
+                                    {
+                                        <tr>
+                                            <td></td>
+                                            <td class="topic-cell">
+                                                <span class="text-accent fw-medium">@t.Ref</span>
+                                                <span>@t.TopicName</span>
+                                            </td>
+                                            <td>@(t.TopicCompletionDate?.ToString("dd-MM-yyyy"))</td>
+                                            <td>
+                                                @if (t.IsCompleted)
+                                                {
+                                                    <span class="badge bg-dark">Completed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Incomplete</span>
+                                                }
+                                            </td>
+                                            <td>                                                
+                                                @if (p.CanEdit)
+                                                {
+                                                    <div class="form-check form-switch" onclick="event.stopPropagation()">
+                                                        <input class="form-check-input section-status-switch" type="checkbox" @(t.IsCompleted ? "checked" : "") onchange="toggleStatus(@t.TopicMapId, this.checked)">
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td class="text-center py-4 text-muted" colspan="5">No Homework Data Found</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <!-- ── Pagination ─────────────────────────────────────────────── -->
+                    @if (totalPages > 1)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mt-3 flex-wrap gap-2 mb-3">
+                            <!-- Record info -->
+                            <div class="text-muted small">
+                                Showing
+                                <strong>@(((Model.PageNumber - 1) * Model.PageSize) + 1)</strong>
+                                –
+                                <strong>@(Math.Min(Model.PageNumber * Model.PageSize, Model.TotalRecords))</strong>
+                                of
+                                <strong>@Model.TotalRecords</strong> users
+                            </div>
+
+                            <nav aria-label="Subject pagination">
+                                <ul class="pagination pagination-sm mb-0">
+
+                                    <!-- First -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=1&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Prev -->
+                                    <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber - 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers — show 5 around current -->
+                                    @{
+                                        int start = Math.Max(1, Model.PageNumber - 2);
+                                        int end = Math.Min(totalPages, start + 4);
+                                        start = Math.Max(1, end - 4);
+                                    }
+                                    @for (int pg = start; pg <= end; pg++)
+                                    {
+                                        <li class="page-item @(pg == Model.PageNumber ? "active" : "")">
+                                            <a class="page-link"
+                                               href="?pageIndex=@pg&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">@pg</a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@(Model.PageNumber + 1)&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevron-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last -->
+                                    <li class="page-item @(Model.PageNumber >= totalPages ? "disabled" : "")">
+                                        <a class="page-link"
+                                           href="?pageIndex=@totalPages&pageSize=@Model.PageSize&search=@Model.SearchTerm&companyId=@Model.CompanyId&sessionID=@Model.SessionId">
+                                            <i class="ti ti-chevrons-right"></i>
+                                        </a>
+                                    </li>
+
+                                </ul>
+                            </nav>
+
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Styles {
+    <style>
+        #homeworkTable thead th {
+            white-space: nowrap;
+        }
+
+        .item-row.bg-light-primary {
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+
+        .ck-editor__editable {
+            min-height: 200px;
+        }
+
+        .dt-buttons {
+            display: none !important;
+        }
+
+        #homeworkTable_filter {
+            display: none;
+        }
+
+        .topic-cell {
+            padding-left: 20px !important;
+        }
+
+        .text-accent {
+            color: #185fa5 !important;
+        }
+    </style>
+}
+
+@section Scripts {
+
+    <script>
+        window.canAdd = @JsonSerializer.Serialize(p.CanAdd);
+        window.canEdit = @JsonSerializer.Serialize(p.CanEdit);
+        window.canDelete = @JsonSerializer.Serialize(p.CanDelete);
+    </script>
+
+    <script src="~/assets/js/ManageSyllabusStatus.js"></script>
+}

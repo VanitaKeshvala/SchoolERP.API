@@ -27,6 +27,7 @@
         public string? DashboardURL { get; set; }
         public int? StaffID { get; set; }
         public int? StudentID { get; set; }
+        public int? ParentUserID { get; set; }
 
 
     }
@@ -277,5 +278,26 @@
         public int? companyId { get; set; }
         public bool? isActive { get; set; }
         public int? userTypeId { get; set; }
+    }
+
+    public class StudentRoleContextDto
+    {
+        public int? StudentID { get; set; }
+        public int? CompanyID { get; set; }
+        public int? SessionID { get; set; }
+        public int StudentUserID { get; set; }
+        public int? ParentUserID { get; set; }
+        public string RollNo { get; set; }
+        public string AdmissionNo { get; set; }
+        public int? ClassID { get; set; }
+        public int? SectionID { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+    }
+
+    public class StaffRoleContextDto
+    {
+        public int StaffID { get; set; }
+        public int StaffUserID { get; set; }
     }
 }

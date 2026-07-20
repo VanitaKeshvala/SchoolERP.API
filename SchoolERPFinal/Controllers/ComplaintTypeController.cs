@@ -28,8 +28,12 @@ namespace SchoolERP.Net.Controllers
         }
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if (CurrentCompanyId == null)
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {

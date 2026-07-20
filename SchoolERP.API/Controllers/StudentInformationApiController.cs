@@ -60,9 +60,9 @@ namespace SchoolERP.API.Controllers
         /// <summary>
         /// Provides the list of all reasons why students are disabled.
         /// </summary>
-        public IActionResult GetAllDisableReasons(int sessionID)
+        public IActionResult GetAllDisableReasons(int sessionID,int companyId)
         {
-            var data = _studentService.GetAllDisableReasons(GetCompanyId(), sessionID);
+            var data = _studentService.GetAllDisableReasons(companyId, sessionID);
             return Ok(new { success = true, data });
         }
 
@@ -108,9 +108,9 @@ namespace SchoolERP.API.Controllers
         /// <summary>
         /// Provides the list of all student categories.
         /// </summary>
-        public IActionResult GetAllStudentCategories(int sessionId)
+        public IActionResult GetAllStudentCategories(int sessionId,int companyId)
         {
-            var data = _studentService.GetAllStudentCategories(GetCompanyId(), sessionId);
+            var data = _studentService.GetAllStudentCategories(companyId, sessionId);
             return Ok(new { success = true, data });
         }
 
@@ -121,7 +121,11 @@ namespace SchoolERP.API.Controllers
             {
                 req.SessionID = GetSessionId();
             }
-            var res = _studentService.UpsertStudentCategory(req, GetCompanyId(), req.SessionID, GetUserId());
+            if (req.CompanyID == null)
+            {
+                req.CompanyID = GetCompanyId();
+            }
+            var res = _studentService.UpsertStudentCategory(req, req.CompanyID, req.SessionID, GetUserId());
             return Ok(new { success = res.Success, message = res.Message });
         }
 
@@ -213,9 +217,9 @@ namespace SchoolERP.API.Controllers
         }
 
         [HttpGet("GetStudentList")]
-        public async Task<IActionResult> GetStudentList(int? sessionId, int? classId, int? sectionId, string? searchTerm, int PageNumber, int PageSize)
+        public async Task<IActionResult> GetStudentList(int? companyId,int? sessionId, int? classId, int? sectionId, string? searchTerm, int PageNumber, int PageSize)
         {
-            var data =await _studentService.GetStudentList(GetCompanyId(), sessionId.Value, classId, sectionId, searchTerm, PageNumber, PageSize);
+            var data =await _studentService.GetStudentList(companyId.Value, sessionId.Value, classId, sectionId, searchTerm, PageNumber, PageSize);
             return Ok(new { success = true, data });
         }
 

@@ -51,12 +51,12 @@ namespace SchoolERP.Net.Controllers.Api
             
         }
 
-        [HttpGet("GetByID/{id}")]
-        public IActionResult GetByID(int id)
+        [HttpGet("GetByID")]
+        public IActionResult GetByID(int id, int? studentId = null)
         {
             try
             {
-                var data = _service.GetByID(id);
+                var data = _service.GetByID(id, studentId);
                 if (data == null) return NotFound(ApiResponse<HomeworkViewModel>.ErrorResponse("Homework not found"));
                 return Ok(ApiResponse<HomeworkViewModel>.SuccessResponse(data));
             }
@@ -81,13 +81,20 @@ namespace SchoolERP.Net.Controllers.Api
                 if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
                     return Ok(new { success = false, message = "You do not have permission to edit homework." });
 
-                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
-                int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                
+                if (request.CompanyID == null) 
+                {
+                    request.CompanyID= _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
 
-                if (companyId == 0 || sessionId == 0)
+                if (request.CompanyID == 0 || request.SessionID == 0)
                     return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
 
-                var response = _service.Upsert(request, companyId, sessionId, userId);
+                var response =await _service.Upsert(request, request.CompanyID, request.SessionID, userId);
                 return Ok(ApiResponse<dynamic>.SuccessResponse(response));
                 //return Ok(response);
             }
@@ -156,6 +163,15 @@ namespace SchoolERP.Net.Controllers.Api
         {
             try
             {
+                int userId = GetCurrentUserId();
+                if (request.CompanyID == null || request.CompanyID == 0)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null || request.SessionID==0)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
                 if (request.CompanyID == 0 || request.SessionID == 0)
                     return Ok(ApiResponse<List<HomeworkViewModel>>.SuccessResponse(new List<HomeworkViewModel>()));
                 var data = await _service.GetAllHomeWorkWithPage(request);
@@ -167,5 +183,226 @@ namespace SchoolERP.Net.Controllers.Api
             }
         }
 
+        [HttpPost("UpsertAttachment")]
+        public async Task<IActionResult> UpsertAttachment([FromBody] HomeworkAttachmentUpsertRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
+
+                var isCreate = request.HomeworkID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit homework." });
+
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var response =await _service.UpsertAttachment(request,userId);
+                return Ok(ApiResponse<dynamic>.SuccessResponse(response));
+                //return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetAllHomeWorkAttechmentById")]
+        public IActionResult GetAllHomeWorkAttechmentById(int homeWorkId)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+
+                if (companyId == 0 || sessionId == 0)
+                    return Ok(ApiResponse<List<HomeworkAttachmentViewModel>>.SuccessResponse(new List<HomeworkAttachmentViewModel>()));
+
+                var data = _service.GetAllHomeWorkAttechmentById(homeWorkId, userId);
+                return Ok(ApiResponse<List<HomeworkAttachmentViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+
+        [HttpPost("UpsertSubmission")]
+        public async Task<IActionResult> UpsertSubmission([FromBody] HomeworkSubmissionUpsertRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
+
+                var isCreate = request.HomeworkID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit homework." });
+
+
+                if (request.CompanyID == null)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null || request.SessionID==0)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var response = await _service.UpsertSubmission(request, userId);
+                return Ok(ApiResponse<dynamic>.SuccessResponse(response));
+                //return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("UpsertSubmissionAttachment")]
+        public async Task<IActionResult> UpsertSubmissionAttachment([FromBody] HomeworkSubmissionAttachmentUpsertRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
+
+                var isCreate = request.SubmissionID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit homework." });
+
+
+                if (request.CompanyID == null || request.CompanyID == 0)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null || request.SessionID==0)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var response = await _service.UpsertSubmissionAttachment(request, userId);
+                return Ok(ApiResponse<dynamic>.SuccessResponse(response));
+                //return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpPost("GetAllHomeWorkSubmissionWithPage")]
+        public async Task<IActionResult> GetAllHomeWorkSubmissionWithPage([FromBody] SearchRequest request)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                if (request.CompanyID == null || request.CompanyID == 0)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null || request.SessionID == 0)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HomeworkSubmissionListDto>>.SuccessResponse(new List<HomeworkSubmissionListDto>()));
+                var data = await _service.GetAllHomeWorkSubmissionWithPage(request);
+                return Ok(ApiResponse<PagedResult<HomeworkSubmissionListDto>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("UpsertEvaluateHomework")]
+        public async Task<IActionResult> UpsertEvaluateHomework([FromBody] HomeworkSubmissionEvaluateUpsertRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+                int userId = GetCurrentUserId();
+
+                var isCreate = request.HomeworkID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, MenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add homework." });
+                if (!isCreate && !await _menuPerm.Has(User, MenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit homework." });
+
+
+                if (request.CompanyID == null || request.CompanyID == 0)
+                {
+                    request.CompanyID = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (request.SessionID == null || request.SessionID == 0)
+                {
+                    request.SessionID = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var response = await _service.UpsertEvaluateHomework(request, userId);
+                return Ok(ApiResponse<dynamic>.SuccessResponse(response));
+                //return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
+        [HttpGet("GetAllHomeWorkSubmissionAttechmentById")]
+        public IActionResult GetAllHomeWorkSubmissionAttechmentById(int submissionID)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                int companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                int sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+
+                if (companyId == 0 || sessionId == 0)
+                    return Ok(ApiResponse<List<HomeworkAttachmentViewModel>>.SuccessResponse(new List<HomeworkAttachmentViewModel>()));
+
+                var data = _service.GetAllHomeWorkSubmissionAttechmentById(submissionID, userId);
+                return Ok(ApiResponse<List<HomeworkAttachmentViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
     }
 }

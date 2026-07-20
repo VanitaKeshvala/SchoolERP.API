@@ -28,10 +28,18 @@ function submitForm() {
     // Sync hidden form fields from dropdowns before submit
     const sessionEl = document.getElementById('ddlFilterSessions');
     const companyEl = document.getElementById('ddlFilterCompany');
-    const hdnMode = document.getElementById('hdnMode');
+    const classEl = document.getElementById('ddlFilterClasses');
+    const sectionEl = document.getElementById('ddlSection');
+    const subGroupEl = document.getElementById('ddlSubjectGroup');
+    const subjectEl = document.getElementById('ddlSubject');
+
+
     if (sessionEl) document.getElementById('hdnSessionID').value = sessionEl.value;
     if (companyEl) document.getElementById('hdnCompanyId').value = companyEl.value;
-    if (hdnMode) hdnMode.value = getStoredMode(); // ensure latest mode goes with every submit
+    if (classEl) document.getElementById('hdnClassID').value = classEl.value;
+    if (sectionEl) document.getElementById('hdnSectionID').value = sectionEl.value;
+    if (subGroupEl) document.getElementById('hdnSubjectGroupID').value = subGroupEl.value;
+    if (subjectEl) document.getElementById('hdnSubjectID').value = subjectEl.value;
 
     document.getElementById('frmSearch').submit();
 }
@@ -40,6 +48,11 @@ function applyFilters() {
     const sessionEl = document.getElementById('ddlFilterSessions');
     const companyEl = document.getElementById('ddlFilterCompany');
     const searchEl = document.getElementById('txtSearchInput');
+
+    const classEl = document.getElementById('ddlFilterClasses');
+    const sectionEl = document.getElementById('ddlSection');
+    const subGroupEl = document.getElementById('ddlSubjectGroup');
+    const subjectEl = document.getElementById('ddlSubject');
 
     // Search
     const searchVal = searchEl?.value.trim();
@@ -62,7 +75,37 @@ function applyFilters() {
         };
     } else delete appliedFilters['ddlFilterCompany'];
 
+    // Class
+    if (classEl?.value && classEl.value !== '') {
+        appliedFilters['ddlFilterClasses'] = {
+            label: 'Class',
+            text: classEl.options[classEl.selectedIndex]?.text || classEl.value
+        };
+    } else delete appliedFilters['ddlFilterClasses'];
 
+    // Section
+    if (sectionEl?.value && sectionEl.value !== '') {
+        appliedFilters['ddlSection'] = {
+            label: 'Section',
+            text: sectionEl.options[sectionEl.selectedIndex]?.text || sectionEl.value
+        };
+    } else delete appliedFilters['ddlSection'];
+
+    // SubjectGroup
+    if (subGroupEl?.value && subGroupEl.value !== '') {
+        appliedFilters['ddlSubjectGroup'] = {
+            label: 'SubjectGroup',
+            text: subGroupEl.options[subGroupEl.selectedIndex]?.text || subGroupEl.value
+        };
+    } else delete appliedFilters['ddlSubjectGroup'];
+
+    // Subject
+    if (subjectEl?.value && subjectEl.value !== '') {
+        appliedFilters['ddlSubject'] = {
+            label: 'Subject',
+            text: subjectEl.options[subjectEl.selectedIndex]?.text || subjectEl.value
+        };
+    } else delete appliedFilters['ddlSubject'];
     saveAppliedFilters();
 }
 
@@ -128,7 +171,7 @@ function resetAllFilters() {
 // ========================================
 // DOMContentLoaded — init DataTable + UI
 // ========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Restore Mode tab state ──────────────────────────────────────
     const currentMode = getStoredMode();
@@ -199,6 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
         submitForm();
     });
 
+    const classId = $('#ddlClass').val();
+    if (classId)
+    {
+        $('#ddlClass').trigger('change');
+        await loadSections(classId, window.editSectionId);
+    }
     // ── Render badges on load ─────────────────────────────────────────
     renderFilterBadges();
 });
@@ -362,13 +411,30 @@ async function loadSections(classId) {
 
     if (!classId) return;
 
+    const sectionId = $('#txtSectionID').val();
+
     try {
         const resp = await fetch(`/Academics/GetSectionsByClass?id=${classId}`);
         const res = await resp.json();
+
         if (res.success && res.data) {
-            res.data.forEach(s => ddl.append(new Option(s.sectionName, s.sectionID)));
+
+            ddl.empty();
+            ddl.append(new Option('-- Select Section --', ''));
+
+            res.data.forEach(s => {
+                ddl.append(new Option(s.sectionName, s.sectionID));
+            });
+
+            // Edit mode - select saved section
+            if (sectionId) {
+                ddl.val(sectionId).trigger('change');
+            }
         }
-    } catch (err) { console.error(err); }
+    }
+    catch (err) {
+        console.error(err);
+    }
 }
 
 async function loadSubjectGroups() {
@@ -382,17 +448,38 @@ async function loadSubjectGroups() {
 
     if (!classId || !sectionId) return;
 
+    const subjectGroupId = $('#txtSubjectGroupID').val();
+
     try {
         const resp = await fetch('/Homework/GetSubjectGroups');
         const res = await resp.json();
+
         if (res.success && res.data) {
+
+            ddl.empty();
+            ddl.append(new Option('-- Select Subject Group --', ''));
+
             const filtered = res.data.filter(g =>
                 g.classID == classId &&
-                (g.sectionNames || "").split(',').map(s => s.trim()).includes(sectionName)
+                (g.sectionNames || "")
+                    .split(',')
+                    .map(s => s.trim())
+                    .includes(sectionName)
             );
-            filtered.forEach(g => ddl.append(new Option(g.name, g.subjectGroupID)));
+
+            filtered.forEach(g => {
+                ddl.append(new Option(g.name, g.subjectGroupID));
+            });
+
+            // Edit mode - select saved Subject Group
+            if (subjectGroupId) {
+                ddl.val(subjectGroupId).trigger('change');
+            }
         }
-    } catch (err) { console.error(err); }
+    }
+    catch (err) {
+        console.error(err);
+    }
 }
 
 async function loadSubjects(groupId) {
@@ -401,18 +488,31 @@ async function loadSubjects(groupId) {
 
     if (!groupId) return;
 
+    const subjectId = $('#txtSubjectID').val();
+
     try {
         const resp = await fetch(`/Homework/GetSubjectGroupByID?id=${groupId}`);
         const res = await resp.json();
 
+        ddl.empty();
+        ddl.append(new Option('-- Select Subject --', ''));
+
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+
             res.data.forEach(s => {
                 ddl.append(new Option(s.name, s.id));
             });
-        } else {
+
+            // Edit mode - select saved Subject
+            if (subjectId) {
+                ddl.val(subjectId).trigger('change');
+            }
+        }
+        else {
             ddl.append(new Option('No subjects found', ''));
         }
-    } catch (err) {
+    }
+    catch (err) {
         console.error(err);
     }
 }
@@ -432,35 +532,30 @@ async function editSelected() {
         console.error(err);
     }
 }
-
 async function saveHomework() {
     IV.clearMap(fieldMap);
     const description = editorInstance ? editorInstance.getData() : '';
-    const data = {
-        homeworkID: parseInt(document.getElementById('txtHomeworkId').value),
-        classID: parseInt(document.getElementById('ddlClass').value),
-        sectionID: parseInt(document.getElementById('ddlSection').value),
-        subjectGroupID: parseInt(document.getElementById('ddlSubjectGroup').value),
-        subjectID: parseInt(document.getElementById('ddlSubject').value),
-        homeworkDate: document.getElementById('txtHomeworkDate').value,
-        submissionDate: document.getElementById('txtSubmissionDate').value,
-        maxMarks: document.getElementById('txtMaxMarks').value ? parseFloat(document.getElementById('txtMaxMarks').value) : null,
-        description: description,
-        isActive: document.getElementById('chkIsActive').checked
-    };
+
+    const homeworkID = parseInt(document.getElementById('txtHomeworkId').value);
+    const classID = parseInt(document.getElementById('ddlClass').value);
+    const sectionID = parseInt(document.getElementById('ddlSection').value);
+    const subjectGroupID = parseInt(document.getElementById('ddlSubjectGroup').value);
+    const subjectID = parseInt(document.getElementById('ddlSubject').value);
+    const homeworkDate = document.getElementById('txtHomeworkDate').value;
+    const submissionDate = document.getElementById('txtSubmissionDate').value;
+    const maxMarksRaw = document.getElementById('txtMaxMarks').value;
+    const isActive = document.getElementById('chkIsActive').checked;
 
     let hasError = false;
-    if (!data.classID) { IV.setFieldError('ddlClass', 'errDdlClass', 'Please select a class'); hasError = true; }
-    if (!data.sectionID) { IV.setFieldError('ddlSection', 'errDdlSection', 'Please select a section'); hasError = true; }
-    if (!data.subjectGroupID) { IV.setFieldError('ddlSubjectGroup', 'errDdlSubjectGroup', 'Please select a subject group'); hasError = true; }
-    if (!data.subjectID) { IV.setFieldError('ddlSubject', 'errDdlSubject', 'Please select a subject'); hasError = true; }
-    if (!data.homeworkDate) { IV.setFieldError('txtHomeworkDate', 'errTxtHomeworkDate', 'Please select a homework date'); hasError = true; }
-    if (!data.submissionDate) { IV.setFieldError('txtSubmissionDate', 'errTxtSubmissionDate', 'Please select a submission date'); hasError = true; }
+    if (!classID) { IV.setFieldError('ddlClass', 'errDdlClass', 'Please select a class'); hasError = true; }
+    if (!sectionID) { IV.setFieldError('ddlSection', 'errDdlSection', 'Please select a section'); hasError = true; }
+    if (!subjectGroupID) { IV.setFieldError('ddlSubjectGroup', 'errDdlSubjectGroup', 'Please select a subject group'); hasError = true; }
+    if (!subjectID) { IV.setFieldError('ddlSubject', 'errDdlSubject', 'Please select a subject'); hasError = true; }
+    if (!homeworkDate) { IV.setFieldError('txtHomeworkDate', 'errTxtHomeworkDate', 'Please select a homework date'); hasError = true; }
+    if (!submissionDate) { IV.setFieldError('txtSubmissionDate', 'errTxtSubmissionDate', 'Please select a submission date'); hasError = true; }
 
-    if (data.homeworkDate && data.submissionDate) {
-        const hwDate = new Date(data.homeworkDate);
-        const subDate = new Date(data.submissionDate);
-        if (subDate < hwDate) {
+    if (homeworkDate && submissionDate) {
+        if (new Date(submissionDate) < new Date(homeworkDate)) {
             IV.setFieldError('txtSubmissionDate', 'errTxtSubmissionDate', 'Submission date cannot be before homework date');
             hasError = true;
         }
@@ -473,6 +568,26 @@ async function saveHomework() {
 
     if (hasError) return;
 
+    // ── Build multipart form: individual fields matching HomeworkUpsertRequest properties ──
+    const formData = new FormData();
+    formData.append('HomeworkID', homeworkID);
+    formData.append('ClassID', classID);
+    formData.append('SectionID', sectionID);
+    formData.append('SubjectGroupID', subjectGroupID);
+    formData.append('SubjectID', subjectID);
+    formData.append('HomeworkDate', homeworkDate);
+    formData.append('SubmissionDate', submissionDate);
+    if (maxMarksRaw) formData.append('MaxMarks', parseFloat(maxMarksRaw));
+    formData.append('Description', description);
+    formData.append('IsActive', isActive);
+
+    const fileInput = document.getElementById('fileAttachment');
+    if (fileInput && fileInput.files.length > 0) {
+        Array.from(fileInput.files).forEach(file => {
+            formData.append('attachmentFiles', file);
+        });
+    }
+
     const $btn = $('#btnSaveHomework');
     const originalHtml = $btn.html();
     $btn.prop('disabled', true).html('<div class="spinner-border spinner-border-sm me-1"></div> Saving...');
@@ -480,37 +595,35 @@ async function saveHomework() {
     try {
         const resp = await fetch('/Homework/UpsertHomework', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: formData
+            // Do NOT set Content-Type manually — the browser sets the multipart boundary automatically.
         });
         const res = await resp.json();
         if (res.success) {
             Swal.fire({
                 icon: 'success',
                 title: 'Saved!',
-                text: res.message || 'Class has been added successfully.',
+                text: res.message || 'Homework has been saved successfully.',
                 confirmButtonText: 'OK',
                 customClass: { confirmButton: 'btn btn-success' },
                 buttonsStyling: false
-            }).then(() => {
-                window.location.href = '/Homework/Index';
-            });
+            }).then(() => window.location.href = '/Homework/Index');
         } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: res.message || 'Failed to save class.',
+                text: res.message || 'Failed to save homework.',
                 confirmButtonText: 'OK',
                 customClass: { confirmButton: 'btn btn-danger' },
                 buttonsStyling: false
             });
+            $btn.prop('disabled', false).html(originalHtml);
         }
     } catch (err) {
         console.error(err);
         $btn.prop('disabled', false).html(originalHtml);
     }
 }
-
 
 async function deleteSelected() {
     if (!permCanDelete) {
@@ -683,4 +796,40 @@ function switchMode(mode) {
     if (pageEl) pageEl.value = 1;
 
     submitForm();
+}
+
+let deletedAttachmentIds = [];
+
+function viewAttachment(filePath) {
+    const ext = (filePath.split('.').pop() || '').toLowerCase();
+    const url = filePath.startsWith('http') ? filePath : filePath;
+
+    let html = '';
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+        html = `<img src="${url}" class="img-fluid" style="max-height:70vh;" />`;
+    } else if (ext === 'pdf') {
+        html = `<iframe src="${url}" style="width:100%;height:70vh;" frameborder="0"></iframe>`;
+    } else {
+        html = `<a href="${url}" target="_blank" class="btn btn-primary">Open Document</a>`;
+    }
+
+    document.getElementById('attachmentPreviewBody').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('attachmentPreviewModal'));
+    modal.show();
+}
+
+function removeAttachment(attachmentId, btn) {
+    Swal.fire({
+        title: 'Delete attachment?',
+        text: 'This document will be removed from homework.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            deletedAttachmentIds.push(attachmentId);
+            const row = btn.closest('tr');
+            row.remove();
+        }
+    });
 }

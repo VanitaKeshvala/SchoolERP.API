@@ -57,8 +57,12 @@ namespace SchoolERP.Net.Controllers
 
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if (CurrentCompanyId == null)
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {
@@ -68,6 +72,11 @@ namespace SchoolERP.Net.Controllers
                 return response?.Data ?? 0;
             }
             return CurrentSessionId;
+        }
+        private int? GetStaffID()
+        {
+            var staffClaim = User.FindFirst("StaffID")?.Value;
+            return int.TryParse(staffClaim, out var staffId) ? staffId : null;
         }
         /// <summary>
         /// Loads the master-data management page — fetches all Purposes,
@@ -1361,7 +1370,7 @@ namespace SchoolERP.Net.Controllers
                     SearchKeyword = search,
                     CompanyID = companyId ?? await GetCompanyId(),
                     SessionID = sessionID ?? await GetSessionId(),
-                    StaffID = staffId ?? null,
+                    StaffID = staffId ?? GetStaffID(),
                     StudentID = studentId ?? null,
                     Purposes=purpose
                 };
@@ -1370,7 +1379,7 @@ namespace SchoolERP.Net.Controllers
                 var visitors = _client.GetAllVisitorsWithPageIndexAsync(request);
                 var purposes = await _client.GetAllPurposesAsync();
                 var classes = await _classClient.GetAllAsync();
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID,request.StaffID);
                 var sessionTask = _sessionService.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
 
@@ -1443,7 +1452,9 @@ namespace SchoolERP.Net.Controllers
             try
             {
                 var sessionId = await GetSessionId();
-                var r = await _hrClient.GetAllStaffAsync(sessionId);
+                var companyId = await GetCompanyId();
+                var staffId = GetStaffID();
+                var r = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
                 return Json(new { success = r.Success, data = r.Data });
             }
             catch (Exception ex)
@@ -1623,11 +1634,12 @@ namespace SchoolERP.Net.Controllers
 
                 };
                 var sessionId = await GetSessionId();
+                var staffId = GetStaffID();
                 var inquiries = _client.GetAllAdmissionInquiriesWithPageIndexAsync(req);
                 var classes = await _classClient.GetAllAsync(false,sessionId);
                 var sources = await _client.GetAllSourcesAsync();
                 var references = await _client.GetAllReferencesAsync();
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(req.CompanyID.Value,req.SessionID.Value,staffId);
 
                 var sessionTask = _sessionService.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
@@ -1814,11 +1826,13 @@ namespace SchoolERP.Net.Controllers
                    "/FrontOffice/AddAdmissionEnquiry"
                );
                 var sessionId = await GetSessionId();
+                var companyId = await GetCompanyId();
+                var staffId = GetStaffID();
                 //var inquiries = await _client.GetAdmissionInquiryByIDAsync(id);
                 var classes = await _classClient.GetAllAsync(false, sessionId);
                 var sources = await _client.GetAllSourcesAsync();
                 var references = await _client.GetAllReferencesAsync();
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
                 model = new AddAdmissionInquiryPageViewModel
                 {
@@ -1861,10 +1875,12 @@ namespace SchoolERP.Net.Controllers
                    "/FrontOffice/VisitorBook"
                );
                 var sessionId = await GetSessionId();
+                var companyId = await GetCompanyId();
+                var staffId = GetStaffID();
                 var visitors = await _client.GetAllVisitorsAsync();
                 var purposes = await _client.GetAllPurposesAsync();
                 var classes = await _classClient.GetAllAsync();
-                var staff = await _hrClient.GetAllStaffAsync(sessionId);
+                var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
                 model = new AddVisitorBookPageViewModel
                 {

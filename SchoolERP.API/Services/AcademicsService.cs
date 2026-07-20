@@ -97,6 +97,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@SessionID", sessionId);
                 parameters.Add("@ClassID", req.ClassID);
                 parameters.Add("@SectionID", req.SectionID);
+                parameters.Add("@SubjectGroupID", req.SubjectGroupID);
                 parameters.Add("@SubjectID", req.SubjectID);
                 parameters.Add("@StaffID", req.StaffID);
                 parameters.Add("@Day", req.Day);
@@ -468,6 +469,30 @@ namespace SchoolERP.API.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+
+        /// <summary>
+        /// Retrieves the timetable entries for a specific staff member filtered by company and session.
+        /// </summary>
+        /// <param name="companyId">The ID of the company.</param>
+        /// <param name="sessionId">The ID of the academic session.</param>
+        /// <param name="staffId">The ID of the staff member.</param>
+        /// <returns>A list of <see cref="TimeTableViewModel"/> representing the staff's timetable.</returns>
+        public TimeTableViewModel? GetTimeTableById(int companyId, int sessionId, int timeTableID)
+        {
+            using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+            var parameters = new DynamicParameters();
+            parameters.Add("@CompanyID", companyId);
+            parameters.Add("@SessionID", sessionId);
+            parameters.Add("@TimeTableID", timeTableID);
+
+            return conn.QueryFirstOrDefault<TimeTableViewModel>(
+                    "SP_ACD_TIMETABLE_GETBYID",
+                    parameters,
+                    commandType: CommandType.StoredProcedure);
         }
 
     }

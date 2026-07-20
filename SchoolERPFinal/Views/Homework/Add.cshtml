@@ -43,7 +43,10 @@
         <div class="card shadow-tbl-outer">
             <div class="card-body">
                 <form id="homeworkForm" class="row">
-                    <input type="hidden" id="txtHomeworkId" value="0">
+                    <input type="hidden" id="txtHomeworkId" value="@Model.EditHomeworks?.HomeworkID">
+                    <input type="hidden" id="txtSectionID" value="@Model.EditHomeworks?.SectionID">
+                    <input type="hidden" id="txtSubjectGroupID" value="@Model.EditHomeworks?.SubjectGroupID">
+                    <input type="hidden" id="txtSubjectID" value="@Model.EditHomeworks?.SubjectID">
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Class<span class="text-danger">*</span></label>
@@ -83,13 +86,13 @@
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Homework Date <span class="text-danger">*</span></label>
-                        <input type="date" id="txtHomeworkDate" value="@Model.EditHomeworks?.HomeworkDate.ToString("dd-MM-yyyy")" class="form-control">
+                        <input type="date" id="txtHomeworkDate" value="@(Model.EditHomeworks?.HomeworkDate.ToString("yyyy-MM-dd"))" class="form-control">
                         <div class="invalid-feedback" id="errTxtHomeworkDate"></div>
                     </div>
 
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Submission Date <span class="text-danger">*</span></label>
-                        <input type="date" id="txtSubmissionDate" value="@Model.EditHomeworks?.SubmissionDate.ToString("dd-MM-yyyy")" class="form-control">
+                        <input type="date" id="txtSubmissionDate" value="@(Model.EditHomeworks?.SubmissionDate.ToString("yyyy-MM-dd"))" class="form-control">
                         <div class="invalid-feedback" id="errTxtSubmissionDate"></div>
                     </div>
 
@@ -100,7 +103,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Attach Document</label>
-                            <input type="file" id="fileAttachment" class="form-control">
+                            <input type="file" id="fileAttachment" class="form-control" multiple>
                         </div>
                         <div class="mb-3">
                             <div class="form-check form-switch">
@@ -115,14 +118,59 @@
                         <textarea id="txtDescription" class="form-control" rows="5">@Model.EditHomeworks?.Description</textarea>
                         <div class="invalid-feedback" id="errTxtDescription"></div>
                     </div>
-
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle" id="attachmentTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>File Name</th>
+                                    <th style="width: 140px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.EditHomeworks?.AttechmetDocument != null && Model.EditHomeworks.AttechmetDocument.Any())
+                                {
+                                    foreach (var doc in Model.EditHomeworks.AttechmetDocument)
+                                    {
+                                        <tr data-attachment-id="@doc.AttachmentID" data-file-path="@doc.AttachmentPath" data-file-name="@doc.AttachmentName">
+                                            <td>@doc.AttachmentName</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="viewAttachment('@doc.AttachmentPath')">
+                                                    <i class="fa fa-eye"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-danger" onclick="removeAttachment(@doc.AttachmentID, this)">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="2" class="text-center text-muted">No uploaded documents found.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
 
                 </form>
             </div>
         </div>
     </div>
 </div>
-
+<div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Document Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="attachmentPreviewBody">
+            </div>
+        </div>
+    </div>
+</div>
 
 
 @section Styles {

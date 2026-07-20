@@ -12,5 +12,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<dynamic>> UpsertAsync(MstSubjectGroupUpsertRequest request);
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
         Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
+        Task<ApiResponse<List<DropdownModel>>> GetAllSubjectByClassandSectionIdAsync(int companyId, int sessionId, int classId, int sectionId);
     }
 }

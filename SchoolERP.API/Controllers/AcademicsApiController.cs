@@ -167,5 +167,21 @@ namespace SchoolERP.Net.Controllers.Api
             catch (Exception ex) { return Ok(ApiResponse<PagedResult<StudentPromotionViewModel>>.ErrorResponse(ex.Message)); }
         }
 
+        [HttpGet("GetTimeTableById")]
+        public IActionResult GetTimeTableById(int companyId, int sessionId, int timeTableID)
+        {
+            try
+            {
+                var data = _svc.GetTimeTableById(companyId, sessionId, timeTableID);
+                if (data == null) return NotFound(ApiResponse<TimeTableViewModel>.ErrorResponse("TimeTable not found"));
+                return Ok(ApiResponse<TimeTableViewModel>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
+
     }
 }

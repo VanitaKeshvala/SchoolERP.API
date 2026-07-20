@@ -249,12 +249,13 @@
 
             $('#FilterClassID').on('change', function () {
                 loadSections($(this).val(), '#FilterSectionID');
-                $('#FilterSubjectGroupID').html('<option value="">Select</option>');
+               // $('#FilterSubjectGroupID').html('<option value="">Select</option>');
             });
-
+            let initialSubjectGroupId = '@Model.SelectedSubjectGroupId';
             $('#FilterSectionID').on('change', function () {
-                loadSubjectGroups($('#FilterClassID').val(), $(this).val());
+                loadSubjectGroups($('#FilterClassID').val(), $(this).val(),initialSubjectGroupId);
             });
+                
 
             // Handle Filter click
             $('.filter-dropdown').on('click', function (e) { e.stopPropagation(); });
@@ -292,7 +293,7 @@
                         const selected = s.sectionID == selectedId ? 'selected' : '';
                         html += `<option value="${s.sectionID}" ${selected}>${s.sectionName}</option>`;
                     });
-                    $(targetSelector).html(html).trigger('change');
+                    $(targetSelector).html(html).trigger('change');   // <-- this line
                 }
             });
         }
@@ -365,22 +366,26 @@
         async function saveAllTimeTable() {
             const classId = $('#FilterClassID').val();
             const sectionId = $('#FilterSectionID').val();
-            if (!classId || !sectionId) {
-                showToast('Please select Class and Section', 'warning');
+            const subjectGroupId = $('#FilterSubjectGroupID').val();
+            if (!classId || !sectionId || !subjectGroupId) {
+                showToast('Please select Class and Section and Subject group', 'warning');
                 return;
             }
-
+           
             const data = [];
             $('.tab-pane').each(function() {
                 const day = $(this).data('day');
-                $(this).find('.slot-row').each(function() {
+                $(this).find('.slot-row').each(function()
+                {
+                     const staffVal = $(this).find('select[name="StaffID"]').val();
                     const slot = {
                         TimeTableID: 0,
                         ClassID: parseInt(classId),
                         SectionID: parseInt(sectionId),
                         Day: day,
+                        SubjectGroupID: parseInt(subjectGroupId),
                         SubjectID: parseInt($(this).find('select[name="SubjectID"]').val()),
-                        StaffID: parseInt($(this).find('select[name="StaffID"]').val()),
+                        StaffID: staffVal ? parseInt(staffVal) : null,   // explicit, not accidental
                         StartTime: $(this).find('input[name="StartTime"]').val(),
                         EndTime: $(this).find('input[name="EndTime"]').val(),
                         RoomNo: $(this).find('input[name="RoomNo"]').val()

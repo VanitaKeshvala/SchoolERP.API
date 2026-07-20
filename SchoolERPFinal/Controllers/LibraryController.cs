@@ -48,8 +48,12 @@ namespace SchoolERP.Net.Controllers
         private int GetUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value ?? "0");
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
+            if (CurrentCompanyId == null)
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
         }
         private async Task<int> GetSessionId()
         {
@@ -782,6 +786,11 @@ namespace SchoolERP.Net.Controllers
         {
             try
             {
+                var model = new BookDetailsResult();
+                var perms = await GetPermissions(
+                   "/Library/AddIssueBook"
+               );
+
                 if (id == null || id <= 0)
                     return RedirectToAction("Books");
 
@@ -794,11 +803,13 @@ namespace SchoolERP.Net.Controllers
                     TempData["ErrorMessage"] = response.Message ?? "Book not found.";
                     return RedirectToAction("Books");
                 }
-
+                
+                model = response.Data;
+                model.Permissions = perms;
                 // View gets the unwrapped BookDetailsResult, not the ApiResponse wrapper —
                 // the ApiResponse envelope (Success/Message) is only useful at the point
                 // you're deciding whether to render the page at all, which is here.
-                return View(response.Data);
+                return View(model);
             }
             catch (Exception)
             {

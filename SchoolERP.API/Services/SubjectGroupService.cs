@@ -5,6 +5,7 @@ using SchoolERP.API.Interfaces;
 using SchoolERP.Shared.Models;
 using SchoolERP.Shared.Models.Common;
 using System.Data;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SchoolERP.API.Services
 {
@@ -201,5 +202,34 @@ namespace SchoolERP.API.Services
                 return (false, ex.Message);
             }
         }
+
+        public List<DropdownModel> GetAllSubjectByClassandSectionId(int companyId, int sessionId, int classId, int sectionId)
+        {
+            try
+            {
+                using var conn = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+                var result = conn.Query<DropdownModel>(
+                    "SP_GET_SUBJECTS_BY_CLASS_SECTION",
+                    new
+                    {
+                        CompanyID = companyId,
+                        SessionID = sessionId,
+                        ClassID = classId,
+                        SectionID = sectionId
+                    },
+                    commandType: CommandType.StoredProcedure)
+                    .ToList();
+
+                return result;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+        }
+       
     }
 }

@@ -55,8 +55,8 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<dynamic>> ToggleLeaveTypeStatusAsync(int id, bool isActive)
             => PostAsync<dynamic>($"api/HumanResourceApi/ToggleLeaveTypeStatus?id={id}&isActive={isActive}", null!);
 
-        public Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int sessionID)
-            => GetAsync<List<HRStaffViewModel>>($"api/HumanResourceApi/GetAllStaff?sessionID={sessionID}");
+        public Task<ApiResponse<List<HRStaffViewModel>>> GetAllStaffAsync(int companyId, int sessionId, int? staffId=null)
+            => GetAsync<List<HRStaffViewModel>>($"api/HumanResourceApi/GetAllStaff?companyId={companyId}&sessionId={sessionId}&staffId={staffId}");
 
         public Task<ApiResponse<HRStaffViewModel>> GetStaffByIDAsync(int id)
             => GetAsync<HRStaffViewModel>($"api/HumanResourceApi/GetStaffByID/{id}");

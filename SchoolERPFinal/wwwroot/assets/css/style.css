@@ -795,12 +795,7 @@ html[data-bs-theme=dark] #light-dark-mode .ti-moon::before {
         display: none !important; /* keep only the small logo mark */
     }
 
-    #ddlSessionYear {
-        min-width: 90px !important;
-        font-size: 12px;
-        padding: 4px 8px;
-    }
-
+    
     #company-selection ~ button,
     button[data-bs-target="#company-selection"] {
         font-size: 12px;
@@ -7629,6 +7624,20 @@ Author URL: https://themeforest.net/user/dreamstechnologies
     .dropdown-menu-xl {
         width: 600px;
     }
+    .page-sticky-header {
+        position: sticky;
+        top: 55px;
+        z-index: 1030;
+        background: #fff;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .sticky-header-wrapper {
+        position: sticky;
+        z-index: 1025;
+        background: #fff;
+    }
 }
 
 @media (min-width: 576px) {
@@ -10477,6 +10486,9 @@ h1,
     h1,
     .h1 {
         font-size: 24px;
+    }
+    .card.shadow-tbl-outer .card-body {
+        padding-top: 56px; /* roughly tab-bar height; refine after testing */
     }
 }
 
@@ -18732,8 +18744,8 @@ Author URL: https://themeforest.net/user/dreamstechnologies
 
     /* Topbar: give username limited space and truncate instead of crowding icons */
     .navbar-header .page-container.topbar-menu > .d-flex.align-items-center:last-child {
-        flex-wrap: nowrap;
-        gap: 2px;
+        flex-wrap: nowrap !important;
+        gap: 4px;
     }
 
     .username-header {
@@ -18748,8 +18760,8 @@ Author URL: https://themeforest.net/user/dreamstechnologies
 
     /* Shrink the user avatar image slightly to save space */
     .profile-dropdown img[width="32"] {
-        width: 26px !important;
-        height: 26px !important;
+        width: 60px !important;
+        height: 24px !important;
     }
 
     /* Hide the chevron icon next to username on very small screens to save space */
@@ -18800,6 +18812,30 @@ Author URL: https://themeforest.net/user/dreamstechnologies
     .filter-dropdown {
         width: calc(100vw - 32px) !important;
         max-width: 340px;
+    }
+    .page-sticky-header {
+        position: fixed;
+        top: 55px; /* below navbar-header */
+        left: 0;
+        right: 0;
+        z-index: 1030;
+        background: #fff;
+        padding: 8px 12px;
+        margin: 0 !important;
+    }
+
+    .sticky-header-wrapper {
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: 1025;
+        background: #fff;
+        /* top is set dynamically by JS below */
+    }
+
+    /* Push page content down so fixed bars don't cover it */
+    .row:has(.card.shadow-tbl-outer) {
+        /* fallback: JS sets exact padding-top on .card-body below */
     }
 }
 
@@ -19100,5 +19136,33 @@ Author URL: https://themeforest.net/user/dreamstechnologies
         overscroll-behavior: contain; /* stops scroll "leaking" to the page behind it */
         padding: 14px 16px 16px;
         scrollbar-width: thin;
+    }
+}
+.topbar-select {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+    .topbar-select {
+        width: 90px;
+        min-width: 70px;
+        max-width: 100px;
+        flex: 1 1 auto; /* shrink hone do, fixed mat raho */
+        font-size: 12px;
+        padding-left: 6px;
+        padding-right: 20px; /* dropdown arrow ke liye jagah */
+    }
+}
+
+@media (max-width: 380px) {
+    .topbar-select {
+        min-width: 60px;
+        max-width: 85px;
+        font-size: 11px;
     }
 }

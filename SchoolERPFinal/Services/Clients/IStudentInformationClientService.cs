@@ -8,11 +8,11 @@ namespace SchoolERP.Net.Services.Clients
 {
     public interface IStudentInformationClientService
     {
-        Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? sessionId, int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber = null, int? PageSize = null);
+        Task<ApiResponse<PagedResult<StudentListViewModel>>> GetStudentListAsync(int? companyId, int? sessionId, int? classId = null, int? sectionId = null, string? searchTerm = null, int? PageNumber = null, int? PageSize = null);
         Task<ApiResponse<StudentDetailsViewModel>> GetStudentByIDAsync(int id);
-        Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID);
+        Task<ApiResponse<List<StudentDisableReasonViewModel>>> GetAllDisableReasons(int sessionID, int companyId);
         Task<ApiResponse<List<StudentHouseViewModel>>> GetAllStudentHouses(int sessionID);
-        Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId);
+        Task<ApiResponse<List<StudentCategoryViewModel>>> GetAllStudentCategories(int sessionId, int companyId);
         Task<ApiResponse<string>> GetNewStudentRollNo(StudentRollNoRequest request);
         Task<ApiResponse<string>> GetNextAdmissionNo();
         Task<ApiResponse<int>> UpsertStudentAdmission(StudentAdmissionUpsertRequest request);

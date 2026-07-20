@@ -59,7 +59,7 @@
         if (name.Contains("house")) return student.BasicInfo.StudentHouseID?.ToString() ?? "";
 
         // 3. Transport & Hostel
-        if (name == "route list") 
+        if (name == "route list")
         {
             var vid = student.Transport?.VehicleID ?? 0;
             return vid != 0 ? vid.ToString() : (student.Transport?.RouteID?.ToString() ?? "");
@@ -100,8 +100,8 @@
 
         if (category == "Basic")
         {
-            return allActive.Where(f => (f.IsSystemField && IsMatch(f.FieldName, new[] { "Roll", "Class", "Section", "First", "Middle", "Last", "Gender", "DOB", "Birth", "Category", "Religion", "Caste", "Mobile", "Email", "Admission", "Blood", "House", "Height", "Weight", "Measurement", "Scholar", "Enroll", "Photo" }) 
-                                     && !IsMatch(f.FieldName, new[] { "Father", "Mother", "Guardian", "User", "Pass", "Bank", "IFSC", "National", "Local", "RTE", "Previous", "Note" })) 
+            return allActive.Where(f => (f.IsSystemField && IsMatch(f.FieldName, new[] { "Roll", "Class", "Section", "First", "Middle", "Last", "Gender", "DOB", "Birth", "Category", "Religion", "Caste", "Mobile", "Email", "Admission", "Blood", "House", "Height", "Weight", "Measurement", "Scholar", "Enroll", "Photo" })
+                                     && !IsMatch(f.FieldName, new[] { "Father", "Mother", "Guardian", "User", "Pass", "Bank", "IFSC", "National", "Local", "RTE", "Previous", "Note" }))
                                      || (!f.IsSystemField && f.DisplayOrder < 100)).OrderBy(f => f.DisplayOrder).ToList();
         }
         else if (category == "Transport")
@@ -122,7 +122,7 @@
             return allActive.Where(f => f.DisplayOrder >= 100 || IsMatch(f.FieldName, new[] { "Bank", "IFSC", "National", "Local", "RTE", "Previous", "Note" }))
                             .OrderBy(f => f.DisplayOrder).ToList();
         }
-        
+
         return new List<FieldModel>();
     }
 
@@ -252,7 +252,7 @@
             var assignments = (viewBag.VehicleAssignments as List<VehicleAssignViewModel>) ?? new List<VehicleAssignViewModel>();
             var grouped = assignments.GroupBy(a => a.RouteName).OrderBy(g => g.Key);
             var routeVal = GetVal("transportrouteid", student);
-            
+
             builder.AppendHtml($"<input type='hidden' id='hdnTransportRouteID' name='TransportRouteID' value='{routeVal}'>");
             builder.AppendHtml($"<select id='ddlRoute' name='{name}' class='form-select form-control' {req}><option value=''>Select Bus/Route</option>");
             foreach (var group in grouped)
@@ -365,7 +365,7 @@
         }
         else
             builder.AppendHtml($"<input type='text' name='{name}' class='form-control' {req} value='{existingVal}'>");
-        
+
         builder.AppendHtml($@"<div class='invalid-feedback'>Please provide a valid {name}.</div>
                             </div>");
         return builder;
@@ -377,46 +377,96 @@
     bool isEdit = ViewBag.IsEdit ?? false;
 }
 <style>
+    
     /* Hide Bootstrap valid feedback icons (ticks) */
-    .was-validated .form-control:valid, 
+    .was-validated .form-control:valid,
     .was-validated .form-select:valid {
         background-image: none !important;
         border-color: #dee2e6 !important;
     }
-    .was-validated .form-control:invalid, 
+
+    .was-validated .form-control:invalid,
     .was-validated .form-select:invalid {
         border-color: #dc3545 !important;
+    }
+
+    /* ===== Sticky header + sticky tabs (mobile) ===== */
+    .page-sticky-header {
+        position: sticky;
+        top: 55px; /* matches --topbar-height, navbar is always this height */
+        z-index: 1030;
+        background: #fff;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .card-header.tabs-sticky {
+        position: sticky;
+        z-index: 1025;
+        background: #fff;
+        /* top value is set dynamically by JS to sit right below .page-sticky-header */
+    }
+
+    /* Horizontal scroll for the tab list instead of wrapping */
+    .tab-scroll {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+        padding-bottom: 10px;
+    }
+
+        .tab-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .tab-scroll .nav-item {
+            flex: 0 0 auto;
+        }
+
+        .tab-scroll .nav-link {
+            white-space: nowrap;
+        }
+
+    @@media (max-width: 767.98px) {
+        .page-sticky-header .btn.top-btn {
+            font-size: 13px;
+            padding: 6px 10px;
+        }
     }
 </style>
 
 <!-- Page Header -->
-<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2 p-2 sticky-header-wrapper" id="pageStickyHeader">
     <div>
         <h6 class="fw-bold mb-0">Student Admission</h6>
     </div>
-    <div>
+    <div class="responsive-btn-group">
         <button type="submit" form="admissionForm" class="btn btn-success d-inline-flex align-items-center top-btn"><i class="ti ti-cloud me-1"></i> @(isEdit ? "Update" : "Save")</button>
         @* <a href="/StudentInformation/ImportStudent" class="btn btn-primary d-inline-flex align-items-center"><i class="ti ti-upload me-1"></i> Import Student</a> *@
-        <a href="/StudentInformation/Students" class="btn btn-secondary d-inline-flex align-items-center top-btn"><i class="ti ti-list me-1"></i> Student List</a>
-        
+        <a href="/StudentInformation/Students" class="btn btn-secondary d-inline-flex align-items-center top-btn"><i class="ti ti-arrow-left me-1"></i> Back</a>
+
+    </div>
+    <div id="tabsStickyBar">
+        <ul class="nav nav-pills gap-2 tab-scroll">
+            <li class="nav-item"><a href="#basicInfo" data-bs-toggle="pill" class="nav-link active">Basic Info</a></li>
+            <li class="nav-item"><a href="#transportInfo" data-bs-toggle="pill" class="nav-link">Transport</a></li>
+            <li class="nav-item"><a href="#hostelInfo" data-bs-toggle="pill" class="nav-link">Hostel</a></li>
+            <li class="nav-item"><a href="#fees" data-bs-toggle="pill" class="nav-link">Fees Details</a></li>
+            <li class="nav-item"><a href="#parentGurdian" data-bs-toggle="pill" class="nav-link">Parent Guardian</a></li>
+            <li class="nav-item"><a href="#addressInfo" data-bs-toggle="pill" class="nav-link">Address</a></li>
+            <li class="nav-item"><a href="#misce" data-bs-toggle="pill" class="nav-link">Miscellaneous</a></li>
+            <li class="nav-item"><a href="#uploadDoc" data-bs-toggle="pill" class="nav-link">Upload Documents</a></li>
+        </ul>
     </div>
 </div>
 
 <div class="row">
     <div class="col-xl-12">
         <div class="card shadow-tbl-outer">
-            <div class="card-header">
-                <ul class="nav nav-pills gap-2">
-                    <li class="nav-item"><a href="#basicInfo" data-bs-toggle="pill" class="nav-link active">Basic Info</a></li>
-                    <li class="nav-item"><a href="#transportInfo" data-bs-toggle="pill" class="nav-link">Transport</a></li>
-                    <li class="nav-item"><a href="#hostelInfo" data-bs-toggle="pill" class="nav-link">Hostel</a></li>
-                    <li class="nav-item"><a href="#fees" data-bs-toggle="pill" class="nav-link">Fees Details</a></li>
-                    <li class="nav-item"><a href="#parentGurdian" data-bs-toggle="pill" class="nav-link">Parent Guardian</a></li>
-                    <li class="nav-item"><a href="#addressInfo" data-bs-toggle="pill" class="nav-link">Address</a></li>
-                    <li class="nav-item"><a href="#misce" data-bs-toggle="pill" class="nav-link">Miscellaneous</a></li>
-                    <li class="nav-item"><a href="#uploadDoc" data-bs-toggle="pill" class="nav-link">Upload Documents</a></li>
-                </ul>
-            </div>
+               
             <div class="card-body">
                 <form id="admissionForm" class="needs-validation" novalidate>
                     <input type="hidden" id="hdnStudentID" value="@(student?.BasicInfo?.StudentID ?? 0)" />
@@ -425,9 +475,9 @@
                     @if (Model == null || !Model.Any())
                     {
                         <div class="alert alert-warning m-3">
-                            <i class="ti ti-alert-triangle me-1"></i> No active fields found for Student Admission. 
-                            Please ensure that fields are configured and marked as <strong>Active</strong> in 
-                            <a href="/Settings/SystemFields" class="alert-link">Settings > System Fields</a> or 
+                            <i class="ti ti-alert-triangle me-1"></i> No active fields found for Student Admission.
+                            Please ensure that fields are configured and marked as <strong>Active</strong> in
+                            <a href="/Settings/SystemFields" class="alert-link">Settings > System Fields</a> or
                             <a href="/Settings/CustomFields" class="alert-link">Custom Fields</a>.
                         </div>
                     }
@@ -490,7 +540,7 @@
 
                         <!-- Fees Details (Kept static for now as requested for field visibility only) -->
                         <div class="tab-pane" id="fees">
-                             <div class="alert alert-info">Fees configuration will be based on Class selection.</div>
+                            <div class="alert alert-info">Fees configuration will be based on Class selection.</div>
                         </div>
 
                         <!-- Parent Guardian -->
@@ -509,7 +559,7 @@
                                 {
                                     @RenderField(field, student, ViewBag)
                                 }
-                                
+
                                 @* Render Mother Fields *@
                                 @foreach (var field in GetFields("Guardian", Model).Where(f => f.FieldName.Contains("Mother", StringComparison.OrdinalIgnoreCase)))
                                 {
@@ -625,7 +675,9 @@
     <script src="~/assets/plugins/sweetalert2/sweetalert2.all.min.js"></script>
     <script src="~/js/inline-form-validation.js"></script>
     <script>
-        $(document).ready(function() {
+          
+        $(document).ready(function() 
+        {       
             // Sibling Modal Logic
             $('#siblingClass').on('change', function() {
                 var classId = $(this).val();
@@ -655,8 +707,8 @@
 
                 if (classId && sectionId) {
                     var excludeId = $('#hdnStudentID').val();
-                    $.getJSON('/StudentInformation/GetStudentList', { 
-                        classId: classId, 
+                    $.getJSON('/StudentInformation/GetStudentList', {
+                        classId: classId,
                         sectionId: sectionId,
                         excludeStudentId: excludeId
                     }, function(data) {
@@ -685,7 +737,7 @@
                 var data = $(this).data('student');
                 if (data && data.basicInfo) {
                     var b = data.basicInfo;
-                    
+
                     // Link via ParentUserID
                     $('#hdnParentUserID').val(b.parentUserID || 0);
 
@@ -694,7 +746,7 @@
                     $('input[name="Father Phone"]').val(b.fatherPhone);
                     $('input[name="Father Mobile"]').val(b.fatherPhone);
                     $('input[name="Father Occupation"]').val(b.fatherOccupation);
-                    
+
                     $('input[name="Mother Name"]').val(b.motherName);
                     $('input[name="Mother Phone"]').val(b.motherPhone);
                     $('input[name="Mother Mobile"]').val(b.motherPhone);
@@ -741,7 +793,7 @@
                 var selectedOption = $(this).find('option:selected');
                 var routeId = selectedOption.data('routeid');
                 $('#hdnTransportRouteID').val(routeId || '');
-                
+
                 var $pickup = $('#ddlPickupPoint');
                 var selectedVal = $pickup.data('selected');
                 $pickup.html('<option value="">Select Pickup Point</option>');
@@ -778,13 +830,13 @@
                 var val = $(this).val();
                 if (val === 'Father' || val === 'Mother') {
                     $('#txtGuardianRelation').val(val).prop('readonly', true);
-                    
+
                     // Copy fields
                     $('input[name="Guardian Name"]').val($('input[name="' + val + ' Name"]').val());
-                    
+
                     var phone = $('input[name="' + val + ' Phone"]').val() || $('input[name="' + val + ' Mobile"]').val();
                     var mobile = $('input[name="' + val + ' Mobile"]').val() || $('input[name="' + val + ' Phone"]').val();
-                    
+
                     $('input[name="Guardian Phone"]').val(phone);
                     $('input[name="Guardian Mobile"]').val(mobile);
                     $('input[name="Guardian Occupation"]').val($('input[name="' + val + ' Occupation"]').val());
@@ -860,12 +912,12 @@
             // Form Submit
             $('#admissionForm').on('submit', async function(e) {
                 e.preventDefault();
-                
+
                 var form = this;
                 if (!form.checkValidity()) {
                     e.stopPropagation();
                     $(form).addClass('was-validated');
-                    
+
                     var firstError = $(form).find(':invalid').first();
                     if (firstError.length > 0) {
                         var tabPane = firstError.closest('.tab-pane');
@@ -911,7 +963,7 @@
                         formData.FieldValues[name] = input.val();
                     }
                 });
-                
+
                 await Promise.all(inputPromises);
 
                 // Custom Validation for Mobile and Email

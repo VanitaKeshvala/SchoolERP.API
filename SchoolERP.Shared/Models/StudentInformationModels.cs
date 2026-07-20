@@ -98,6 +98,7 @@ namespace SchoolERP.Shared.Models
         public int StudentCategoryID { get; set; }
         public string StudentCategoryName { get; set; } = "";
         public int SessionID { get; set; }
+        public int CompanyID { get; set; }
     }
 
     public class StudentCategoryPageViewModel

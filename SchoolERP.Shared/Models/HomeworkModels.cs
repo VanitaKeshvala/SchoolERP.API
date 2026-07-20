@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace SchoolERP.Shared.Models
 {
@@ -27,12 +28,21 @@ namespace SchoolERP.Shared.Models
         public DateTime HomeworkDate { get; set; }
         public DateTime SubmissionDate { get; set; }
         public DateTime? EvaluationDate { get; set; }
+       
         public decimal? MaxMarks { get; set; }
         public string? AttachmentPath { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; }
         public string CreatedByName { get; set; } = string.Empty;
         public DateTime CreatedOn { get; set; }
+        public int? Status { get; set; }
+        public int? SubmissionID { get; set; }
+        public string? EvaluationByName { get; set; }
+
+        public string? Note { get; set; }
+        public string? MarkSobtained{ get; set; }
+
+        public List<HomeworkAttachmentViewModel> AttechmetDocument { get; set; } = new List<HomeworkAttachmentViewModel>();
     }
 
     public class HomeworkUpsertRequest
@@ -64,8 +74,35 @@ namespace SchoolERP.Shared.Models
         // Attachment will be handled separately via file upload if needed, 
         // or passed as a path string.
         public string? AttachmentPath { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
+
+    public class HomeworkAttachmentUpsertRequest 
+    {
+        public int HomeworkID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string AttachmentsJson { get; set; } = "[]";
+    }
+    public class HomeworkAttachmentViewModel 
+    {
+        public int AttachmentID { get; set; }
+        public int HomeworkID { get; set; }
+        public string AttachmentPath { get; set; } = string.Empty;
+        public string AttachmentName { get; set; } = string.Empty;
+        public string AttachmentType { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+
+    public class HomeWorkAddDetailsViewModel
+    {
+        public int? HomeworkID { get; set; }
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public HomeworkViewModel Homeworks { get; set; } = new HomeworkViewModel();
+        public List<HomeworkAttachmentViewModel> HomeWorkSubmissionAttechment { get; set; } = new List<HomeworkAttachmentViewModel>();
+    }
     public class HomeworkPageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
@@ -89,5 +126,151 @@ namespace SchoolERP.Shared.Models
         public HomeworkViewModel Homeworks { get; set; } = new HomeworkViewModel();
         public HomeworkViewModel EditHomeworks { get; set; } = new HomeworkViewModel();
         public List<MstClassViewModel> Classes { get; set; } = new List<MstClassViewModel>();
+        
     }
+
+    public class HomeworkSubmissionUpsertRequest
+    {
+        public int SubmissionID { get; set; }
+        public int HomeworkID { get; set; }
+        public int StudentID { get; set; }
+
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+
+        public string? Message { get; set; }
+        public DateTime? SubmittedOn { get; set; }
+        public int? Status { get; set; }
+        public string? Remark { get; set; }
+        public decimal? MarksObtained { get; set; }
+        public DateTime? EvaluationDate { get; set; }
+        public int? EvaluatedBy { get; set; }
+
+        public bool IsActive { get; set; } = true;
+
+        public int UserID { get; set; }
+        public string? IPAddress { get; set; }
+    }
+
+    public class HomeworkSubmissionAttachmentUpsertRequest
+    {
+        public int SubmissionID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public string AttachmentsJson { get; set; } = "[]";
+    }
+
+    public class HomeworkEvaluationRow
+    {
+        public int SubmissionID { get; set; }
+        public decimal? MarksObtained { get; set; }
+        public string? Remark { get; set; }
+    }
+
+    public class HomeworkEvaluateRequest
+    {
+        public int HomeworkID { get; set; }
+        public DateTime EvaluationDate { get; set; }
+        public int EvaluatedBy { get; set; }
+        public List<HomeworkEvaluationRow> Evaluations { get; set; } = new();
+
+        // Filled server-side, not by the client
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+    }
+
+
+    public class HomeworkSubmissionEvaluateUpsertRequest
+    {
+        public int HomeworkID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public DateTime EvaluationDate { get; set; }
+        public int? EvaluatedBy { get; set; }
+        public string EvaluationsJson { get; set; } = "[]";
+        public int? UserID { get; set; }
+        public string? IPAddress { get; set; }
+    }
+    public class HomeworkSubmission 
+    {
+        public int SubmissionID { get; set; }
+        public int? HomeworkID { get; set; }
+        public int? StudentID { get; set; }
+        public string? Message { get; set; }
+        public DateTime? SubmittedOn { get; set; }
+        public int? Status { get; set; }
+        public string? Remark { get; set; }
+        public decimal? MarksObtained { get; set; }
+        public DateTime? EvaluationDate { get; set; }
+        public int? EvaluatedBy { get; set; }
+        public int? CompanyID { get; set; }
+        public int? SessionID { get; set; }
+        public bool? IsActive { get; set; }
+        public bool? IsDelete { get; set; }
+        public int CreatedBy { get; set; }
+        public DateTime? CreatedOn { get; set; }
+        public int? ModifiedBy { get; set; }
+        public DateTime? ModifiedOn { get; set; }
+    }
+    public class HomeworkEvaluateViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public int? HomeworkID { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public HomeworkViewModel Homeworks { get; set; } = new HomeworkViewModel();
+
+        public List<HomeworkSubmission> Submissions { get; set; }= new List<HomeworkSubmission>();
+        public List<HomeworkSubmissionListDto> HomeworkSubmissions { get; set; }= new List<HomeworkSubmissionListDto>();
+    }
+
+    public class HomeworkSubmissionListDto
+    {
+        public int Result { get; set; }
+        public int SubmissionID { get; set; }
+        public int StudentID { get; set; }
+        public string? FullName { get; set; }
+        public string? FatherName { get; set; }
+        public string? AdmissionNo { get; set; }
+        public string? RollNo { get; set; }
+        public int ClassID { get; set; }
+        public int SectionID { get; set; }
+        public DateTime? SubmittedOn { get; set; }
+        public string? Remark { get; set; }
+        public string? Message { get; set; }
+        public decimal? MarksObtained { get; set; }
+
+        // Raw JSON string as returned by SQL Server's FOR JSON PATH
+        public string? Attachments { get; set; }
+
+        // Pagination
+        public int TotalRecords { get; set; }
+        public int CurrentPage { get; set; }
+        public int PageSize { get; set; }
+        public int TotalPage { get; set; }
+
+        // Deserialized attachments — not mapped by Dapper directly,
+        // populate this after reading (see helper below)
+        //[JsonIgnore]
+        public List<HomeworkAttachmentDto> AttachmentList { get; set; } = new();
+    }
+
+    public class HomeworkAttachmentDto
+    {
+        [JsonPropertyName("ATTACHMENTID")]
+        public int AttachmentID { get; set; }
+
+        [JsonPropertyName("ATTACHMENTNAME")]
+        public string? AttachmentName { get; set; }
+
+        [JsonPropertyName("ATTACHMENTPATH")]
+        public string? AttachmentPath { get; set; }
+
+        [JsonPropertyName("ATTACHMENTTYPE")]
+        public string? AttachmentType { get; set; }
+    }
+
+    // Optional wrapper if you want the paged result exposed as a clean object
+    // instead of repeating TotalRecords/CurrentPage/PageSize/TotalPage on every row
+    
 }

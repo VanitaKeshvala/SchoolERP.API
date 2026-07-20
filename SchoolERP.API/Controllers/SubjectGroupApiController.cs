@@ -119,5 +119,36 @@ namespace SchoolERP.API.Controllers.Api
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             return userIdClaim != null ? int.Parse(userIdClaim.Value) : 1;
         }
+
+
+        [HttpGet("GetAllSubjectByClassandSectionId")]
+        public IActionResult GetAllSubjectByClassandSectionId(int companyId, int sessionId, int classId, int sectionId)
+        {
+            try
+            {
+                int userId = GetCurrentUserId();
+                if (companyId == null || companyId == 0)
+                {
+                    companyId = _companyService.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (sessionId == null || sessionId == 0)
+                {
+                    sessionId = _sessionService.GetUserCurrentSession(userId) ?? 0;
+                }
+
+                var result = _service.GetAllSubjectByClassandSectionId(companyId, sessionId, classId, sectionId);
+
+                return Ok(new ApiResponse<List<DropdownModel>>
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+
+        }
     }
 }

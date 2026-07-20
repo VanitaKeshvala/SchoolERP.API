@@ -202,7 +202,7 @@ namespace SchoolERP.API.Controllers.Api
         /// Provides a list of all staff members. 
         /// It can be filtered to show only active or only inactive staff.
         /// </summary>
-        public IActionResult GetAllStaff(bool? isActive = null,int? sessionID=null)
+        public IActionResult GetAllStaff(bool? isActive = null,int? sessionID=null,int? companyId=null, int? staffId=null)
         {
             try
             {
@@ -210,7 +210,11 @@ namespace SchoolERP.API.Controllers.Api
                 {
                     sessionID = GetSessionId();
                 }
-                var data = _hrService.GetAllStaff(GetCompanyId(), sessionID.Value);
+                if (companyId == null)
+                {
+                    companyId = GetCompanyId();
+                }
+                var data = _hrService.GetAllStaff(companyId.Value, sessionID.Value, staffId);
                 if (isActive.HasValue)
                 {
                     data = data.Where(s => s.IsActive == isActive.Value).ToList();

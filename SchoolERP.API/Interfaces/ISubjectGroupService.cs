@@ -32,5 +32,6 @@ namespace SchoolERP.API.Interfaces
         /// Turns a subject group's active status on or off.
         /// </summary>
         (bool success, string message) ToggleStatus(StatusUpdateRequest request);
+        List<DropdownModel> GetAllSubjectByClassandSectionId(int companyId, int sessionId, int classId, int sectionId);
     }
 }

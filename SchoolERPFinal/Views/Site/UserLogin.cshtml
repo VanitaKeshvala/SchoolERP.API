@@ -1,0 +1,259 @@
+﻿@*
+    ======================================================================
+    VIEW: Auth / Login.cshtml
+    PURPOSE: User interface rendering for the Auth module.
+    ======================================================================
+*@
+@{
+    Layout = null; // Login page doesn't use the shared layout
+}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Meta Tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Login Form | School ERP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Dreams Technologies">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="~/assets/img/favicon.png">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="~/assets/css/bootstrap.min.css">
+
+    <!-- Tabler Icon CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/tabler-icons/tabler-icons.min.css">
+
+    <!-- Fontawesome CSS -->
+    <link rel="stylesheet" href="~/assets/plugins/fontawesome/css/all.min.css">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="~/assets/css/style.css" id="app-style">
+
+    <style>
+        .auth-bg .login-backgrounds .cover-img {
+            top: 0;
+            object-fit: cover;
+            height: 100%;
+            object-position: right;
+        }
+
+        .auth-bg .login-backgrounds .authentication-card .authen-overlay-item {
+            padding: 40px;
+        }
+
+        #btnTogglePassword {
+            cursor: pointer;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <!-- Begin Wrapper -->
+    <div class="main-wrapper auth-bg position-relative overflow-hidden">
+
+        <!-- Start Content -->
+        <div class="container-fuild position-relative z-1">
+            <div class="w-100 overflow-hidden position-relative flex-wrap d-block vh-100 bg-white">
+                <!-- start row-->
+                <div class="row">
+                    <div class="col-lg-8 p-0">
+                        <div class="login-backgrounds login-covers bg-primary d-lg-flex align-items-center justify-content-center d-none flex-wrap p-4 position-relative h-100 z-0">
+                            <div class="authentication-card w-100">
+                                <div class="authen-overlay-item w-100">
+                                    <div class="authen-head text-center">
+                                        <h1 class="text-white fs-24 fw-bold mb-3">Connecting Parents, Students & Schools</h1>
+                                        <p class="text-light fw-normal text-light"> A School ERP (Enterprise Resource Planning) system often includes a text/SMS messaging feature to improve communication between the school, students, parents, and staff. </p>
+                                    </div>
+                                    <!-- <div class="mt-4 mx-auto authen-overlay-img">
+                                        <img src="https://cdni.iconscout.com/illustration/premium/thumb/erp-illustration-svg-download-png-7201956.png" alt="Img">
+                                    </div> -->
+                                </div>
+                            </div>
+                            <img src="https://edumarshal.com/wp-content/uploads/2024/12/curriculam_banner-1024x384.png" alt="cover-imgs-2" class="img-fluid cover-img">
+                        </div>
+                    </div>
+                    <!-- end row-->
+
+                    <div class="col-lg-4 col-md-12 col-sm-12">
+                        <div class="row justify-content-center align-items-center overflow-auto flex-wrap vh-100">
+                            <div class="col-md-12 mx-auto">
+                                <form id="loginForm" action="index.html" class="d-flex justify-content-center align-items-center">
+                                    <div class="d-flex flex-column justify-content-lg-center p-4 p-lg-0 pb-0 flex-fill">
+                                        <div class=" mx-auto mb-4 text-center">
+                                            <img src="~/assets/img/logo.svg" width="200" class="img-fluid" alt="Logo">
+                                        </div>
+                                        <div class="card border-0 p-lg-3 shadow-md rounded-3 m-0">
+                                            <div class="card-body">
+                                                <div class="text-center mb-3">
+                                                    <h5 class="mb-1 fs-20 fw-bold">Sign In</h5>
+                                                    <p class="mb-0">Please enter below details to access the dashboard</p>
+                                                </div>
+                                                <div id="loginErrorBox" class="alert alert-danger py-2 px-3 small d-none" role="alert"></div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Username</label>
+                                                    <div class="position-relative">
+                                                        <div class="pass-group input-group position-relative border rounded">
+                                                            <span class="input-group-text bg-white border-0">
+                                                                <i class="ti ti-user text-dark fs-14"></i>
+                                                            </span>
+                                                            <input type="text" id="txtUsername" class="form-control ps-0 border-0" placeholder="Enter Username">
+                                                            
+                                                        </div>
+                                                    </div>
+                                                   
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Password</label>
+                                                    <div class="position-relative">
+                                                        <div class="pass-group input-group position-relative border rounded">
+                                                            <span class="input-group-text bg-white border-0">
+                                                                <i class="ti ti-lock text-dark fs-14"></i>
+                                                            </span>
+                                                            <input type="password" id="txtPassword" class="pass-input form-control ps-0 border-0" placeholder="****************">
+                                                            <button type="button" class="input-group-text bg-white border-0" id="btnTogglePassword" aria-label="Show or hide password">
+                                                                <i class="ti ti-eye-off text-dark fs-14"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="form-check form-check-md mb-0">
+                                                            <input class="form-check-input" id="remember_me" type="checkbox">
+                                                            <label for="remember_me" class="form-check-label mt-0 text-dark">Remember Me</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <a href="forgot-password-cover.html" class="text-primary">Forgot Password?</a>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <button type="submit" id="btnLogin" class="btn bg-primary text-white w-100">Login</button>
+                                                </div>
+                                            </div>
+                                            <!-- end card body -->
+                                        </div>
+                                        <!-- end card -->
+                                    </div>
+                                </form>
+                                <p class="fs-14 text-dark text-center mt-4">Copyright &copy; 2026 - All right reserved Shivkarma Infotech Solutions.</p>
+                            </div>
+                            <!-- end row-->
+                        </div>
+
+                    </div>
+                </div>
+                <!-- end row-->
+
+            </div>
+        </div>
+        <!-- End Content -->
+
+    </div>
+    <!-- End Wrapper -->
+    <!-- jQuery -->
+    <script src="~/assets/js/jquery-3.7.1.min.js"></script>
+
+    <!-- Bootstrap Core JS -->
+    <script src="~/assets/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App Logic -->
+    <script>
+        function setLoginError(message) {
+            const box = document.getElementById('loginErrorBox');
+            if (!box) return;
+            box.textContent = message || 'Login failed. Please try again.';
+            box.classList.remove('d-none');
+        }
+
+        function clearLoginError() {
+            const box = document.getElementById('loginErrorBox');
+            if (!box) return;
+            box.textContent = '';
+            box.classList.add('d-none');
+        }
+
+        const btnTogglePwd = document.getElementById('btnTogglePassword');
+        if (btnTogglePwd) {
+            btnTogglePwd.addEventListener('click', function () {
+                const pwd = document.getElementById('txtPassword');
+                const icon = this.querySelector('i');
+                if (!pwd || !icon) return;
+                if (pwd.type === 'password') {
+                    pwd.type = 'text';
+                    icon.classList.remove('ti-eye-off');
+                    icon.classList.add('ti-eye');
+                } else {
+                    pwd.type = 'password';
+                    icon.classList.remove('ti-eye');
+                    icon.classList.add('ti-eye-off');
+                }
+            });
+        }
+
+        $(document).ready(function ()
+        {
+            const apiBaseUrl = '@ViewBag.ApiBaseUrl';
+            $('#loginForm').on('submit', function (e) {
+                e.preventDefault();
+                clearLoginError();
+
+                const loginData = {
+                    username: $('#txtUsername').val(),
+                    password: $('#txtPassword').val()
+                };
+
+                // Asynchronously intercepts the submit action and tunnels credentials via JSON to 'AuthController'
+                $.ajax({
+                    url: '/auth/login',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(loginData),
+                    success: function (response) {
+                        // Persists the JWT and standard profile tuple inside the browser's persistent cache.
+                        // Essential for constructing HTTP Bearer headers on subsequent internal calls.
+                        console.log(response);
+                        const token = response?.data?.token;
+                        if (token) {
+                            localStorage.setItem('token', token);
+                            // Make JWT available to server-rendered MVC pages (sidebar) via cookie.
+                            document.cookie = `token=${token}; path=/; SameSite=Lax`;
+                        }
+                        localStorage.setItem('user', JSON.stringify(response?.data ?? response));
+                             // ── Redirect to DashboardURL or default ───────────────
+                            // redirectUrl is set by server based on user's DefaultDashboardID
+                            const redirectUrl = response.redirectUrl || '/Dashboard/Index';
+                            const finalUrl = redirectUrl.startsWith('/')
+                                ? redirectUrl
+                                : '/' + redirectUrl;
+
+                            window.location.href = finalUrl;
+                        // Redirect to dashboard
+                        //window.location.href = '/Dashboard/Index';
+                    },
+                    error: function (xhr) {
+                        const message =
+                            xhr?.responseJSON?.message ||
+                            xhr?.responseJSON?.Message ||
+                            xhr?.responseText ||
+                            'Login failed. Please check username and password.';
+                        setLoginError(message);
+                    }
+                });
+            });
+
+            $('#txtUsername, #txtPassword').on('input', clearLoginError);
+        });
+    </script>
+</body>
+
+</html>

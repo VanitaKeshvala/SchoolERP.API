@@ -1,0 +1,13 @@
+﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+
+namespace SchoolERP.API.Interfaces
+{
+    public interface IMediaService
+    {
+        Task<ApiResponse> Upsert(
+           MediaRequest request,
+           int userId);
+        Task<PagedResult<MediaViewModel>> GetAllMediaWithPage(SearchRequest request);
+    }
+}

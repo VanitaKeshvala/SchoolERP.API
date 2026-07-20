@@ -670,7 +670,7 @@ namespace SchoolERP.API.Services
         }
 
         // --- Staff ---
-        public List<HRStaffViewModel> GetAllStaff(int companyId, int sessionId)
+        public List<HRStaffViewModel> GetAllStaff(int companyId, int sessionId,int? staffId)
         {
             try
             {
@@ -694,7 +694,8 @@ namespace SchoolERP.API.Services
                     {
                         CompanyID = companyId,
                         SessionID = sessionId,
-                        IncludeDeleted = false
+                        IncludeDeleted = false,
+                        StaffID= staffId
                     },
                     commandType: CommandType.StoredProcedure
                 ).ToList();

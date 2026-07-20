@@ -359,6 +359,31 @@ builder.Services.AddHttpClient<ILibrarySeriesClientService, LibrarySeriesClientS
     client.BaseAddress = client.BaseAddress = new Uri(
         builder.Configuration["ApiSettings:BaseUrl"]);
 });
+builder.Services.AddHttpClient<IDailyAssignmentClientService, DailyAssignmentClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ILessonPlanClientService, LessonPlanClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<ITopicClientService, TopicClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IManageLessonPlanClientService, ManageLessonPlanClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
+builder.Services.AddHttpClient<IMediaClientService, MediaClientService>(client =>
+{
+    client.BaseAddress = client.BaseAddress = new Uri(
+        builder.Configuration["ApiSettings:BaseUrl"]);
+});
 builder.Services.AddHttpClient("SchoolERPApi", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);

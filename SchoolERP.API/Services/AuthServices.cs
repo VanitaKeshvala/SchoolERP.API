@@ -61,7 +61,31 @@ namespace SchoolERP.API.Services
                         ? user.UserTypeName
                         : string.Empty;
 
-                int? staffId = 17;
+                int? staffId = 18;
+
+
+                // Result set 3: role-specific context (present only for Student/Parent/Staff)
+                // multi.IsConsumed is false only if the SP actually returned this result set,
+                // but since the SP always issues a SELECT for known roles, just check the grid is not empty.
+                StudentRoleContextDto? studentRoleContextDto = null;
+                if (userTypeName.Equals("Student", StringComparison.OrdinalIgnoreCase)
+                    || userTypeName.Equals("Parent", StringComparison.OrdinalIgnoreCase))
+                {
+                    studentRoleContextDto = await multi.ReadFirstOrDefaultAsync<StudentRoleContextDto>();
+                    if (studentRoleContextDto != null)
+                    {
+                        user.StudentID = studentRoleContextDto.StudentID;
+                        user.ParentUserID = studentRoleContextDto.ParentUserID;
+                    }
+                }
+                else if (userTypeName.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+                {
+                    var staffCtx = await multi.ReadFirstOrDefaultAsync<StaffRoleContextDto>();
+                    if (staffCtx != null)
+                    {
+                        user.StaffID = staffCtx.StaffID;
+                    }
+                }
 
                 // Generate JWT token for authenticated user
                 user.Token = _jwtHelper.GenerateToken(
@@ -71,7 +95,8 @@ namespace SchoolERP.API.Services
                     user.UserTypeID,
                     user.DefaultRoleID,
                     userTypeName,
-                    user.StaffID= staffId);
+                    user.StaffID= staffId,
+                    studentRoleContextDto= studentRoleContextDto);
 
                 return Common.ApiResponse<UserSessionModel?>
                     .SuccessResponse(user, loginResult.Message);

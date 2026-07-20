@@ -49,9 +49,13 @@ namespace SchoolERP.Net.Controllers
         private int GetUserId() => int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value, out var id) ? id : 0;
         private async Task<int> GetCompanyId()
         {
-            var response = await _companyService.GetUserCurrentCompanyAsync();
-            return response?.Data ?? 0;
-        }
+            if (CurrentCompanyId == null) 
+            {
+                var response = await _companyService.GetUserCurrentCompanyAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentCompanyId;
+        } 
         private async Task<int> GetSessionId()
         {
             if (CurrentSessionId == null)
@@ -60,6 +64,11 @@ namespace SchoolERP.Net.Controllers
                 return response?.Data ?? 0;
             }
             return CurrentSessionId;
+        }
+        private int? GetStaffIDForLogin()
+        {
+            var staffClaim = User.FindFirst("StaffID")?.Value;
+            return int.TryParse(staffClaim, out var staffId) ? staffId : null;
         }
         public async Task<IActionResult> StudentCertificate()
         {
@@ -158,8 +167,9 @@ namespace SchoolERP.Net.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStudentList(int? classId = null, int? sectionId = null, string? searchTerm = null)
         {
+            var companyId = await GetCompanyId();
             var sessionId = await GetSessionId();
-            var res = await _studentInfoClient.GetStudentListAsync(sessionId, classId, sectionId, searchTerm);
+            var res = await _studentInfoClient.GetStudentListAsync(companyId,sessionId, classId, sectionId, searchTerm);
             return Json(res);
         }
 
@@ -189,7 +199,9 @@ namespace SchoolERP.Net.Controllers
         public async Task<IActionResult> GetAllStaff()
         {
             var sessionId = await GetSessionId();
-            var res = await _hrClient.GetAllStaffAsync(sessionId);
+            var companyId = await GetCompanyId();
+            var staffId = GetStaffIDForLogin();
+            var res = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
             return Json(res);
         }
 

@@ -356,7 +356,7 @@
             var hBg = hColour + "18";
 
             // Normal period slots only (exclude the sentinel holiday row)
-            var normalSlots = daySlots.Where(x => !x.IsHoliday).ToList();
+            var normalSlots  = Model.TimeTableSlots.Where(x => x.Day == day).OrderBy(x => x.StartTime).ToList(); 
 
             <div class="day-card">
 

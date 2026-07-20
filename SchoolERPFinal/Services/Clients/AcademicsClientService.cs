@@ -71,5 +71,10 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<PagedResult<StudentPromotionViewModel>>> GetForPromotionPageIndexAsync(SearchPromotedStudent req)
            => PostAsync<PagedResult<StudentPromotionViewModel>>("api/AcademicsApi/GetForPromotionPageIndex", req);
+
+        public async Task<ApiResponse<TimeTableViewModel>> GetTimeTableByIdAsync(int companyId, int sessionId, int timeTableID)
+        {
+            return await GetAsync<TimeTableViewModel>($"api/AcademicsApi/GetTimeTableById?companyId={companyId}&sessionId={sessionId}&timeTableID={timeTableID}");
+        }
     }
 }

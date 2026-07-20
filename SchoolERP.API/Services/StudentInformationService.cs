@@ -326,7 +326,7 @@ namespace SchoolERP.API.Services
         /// <returns>
         /// Returns a list of student categories.
         /// </returns>
-        public List<StudentCategoryViewModel> GetAllStudentCategories(
+        public List<StudentCategoryViewModel>  GetAllStudentCategories(
             int companyId,
             int sessionId)
         {

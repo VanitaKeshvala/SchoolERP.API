@@ -19,6 +19,7 @@ namespace SchoolERP.Shared.Models
         PostalReceive,
         LeaveApp,
         BookCoverPage,
+        Homework,
     }
 
     public enum FolderNameModule 

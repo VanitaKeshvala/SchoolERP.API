@@ -86,6 +86,7 @@ namespace SchoolERP.Shared.Models
 
     public class BookDetailsResult
     {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public BookDetailsDto? Book { get; set; }
         public List<IssueHistoryDto> IssueHistory { get; set; } = new();
     }

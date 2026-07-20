@@ -41,5 +41,7 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<PagedResult<MstClassViewModel>>("api/ClassApi/GetAllClassWithPage", request);
         }
+
+
     }
 }

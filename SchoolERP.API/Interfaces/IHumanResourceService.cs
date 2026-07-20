@@ -44,7 +44,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Finds and returns the details of a specific department using its unique ID.
         /// </summary>
-        HRDepartmentViewModel? GetDepartmentByID(int id);
+        HRDepartmentViewModel? GetDepartmentByID(int id); 
 
         /// <summary>
         /// Adds a new department or updates an existing one in the database.
@@ -93,7 +93,7 @@ namespace SchoolERP.API.Interfaces
         /// <summary>
         /// Retrieves a complete list of all staff members from the database.
         /// </summary>
-        List<HRStaffViewModel> GetAllStaff(int companyId, int sessionId);
+        List<HRStaffViewModel> GetAllStaff(int companyId, int sessionId, int? staffId);
 
         /// <summary>
         /// Finds and returns the details of a specific staff member using its unique ID.
