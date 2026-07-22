@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using SchoolERP.API.Interfaces;
 using SchoolERP.API.Services;
 using SchoolERP.Shared.Models;
@@ -71,6 +72,26 @@ namespace SchoolERP.API.Controllers
             {
                 throw;
             }
+        }
+
+        [HttpPost("GetAllRoomCoolingTypeWithPage")]
+        public async Task<IActionResult> GetAllRoomCoolingTypeWithPage([FromBody] ClassSearchRequest request)
+        {
+            try
+            {
+                
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<RoomCoolingType>>.SuccessResponse(new List<RoomCoolingType>()));
+
+                var data = await _roomCoolingService.GetAllRoomCoolingTypeWithPage(request);
+                return Ok(ApiResponse<PagedResult<RoomCoolingType>>.SuccessResponse(data));
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
         }
 
         // ------------------------------------------------------------

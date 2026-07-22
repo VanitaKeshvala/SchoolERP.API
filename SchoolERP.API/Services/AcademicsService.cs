@@ -55,15 +55,18 @@ namespace SchoolERP.API.Services
         /// <param name="sessionId">The ID of the academic session.</param>
         /// <param name="staffId">The ID of the staff member.</param>
         /// <returns>A list of <see cref="TimeTableViewModel"/> representing the staff's timetable.</returns>
-        public List<TimeTableViewModel> GetTimeTableByStaff(int companyId, int sessionId, int staffId)
+        public List<TimeTableViewModel> GetTimeTableByStaff(TimeTableSearchRequest request)
         {
             using var conn = new SqlConnection(
                 _configuration.GetConnectionString("DefaultConnection"));
 
             var parameters = new DynamicParameters();
-            parameters.Add("@CompanyID", companyId);
-            parameters.Add("@SessionID", sessionId);
-            parameters.Add("@StaffID", staffId);
+            parameters.Add("@CompanyID", request.CompanyID);
+            parameters.Add("@SessionID", request.SessionID);
+            parameters.Add("@StaffID", request.StaffID);
+            parameters.Add("@StaffID", request.ClassID);
+            parameters.Add("@StaffID", request.SectionID);
+            parameters.Add("@StaffID", request.StudentID);
 
             return conn.Query<TimeTableViewModel>(
                     "SP_ACD_TIMETABLE_GETBYSTAFF",

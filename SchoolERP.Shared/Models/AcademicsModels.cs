@@ -37,6 +37,7 @@ namespace SchoolERP.Shared.Models
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int? NoOfDays { get; set; }
+        public int? LessonPlanId { get; set; }
     }
 
     public class TimeTableUpsertRequest
@@ -233,6 +234,16 @@ namespace SchoolERP.Shared.Models
         public int? PageNumber { get; set; }
         public int? PageSize { get; set; }
         public int? UserId { get; set; }
+        public int? SectionID { get; set; }
+        public int? ClassID { get; set; }
+    }
+
+    public class TimeTableSearchRequest 
+    {
+        public int? CompanyID { get; set; }
+        public int SessionID { get; set; }
+        public int StudentID { get; set; }
+        public int? StaffID { get; set; }
         public int? SectionID { get; set; }
         public int? ClassID { get; set; }
     }

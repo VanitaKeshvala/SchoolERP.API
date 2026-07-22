@@ -1,4 +1,278 @@
-﻿function triggerExport(index) {
+﻿
+
+// ========================================
+// Filter badges — sessionStorage persistence
+// ========================================
+const FILTER_KEY = 'appliedFilters_roomcoolingtype';
+let appliedFilters = {};
+try {
+    const stored = sessionStorage.getItem(FILTER_KEY);
+    if (stored) appliedFilters = JSON.parse(stored);
+} catch (e) { appliedFilters = {}; }
+
+function saveAppliedFilters() {
+    try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(appliedFilters)); }
+    catch (e) { console.warn('sessionStorage unavailable'); }
+}
+
+function clearAppliedFilters() {
+    appliedFilters = {};
+    try { sessionStorage.removeItem(FILTER_KEY); } catch (e) { }
+}
+
+function submitForm() {
+    // Sync hidden form fields from dropdowns before submit
+    const sessionEl = document.getElementById('ddlFilterSessions');
+    const companyEl = document.getElementById('ddlFilterCompany');
+    const searchEl = document.getElementById('txtSearchInput');
+
+    if (sessionEl) document.getElementById('hdnSessionID').value = sessionEl.value;
+    if (companyEl) document.getElementById('hdnCompanyId').value = companyEl.value;
+    if (searchEl) document.getElementById('hdnSearch').value = searchEl.value.trim();
+    document.getElementById('frmSearch').submit();
+}
+
+function applyFilters() {
+    const sessionEl = document.getElementById('ddlFilterSessions');
+    const companyEl = document.getElementById('ddlFilterCompany');
+    const searchEl = document.getElementById('txtSearchInput');
+
+    // Search
+    const searchVal = searchEl?.value.trim() ?? '';
+    document.getElementById('hdnSearch').value = searchVal;
+
+    if (searchVal) {
+        appliedFilters['txtSearchInput'] = { label: 'Search', text: searchVal };
+    } else {
+        delete appliedFilters['txtSearchInput'];
+    }
+
+    // Session
+    if (sessionEl?.value && sessionEl.value !== '') {
+        appliedFilters['ddlFilterSessions'] = {
+            label: 'Session',
+            text: sessionEl.options[sessionEl.selectedIndex]?.text || sessionEl.value
+        };
+    } else delete appliedFilters['ddlFilterSessions'];
+
+    // Company
+    if (companyEl?.value && companyEl.value !== '') {
+        appliedFilters['ddlFilterCompany'] = {
+            label: 'Company',
+            text: companyEl.options[companyEl.selectedIndex]?.text || companyEl.value
+        };
+    } else delete appliedFilters['ddlFilterCompany'];
+
+    
+    saveAppliedFilters();
+    submitForm();
+    renderFilterBadges();
+}
+
+function renderFilterBadges() {
+    const container = document.getElementById('badgeContainer');
+    const mainContainer = document.getElementById('activeFilterBadges');
+    if (!container || !mainContainer) return;
+
+    container.innerHTML = '';
+    const activeCount = Object.keys(appliedFilters).length;
+
+    Object.entries(appliedFilters).forEach(([id, { label, text }]) => {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-flex align-items-center gap-1 fw-medium px-2 py-1';
+        badge.innerHTML = `${label}: ${text} <i class="ti ti-x ms-1 cursor-pointer" onclick="removeFilter('${id}')" style="font-size:10px;"></i>`;
+        container.appendChild(badge);
+    });
+
+    mainContainer.style.display = activeCount > 0 ? 'block' : 'none';
+}
+
+function removeFilter(filterId) {
+    // Clear the matching dropdown/input
+    if (filterId === 'ddlFilterSessions') {
+        const el = document.getElementById('ddlFilterSessions');
+        if (el) {
+            el.value = '';
+            if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val('').trigger('change');
+        }
+    } else if (filterId === 'ddlFilterCompany') {
+        const el = document.getElementById('ddlFilterCompany');
+        if (el) {
+            el.value = '';
+            if (window.jQuery && jQuery(el).data('select2')) jQuery(el).val('').trigger('change');
+        }
+    } 
+    else if (filterId === 'txtSearchInput') {
+        const el = document.getElementById('txtSearchInput');
+        if (el) el.value = '';
+        document.getElementById('hdnSearch').value = '';
+    }
+    delete appliedFilters[filterId];
+    saveAppliedFilters();
+    document.getElementById('hdnPageIndex').value = 1;
+    submitForm();
+}
+
+function resetAllFilters() {
+    document.getElementById('txtSearchInput').value = '';
+    document.getElementById('hdnSearch').value = '';
+
+    // all three in one selector string
+    jQuery('#ddlFilterSessions, #ddlFilterCompany').select2({
+        width: '100%',
+        dropdownParent: jQuery('#filter-dropdown'),
+        allowClear: true,
+        placeholder: function () { return jQuery(this).data('placeholder') || 'Select'; }
+    });
+
+    clearAppliedFilters();
+    document.getElementById('hdnPageIndex').value = 1;
+    submitForm();
+}
+
+// ========================================
+// DOMContentLoaded — init DataTable + UI
+// ========================================
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('txtPinCode');
+    const list = document.getElementById('pinCodeSuggestions');
+    if (!input || !list) {
+        console.warn('PinCode autocomplete: input or list element not found');
+        return;
+    }
+
+    let debounceTimer;
+    let currentItems = [];
+
+
+    // ── Add/Edit form: Hostel change -> reload State select ────────
+    const formCountry = document.getElementById('ddlCountry');
+    if (formCountry) {
+        const preselectState = document.getElementById('hdnSelectedStateId')?.value;
+        const preselectCity = document.getElementById('hdnSelectedCityId')?.value;
+
+        if (window.jQuery) {
+            jQuery(formCountry).on('change', function () {
+                loadStatesByCountry(this.value, 'ddlState');
+            });
+        } else {
+            formCountry.addEventListener('change', function () {
+                loadStatesByCountry(this.value, 'ddlState');
+            });
+        }
+
+        // On edit: preload states for the already-selected country, then select saved state
+        if (formCountry.value) {
+            loadStatesByCountry(formCountry.value, 'ddlState', preselectState).then(() => {
+                // Once state is preselected, cascade into city
+                const stateEl = document.getElementById('ddlState');
+                if (stateEl && stateEl.value) {
+                    loadCitiesByState(stateEl.value, 'ddlCity', preselectCity);
+                }
+            });
+        }
+    }
+
+    // ── Add/Edit form: State change -> reload City select ───────────
+    const formState = document.getElementById('ddlState');
+    if (formState) {
+        if (window.jQuery) {
+            jQuery(formState).on('change', function () {
+                loadCitiesByState(this.value, 'ddlCity');
+            });
+        } else {
+            formState.addEventListener('change', function () {
+                loadCitiesByState(this.value, 'ddlCity');
+            });
+        }
+    }
+
+    input.addEventListener('input', function () {
+        const term = this.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (term.length < 2) {
+            hideList();
+            return;
+        }
+        debounceTimer = setTimeout(() => fetchPinCodes(term), 300);
+
+
+    });
+
+    async function fetchPinCodes(term) {
+        try {
+            const res = await fetch(`/Hostel/SearchPostalCode?term=${encodeURIComponent(term)}`);
+            const result = await res.json();
+
+            console.log('API response:', result); // 🔍 TEMP: check shape of result.data
+
+            if (result.success && result.data && result.data.length > 0) {
+                currentItems = result.data;
+                renderList(currentItems);
+            } else {
+                hideList();
+            }
+        } catch (err) {
+            console.error('SearchPostalCode error:', err);
+            hideList();
+        }
+    }
+
+    function renderList(items) {
+        list.innerHTML = '';
+        items.forEach((item, idx) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-action';
+            li.style.cursor = 'pointer';
+            li.textContent = `${item.postalCode ?? item.postalCode}`;
+            li.addEventListener('click', () => selectPinItem(idx));
+            list.appendChild(li);
+        });
+        list.style.display = 'block';
+    }
+
+    async function selectPinItem(idx) {
+        const item = currentItems[idx];
+        input.value = item.postalCode ?? item.postalCode;
+        hideList();
+        const countryId = item.countryId ?? item.countryId;
+        const stateId = item.stateId ?? item.stateId;
+        const cityId = item.cityId ?? item.cityId;
+
+        // 1️⃣ Select Country immediately (options already exist server-side)
+        if (countryId) {
+            $('#ddlCountry').val(countryId).trigger('change.select2');
+            $('#ddlCountry').trigger('change');
+        }
+
+
+        // 2️⃣ Load States for that country, then select the right one
+        if (countryId && stateId) {
+            await loadStatesByCountry(countryId, 'ddlState', stateId);
+        }
+
+        // 3️⃣ Load Cities for that state, then select the right one
+        if (stateId && cityId) {
+            await loadCitiesByState(stateId, 'ddlCity', cityId);
+        }
+
+    }
+
+    function hideList() {
+        list.style.display = 'none';
+        list.innerHTML = '';
+    }
+
+    document.addEventListener('click', function (e) {
+        if (!input.contains(e.target) && !list.contains(e.target)) {
+            hideList();
+        }
+    });
+});
+
+
+function triggerExport(index) {
     if ($.fn.DataTable.isDataTable('#classesTable')) {
         const table = $('#classesTable').DataTable();
         table.button(index).trigger();
@@ -46,7 +320,20 @@ $(document).ready(function () {
         paging: false,
         info: false
     });
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        var $panel = $('#filter-dropdown');
 
+        $('#ddlFilterCompany').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
+        $('#ddlFilterSessions').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
+    });
     $('#ddlSections').select2({
         placeholder: "Select Sections",
         allowClear: true
@@ -311,3 +598,15 @@ async function toggleStatus(id, isActive) {
         location.reload();
     }
 }
+
+$('#btnFilterToggle').on('shown.bs.dropdown', function () {
+    var dropdownInstance = bootstrap.Dropdown.getInstance(this);
+    if (dropdownInstance && dropdownInstance._popper) {
+        dropdownInstance._popper.setOptions({
+            modifiers: [
+                { name: 'flip', enabled: false },
+                { name: 'preventOverflow', enabled: false }
+            ]
+        });
+    }
+});

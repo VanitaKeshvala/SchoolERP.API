@@ -13,8 +13,11 @@ namespace SchoolERP.Net.Services.Clients
         public Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByClassAsync(int classId, int sectionId)
             => GetAsync<List<TimeTableViewModel>>($"api/AcademicsApi/GetTimeTableByClass?classId={classId}&sectionId={sectionId}");
 
-        public Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByStaffAsync(int staffId)
-            => GetAsync<List<TimeTableViewModel>>($"api/AcademicsApi/GetTimeTableByStaff/{staffId}");
+        
+        public async Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByStaffAsync(TimeTableSearchRequest request)
+        {
+            return await PostAsync<List<TimeTableViewModel>>($"api/AcademicsApi/GetTimeTableByStaff", request);
+        }
 
         public Task<ApiResponse<dynamic>> UpsertTimeTableAsync(TimeTableUpsertRequest req)
             => PostAsync<dynamic>("api/AcademicsApi/UpsertTimeTable", req);

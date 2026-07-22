@@ -98,6 +98,66 @@ namespace SchoolERP.API.Services
 
         }
 
+
+        public async Task<PagedResult<RoomCoolingType>> GetAllRoomCoolingTypeWithPage(ClassSearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SearchTerm", req.SearchKeyword);
+                param.Add("@PageIndex", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<RoomCoolingType>(
+                "SP_MST_ROOMCOOLINGTYPE_GETALLWITHPAGEINDEX",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TOTALRECORDS ?? 0;
+                int pageIndex = result.FirstOrDefault()?.CURRENTPAGE ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<RoomCoolingType>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<RoomCoolingType>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+        }
+
         // ============================================================
         // GET BY ID
         // ============================================================

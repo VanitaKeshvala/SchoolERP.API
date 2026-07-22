@@ -104,7 +104,7 @@ namespace SchoolERP.Net.Controllers
 
                 var sessionId = await GetSessionId();
                 var classesResponse = _classClient.GetAllClassWithPageAsync(request);
-                var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
+                var sectionsResponse = await _sectionClient.GetAllAsync(false, request.SessionID, request.CompanyID);
 
                 var sessionTask = _sessionClient.GetAllAsync();
                 var companiesTask = _companyService.GetAllAsync();
@@ -405,6 +405,11 @@ namespace SchoolERP.Net.Controllers
                     SessionID = sessionId
                 };
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var classes = await _classClient.GetAllAsync();
                 var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
                 var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID, staffId);
@@ -441,6 +446,10 @@ namespace SchoolERP.Net.Controllers
                 };
 
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var classes = await _classClient.GetAllAsync();
                 var subjectsResponse = await _subjectClient.SubjectsDropdowBindAsync(request);
                 var staff = await _hrClient.GetAllStaffAsync(request.CompanyID,request.SessionID, staffId);
@@ -568,6 +577,11 @@ namespace SchoolERP.Net.Controllers
            );
             var companyId = await GetCompanyId();
             var staffId = GetStaffID();
+            if (staffId == null || staffId == 0)
+            {
+                staffId = GetStaffID();
+                staffId = (staffId ?? 0) <= 0 ? null : staffId;
+            }
             var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
             var model = new TeacherTimeTablePageViewModel
@@ -595,7 +609,13 @@ namespace SchoolERP.Net.Controllers
 
             if (staffId > 0)
             {
-                var slots = await _academicsClient.GetTimeTableByStaffAsync(staffId);
+                var req = new TimeTableSearchRequest
+                {
+                    CompanyID=companyId,
+                    SessionID=sessionId,
+                    StaffID=staffId
+                };
+                var slots = await _academicsClient.GetTimeTableByStaffAsync(req);
                 model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
             }
 
@@ -816,7 +836,8 @@ namespace SchoolERP.Net.Controllers
                    "/Academics/Class"
                );
                 var sessionId = await GetSessionId();
-                var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
+                var companyId = await GetCompanyId();
+                var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId, companyId);
                 var model = new MstClassAddViewModel
                 {
                     AvailableSections = sectionsResponse.Success ? sectionsResponse.Data : new List<MstSectionViewModel>()
@@ -943,6 +964,11 @@ namespace SchoolERP.Net.Controllers
                 var sessionId = await GetSessionId();
                 var companyId = await GetCompanyId();
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var sectionsResponse = await _sectionClient.GetAllAsync(false, sessionId);
                 var classes = await _classClient.GetAllAsync(false, sessionId);
                 var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);

@@ -39,10 +39,9 @@ namespace SchoolERP.API.Services
 
                 if (result != null)
                 {
-                    response.Result = result.RESULT;
-                    response.Message = result.MESSAGE;
-                    response.TechnicalMessage = result.TECHNICALMESSAGE;
-                    response.Data = result.LESSONPLANID;
+                    response.Result = result.Result;
+                    response.Message = result.Message;
+                    response.Data = result.MediaID;
                 }
 
 

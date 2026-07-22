@@ -47,7 +47,7 @@ namespace SchoolERP.Net.Controllers
         }
 
         private int GetUserId() => int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value ?? "0");
-        private int GetStaffID()
+        private int? GetStaffID()
         {
             var staffClaim = User.FindFirst("StaffID")?.Value;
             return int.TryParse(staffClaim, out var staffId) ? staffId : 0;
@@ -63,8 +63,12 @@ namespace SchoolERP.Net.Controllers
         }
         private async Task<int> GetSessionId()
         {
-            var response = await _sessionService.GetUserCurrentSessionAsync();
-            return response?.Data ?? 0;
+            if (CurrentSessionId == null) 
+            {
+                var response = await _sessionService.GetUserCurrentSessionAsync();
+                return response?.Data ?? 0;
+            }
+            return CurrentSessionId;
         }
         /// <summary>
         /// Shows the 'Attendance' marking page where teachers can mark students as Present, Absent, or Late.
@@ -98,10 +102,15 @@ namespace SchoolERP.Net.Controllers
                     AttendanceDate = date ?? DateTime.Now
                 };
                 var staffID = GetStaffID();
+                if (staffID == null || staffID == 0)
+                {
+                    staffID = GetStaffID();
+                    staffID = (staffID ?? 0) <= 0 ? null : staffID;
+                }
                 var sessionId = await GetSessionId();
                 var classesResponse = _service.GetAllStudentAttendanceWithPageAsync(request);
                 var companiesTask = _companyService.GetAllAsync();
-                var classList = await _classService.GetAllAsync(false,await GetSessionId(),await GetCompanyId(), staffID);
+                var classList = await _classService.GetAllAsync(false,await GetSessionId(), request.CompanyID, staffID);
                 await Task.WhenAll(classesResponse, companiesTask);
 
                 var pagedResult = await classesResponse;
@@ -156,6 +165,11 @@ namespace SchoolERP.Net.Controllers
         public async Task<IActionResult> GetSectionsByClass(int classId)
         {
             var staffId = GetStaffID();
+            if (staffId == null || staffId == 0)
+            {
+                staffId = GetStaffID();
+                staffId = (staffId ?? 0) <= 0 ? null : staffId;
+            }
             var data =(await _sectionService.GetByClassAsync(classId, staffId)).Data;
             return Json(new { success = true, data });
         }
@@ -193,6 +207,11 @@ namespace SchoolERP.Net.Controllers
                     AttendanceDate = date ?? DateTime.Now
                 };
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var sessionId = await GetSessionId();
                 var classesResponse = _service.GetAllStudentAttendanceWithPageAsync(request);
                 var companiesTask = _companyService.GetAllAsync();
@@ -254,6 +273,11 @@ namespace SchoolERP.Net.Controllers
                     Status=status
                 };
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var sessionId = await GetSessionId();
                 var classesResponse = _service.GetAllLeaveApplicationsWithPageAsync(request);
                 var companiesTask = _companyService.GetAllAsync();
@@ -298,6 +322,11 @@ namespace SchoolERP.Net.Controllers
                    "/Attendance/AddLeaveRequest"
                );
                 var staffId = GetStaffID();
+                if (staffId == null || staffId == 0)
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
                 var sessionId = await GetSessionId();
                 var classResponce = await _classService.GetAllAsync(false, await GetSessionId(), await GetCompanyId(), staffId);
                 var model = new StudentLeaveAddViewModel();

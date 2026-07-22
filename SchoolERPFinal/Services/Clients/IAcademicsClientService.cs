@@ -8,7 +8,7 @@ namespace SchoolERP.Net.Services.Clients
     public interface IAcademicsClientService
     {
         Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByClassAsync(int classId, int sectionId);
-        Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByStaffAsync(int staffId);
+        Task<ApiResponse<List<TimeTableViewModel>>> GetTimeTableByStaffAsync(TimeTableSearchRequest request);
         Task<ApiResponse<dynamic>> UpsertTimeTableAsync(TimeTableUpsertRequest req);
         Task<ApiResponse<dynamic>> DeleteTimeTableSlotAsync(int id);
 

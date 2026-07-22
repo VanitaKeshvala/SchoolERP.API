@@ -10,5 +10,6 @@ namespace SchoolERP.API.Interfaces
         Task<RoomCoolingType?> GetRoomCoolingTypeByIdAsync(int roomCoolingTypeId);
         (bool success, string message) DeleteRoomCoolingType(List<int> ids, int userId);
         (bool success, string message) ToggleRoomCoolingTypeStatus(StatusUpdateRequest request);
+        Task<PagedResult<RoomCoolingType>> GetAllRoomCoolingTypeWithPage(ClassSearchRequest req);
     }
 }

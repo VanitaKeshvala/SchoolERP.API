@@ -84,11 +84,11 @@
                     <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
-                        name="search"
-                        id="txtSearchInput"
-                        value="@Model.SearchTerm"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
                                class="form-control border-0 ps-2 search-input-responsive"
-                        placeholder="Search by Student Name, Admission No..."/>
+                               placeholder="Search by Student Name, Admission No..." />
                     </div>
 
                     <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
@@ -104,19 +104,23 @@
 
                     <div class="dropdown">
                         <a href="#" id="btnFilterToggle"
-                        class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
 
-                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-2 shadow-tbl"
-                        id="filter-dropdown">
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="max-width: calc(100vw - 2rem);">
 
                             <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
                                 <div class="d-flex align-items-center justify-content-end">
-                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Apply</button>
+                                    <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                        <i class="ti ti-filter me-1"></i>Apply
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                        <i class="ti ti-x"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -125,8 +129,8 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
-                                        id="ddlFilterCompany"
-                                        data-placeholder="Select company">
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
                                             <option value="">All</option>
                                             @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
                                             {
@@ -169,6 +173,7 @@
 
                         </div>
                     </div>
+
 
                 </div>
             </div>

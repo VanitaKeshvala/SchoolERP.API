@@ -53,6 +53,64 @@ namespace SchoolERP.API.Services
             }
         }
 
+        public async Task<PagedResult<HRDesignationViewModel>> GetAllDesignationsWithPage(SearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<HRDesignationViewModel>(
+                "sp_Mst_HRDesignation_GetAllWithPageIndex",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TotalRecords ?? 0;
+                int pageIndex = result.FirstOrDefault()?.PageNumber ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<HRDesignationViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<HRDesignationViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         /// <summary>
         /// Retrieves the details of a specific HR designation by its unique identifier.
         /// </summary>
@@ -97,7 +155,10 @@ namespace SchoolERP.API.Services
                     commandType: CommandType.StoredProcedure
                 );
 
-                return ((int)result.Result == 1, (string)result.Message);
+                return (
+                    result?.RESULT == 1,
+                    result?.MESSAGE ?? "Operation completed."
+                );
             }
             catch (Exception ex)
             {
@@ -218,6 +279,64 @@ namespace SchoolERP.API.Services
                     Message = ex.Message,
                     Data = null
                 };
+            }
+        }
+
+        public async Task<PagedResult<HRDepartmentViewModel>> GetAllDepartmentsWithPage(SearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<HRDepartmentViewModel>(
+                "sp_Mst_Department_GetAllPageIndex",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TotalRecords ?? 0;
+                int pageIndex = result.FirstOrDefault()?.PageNumber ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<HRDepartmentViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<HRDepartmentViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 
@@ -385,6 +504,65 @@ namespace SchoolERP.API.Services
                 commandType: CommandType.StoredProcedure
             );
         }
+
+        public async Task<PagedResult<HRLeaveTypeViewModel>> GetAllLeaveTypesWithPage(SearchRequest req)
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var param = new DynamicParameters();
+                if (req.PageNumber == 0 && req.PageSize == 0)
+                {
+                    req.PageNumber = 1;
+                    req.PageSize = 10;
+                }
+
+
+                param.Add("@COMPANYID", req.CompanyID);
+                param.Add("@SESSIONID", req.SessionID);
+                param.Add("@SearchKeyword", req.SearchKeyword);
+                param.Add("@PageNumber", req.PageNumber);
+                param.Add("@PageSize", req.PageSize);
+
+                var result = (await conn.QueryAsync<HRLeaveTypeViewModel>(
+                "sp_Mst_LeaveType_GetAllWithPageIndex",
+                param,
+                commandType: CommandType.StoredProcedure)).ToList();
+
+
+                int res = result.FirstOrDefault()?.Result ?? 0;
+                int totalRecords = result.FirstOrDefault()?.TotalRecords ?? 0;
+                int pageIndex = result.FirstOrDefault()?.PageNumber ?? 0;
+                int pageSize = result.FirstOrDefault()?.PageSize ?? 0;
+
+                var userModel = new PagedResult<HRLeaveTypeViewModel>
+                {
+                    Data = result,
+                    TotalRecords = totalRecords,
+                    PageNumber = pageIndex,
+                    PageSize = pageSize
+                };
+
+                if (res == 0)
+                {
+                    userModel = new PagedResult<HRLeaveTypeViewModel>
+                    {
+                        Data = null,
+                        TotalRecords = totalRecords,
+                        PageNumber = pageIndex,
+                        PageSize = pageSize
+                    };
+                }
+                return userModel;
+
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
 
         /// <summary>
         /// Creates or updates a leave type record.

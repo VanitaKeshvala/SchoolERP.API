@@ -10,5 +10,6 @@ namespace SchoolERP.Net.Services.Clients
         Task<ApiResponse<List<RoomCoolingType>>> GetAllAsync(int? companyId = null, int? sessionId = null);
         Task<ApiResponse<dynamic>> DeleteAsync(List<int> ids);
         Task<ApiResponse<dynamic>> ToggleStatusAsync(StatusUpdateRequest request);
+        Task<ApiResponse<PagedResult<RoomCoolingType>>> GetAllRoomCoolingTypeWithPageAsync(ClassSearchRequest request);
     }
 }

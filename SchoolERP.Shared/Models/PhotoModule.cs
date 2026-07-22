@@ -20,11 +20,15 @@ namespace SchoolERP.Shared.Models
         LeaveApp,
         BookCoverPage,
         Homework,
+        Media,
+        LessonPlan,
     }
 
     public enum FolderNameModule 
     {
         Profile,
-        Documents
+        Documents,
+        Video,
+        Images
     }
 }

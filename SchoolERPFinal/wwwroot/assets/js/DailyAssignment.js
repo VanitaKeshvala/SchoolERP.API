@@ -350,7 +350,7 @@ async function saveHomework() {
     //const subjectId = parseInt(document.getElementById('ddlSubject').value) || 0;
     const subjectId = document.getElementById('ddlSubject')
         ? document.getElementById('ddlSubject').value.trim()
-        : document.getElementById('txtSectionID').value.trim();
+        : document.getElementById('txtSubjectID').value.trim();
     //const title = document.getElementById('txtTitle')?.value.trim() || '';
     const title = document.getElementById('txtTitle')
         ? document.getElementById('txtTitle').value

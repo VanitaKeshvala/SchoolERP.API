@@ -41,12 +41,25 @@ namespace SchoolERP.Net.Controllers.Api
             catch (Exception ex) { return Ok(ApiResponse<List<TimeTableViewModel>>.ErrorResponse(ex.Message)); }
         }
 
-        [HttpGet("GetTimeTableByStaff/{staffId}")]
-        public IActionResult GetTimeTableByStaff(int staffId)
+        [HttpPost("GetTimeTableByStaff")]
+        public IActionResult GetTimeTableByStaff(TimeTableSearchRequest request)
         {
             try
             {
-                var list = _svc.GetTimeTableByStaff(CompanyId, SessionId, staffId);
+                int userId = UserId;
+
+                if (request.CompanyID == null || request.CompanyID == 0) 
+                {
+                    request.CompanyID = CompanyId;
+                }
+                if (request.SessionID == null || request.SessionID == 0)
+                {
+                    request.SessionID = SessionId;
+                }
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<ClassTeacherViewModel>>.SuccessResponse(new List<ClassTeacherViewModel>()));
+
+                var list = _svc.GetTimeTableByStaff(request);
                 return Ok(ApiResponse<List<TimeTableViewModel>>.SuccessResponse(list));
             }
             catch (Exception ex) { return Ok(ApiResponse<List<TimeTableViewModel>>.ErrorResponse(ex.Message)); }

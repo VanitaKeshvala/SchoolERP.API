@@ -45,5 +45,8 @@ namespace SchoolERP.Net.Services.Clients
            PhotoModule module,
            FolderNameModule folderNameModule,
            int recordId);
+
+        Task<PhotoUploadResult> UploadVideoAsync(
+            IFormFile video, PhotoModule module, FolderNameModule folderNameModule, int recordId);
     }
 }

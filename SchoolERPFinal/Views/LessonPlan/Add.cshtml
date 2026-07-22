@@ -99,6 +99,7 @@
         </div>
 
         <!-- Lessons Card -->
+        <!-- Lessons Card -->
         <div class="card shadow-tbl-outer">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
                 <h6 class="card-title mb-0">Lessons</h6>
@@ -107,25 +108,35 @@
                 </button>
             </div>
             <div class="card-body">
+
+                <!-- Column headers — shown ONCE -->
+                <div class="row lesson-header mb-2">
+                    <div class="col-md-4">
+                        <label class="form-label mb-0">Lesson Name<span class="text-danger">*</span></label>
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label mb-0">Description</label>
+                    </div>
+                    <div class="col-md-1"></div>
+                </div>
+
                 <div id="lessonRowsContainer" class="lesson-rows-container">
                     @if (existingLessons.Any())
                     {
                         foreach (var lesson in existingLessons)
                         {
-                            <div class="lesson-row row align-items-start mb-3" data-lesson-map-id="@lesson.LessonMapId">
+                            <div class="lesson-row row align-items-center mb-2" data-lesson-map-id="@lesson.LessonMapId">
                                 <input type="hidden" class="lesson-map-id" value="@lesson.LessonMapId" />
                                 <input type="hidden" class="lesson-isdelete" value="0" />
-                                <div class="col-md-4 mb-2">
-                                    <label class="form-label">Lesson Name<span class="text-danger">*</span></label>
+                                <div class="col-md-4">
                                     <input type="text" class="form-control lesson-name" value="@lesson.LessonName">
                                     <div class="invalid-feedback"></div>
                                 </div>
-                                <div class="col-md-7 mb-2">
-                                    <label class="form-label">Description</label>
+                                <div class="col-md-7">
                                     <textarea class="form-control lesson-description" rows="1">@lesson.Description</textarea>
                                 </div>
-                                <div class="col-md-1 mb-2 d-flex align-items-end mt-4">
-                                    <button type="button" class="btn btn-danger py-2 w-100" onclick="deleteLessonRow(this)">
+                                <div class="col-md-1 d-flex justify-content-center">
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="deleteLessonRow(this)">
                                         <i class="ti ti-trash"></i>
                                     </button>
                                 </div>
@@ -134,21 +145,18 @@
                     }
                     else
                     {
-                        <!-- Initial blank row if none exist -->
-                        <div class="lesson-row row align-items-start mb-3" data-lesson-map-id="0">
+                        <div class="lesson-row row align-items-center mb-2" data-lesson-map-id="0">
                             <input type="hidden" class="lesson-map-id" value="0" />
                             <input type="hidden" class="lesson-isdelete" value="0" />
-                            <div class="col-md-4 mb-2">
-                                <label class="form-label">Lesson Name<span class="text-danger">*</span></label>
+                            <div class="col-md-4">
                                 <input type="text" class="form-control lesson-name">
                                 <div class="invalid-feedback"></div>
                             </div>
-                            <div class="col-md-7 mb-2">
-                                <label class="form-label">Description</label>
+                            <div class="col-md-7">
                                 <textarea class="form-control lesson-description" rows="1"></textarea>
                             </div>
-                            <div class="col-md-1 mb-2 d-flex align-items-end mt-4">
-                                <button type="button" class="btn btn-danger py-2 w-100" onclick="deleteLessonRow(this)">
+                            <div class="col-md-1 d-flex justify-content-center">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="deleteLessonRow(this)">
                                     <i class="ti ti-trash"></i>
                                 </button>
                             </div>
@@ -157,30 +165,44 @@
                 </div>
             </div>
         </div>
+
+       
     </div>
 </div>
-
 <!-- Template used to clone new, blank lesson rows -->
 <template id="lessonRowTemplate">
-    <div class="lesson-row row align-items-start mb-3" data-lesson-map-id="0">
+    <div class="lesson-row row align-items-center mb-2" data-lesson-map-id="0">
         <input type="hidden" class="lesson-map-id" value="0" />
         <input type="hidden" class="lesson-isdelete" value="0" />
-        <div class="col-md-4 mb-2">
-            <label class="form-label">Lesson Name<span class="text-danger">*</span></label>
+        <div class="col-md-4">
             <input type="text" class="form-control lesson-name">
             <div class="invalid-feedback"></div>
         </div>
-        <div class="col-md-7 mb-2">
-            <label class="form-label">Description</label>
+        <div class="col-md-7">
             <textarea class="form-control lesson-description" rows="1"></textarea>
         </div>
-        <div class="col-md-1 mb-2 d-flex align-items-end mt-4">
-            <button type="button" class="btn btn-danger py-2 w-100" onclick="deleteLessonRow(this)">
+        <div class="col-md-1 d-flex justify-content-center">
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteLessonRow(this)">
                 <i class="ti ti-trash"></i>
             </button>
         </div>
     </div>
 </template>
+
+<style>
+    .lesson-header {
+        border-bottom: 1px solid #eef0f2;
+        padding-bottom: 6px;
+    }
+
+    .lesson-row .btn-danger {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
 
 @section Scripts {
 

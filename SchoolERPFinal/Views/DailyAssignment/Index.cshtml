@@ -178,11 +178,13 @@
                                 {
                                     <th></th>
                                     <th>Subject</th>
+                                    <th>Teacher Name</th>
                                     <th>Title</th>
                                     <th>Description</th>
                                     <th>Remark</th>
                                     <th>Submission Date</th>
                                     <th>Evaluation Date</th>
+                                    <th>Evaluated By</th>
                                     <th>Action</th>
                                 }
                                 else
@@ -191,9 +193,10 @@
                                     <th>Student Name</th>
                                     <th>Class (Section)</th>
                                     <th>Subject</th>
+                                    <th>Teacher Name</th>
                                     <th>Title</th>
                                     <th>Submission Date</th>
-                                    <th>Evaluation By</th>
+                                    <th>Evaluation Date</th>
                                     <th>Evaluated By</th>
                                     <th>Action</th>
                                 }
@@ -216,13 +219,17 @@
                                                 @(isEvaluated ? "disabled" : "") />
                                             </td>
                                             <td>
-                                                <span>@h.SubjectName
+                                                @h.SubjectName
+                                            </td>
+                                            <td>
+                                                @h.CLASSTEACHERNAME
                                             </td>
                                             <td>@h.Title</td>
                                             <td>@h.Description</td>
                                             <td>@h.Remark</td>
                                             <td>@h.CreatedOn?.ToString("dd MMM yyyy")</td>
                                             <td>@h.EvaluationDate?.ToString("dd MMM yyyy")</td>
+                                            <td>@h.EVALUATEDBYNAME</td>
                                             <td>
                                                 <i class="fa fa-eye view-attachment-btn"
                                                    style="cursor:pointer;"
@@ -242,10 +249,11 @@
                                                 <span>@h.ClassName</span> (@h.SectionName)
                                             </td>
                                             <td>@h.SubjectName</td>
+                                            <td>@h.CLASSTEACHERNAME</td>
                                             <td>@h.Title</td>
                                             <td>@h.CreatedOn?.ToString("dd MMM yyyy")</td>
                                             <td>@h.EvaluationDate?.ToString("dd MMM yyyy")</td>
-                                            <td>@h.EvaluatedByName</td>                                            
+                                            <td>@h.EVALUATEDBYNAME</td>
                                             <td>
                                                 <i class="fa fa-eye view-attachment-btn"
                                                    style="cursor:pointer;"

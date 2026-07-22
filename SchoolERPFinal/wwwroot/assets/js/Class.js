@@ -273,6 +273,40 @@ $(document).ready(function () {
         placeholder: "Select Sections",
         allowClear: true
     });
+
+
+    $('#ddlFilterCompany').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#ddlFilterSessions').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#ddlFilterSection').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        initFilterSelect2('#ddlFilterCompany');
+        initFilterSelect2('#ddlFilterSessions');
+        initFilterSelect2('#ddlFilterSection');
+    });
+
+    function initFilterSelect2(selector) {
+        var $el = $(selector);
+        // Only init if not already a select2 instance
+        if (!$el.hasClass('select2-hidden-accessible')) {
+            $el.select2({
+                dropdownParent: $('#filter-dropdown'),
+                width: '100%'
+            });
+        }
+    }
+
+    
+    
 });
 
 function clearModalValidation() {

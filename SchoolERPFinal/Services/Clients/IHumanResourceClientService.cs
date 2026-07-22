@@ -55,5 +55,10 @@ namespace SchoolERP.Net.Services.Clients
             int year);
 
         Task<ApiResponse<dynamic>> UpdateProfileAsync(ProfileRequest req);
+
+
+        Task<ApiResponse<PagedResult<HRDepartmentViewModel>>> GetAllDepartmentsWithPageAsync(SearchRequest request);
+        Task<ApiResponse<PagedResult<HRDesignationViewModel>>> GetAllDesignationsWithPageAsync(SearchRequest request);
+        Task<ApiResponse<PagedResult<HRLeaveTypeViewModel>>> GetAllLeaveTypesWithPageAsync(SearchRequest request);
     }
 }

@@ -6,6 +6,9 @@ namespace SchoolERP.Shared.Models
 {
     public class HRDesignationViewModel
     {
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+
         public int HRDesignationID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -16,12 +19,20 @@ namespace SchoolERP.Shared.Models
         public int CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public int? ModifiedBy { get; set; }
+        
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
     }
 
     public class HRDesignationUpsertRequest
     {
         public int HRDesignationID { get; set; }
         public string DesignationName { get; set; } = string.Empty;
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
         public bool IsActive { get; set; }
     }
 
@@ -29,10 +40,31 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<HRDesignationViewModel> Items { get; set; } = new();
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
+    }
+    public class HRDesignationAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public HRDesignationViewModel EditItems { get; set; } = new HRDesignationViewModel();
     }
 
+    public class DepartmentAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public HRDepartmentViewModel EditItems { get; set; } = new HRDepartmentViewModel();
+    }
     public class HRDepartmentViewModel
     {
+        
+
         public int DepartmentID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
@@ -45,7 +77,14 @@ namespace SchoolERP.Shared.Models
         public int? ModifiedBy { get; set; }
         //this two key added bcz dapper direct map sp so need two check sp run proper or exiqute message show
         public bool Success { get; set; }
-        public string Message { get; set; }
+        
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+       
     }
 
     public class HRDepartmentUpsertRequest
@@ -53,6 +92,8 @@ namespace SchoolERP.Shared.Models
         public int DepartmentID { get; set; }
         public string DepartmentName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     public class HRDepartmentPageViewModel
@@ -88,6 +129,7 @@ namespace SchoolERP.Shared.Models
         public int PageSize { get; set; }
         public string SearchTerm { get; set; } = string.Empty;
         public int? CompanyId { get; set; }
+
     }
 
     public class HRDepartmentAddPageViewModel
@@ -136,18 +178,32 @@ namespace SchoolERP.Shared.Models
 
     }
 
+    public class HRLeaveTypeAddPageViewModel
+    {
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public HRLeaveTypeViewModel EditItems { get; set; } = new HRLeaveTypeViewModel();
+    }
+
     public class HRLeaveTypeViewModel
     {
         public int LeaveTypeID { get; set; }
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
         public string LeaveTypeName { get; set; } = string.Empty;
+        public string? DisplayLabel { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public bool IsDelete { get; set; }
         public DateTime CreatedOn { get; set; }
         public int CreatedBy { get; set; }
         public DateTime? ModifiedOn { get; set; }
         public int? ModifiedBy { get; set; }
+
+        public int Result { get; set; }       // maps to RESULT
+        public string Message { get; set; }   // maps to MESSAGE
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
     }
 
     public class HRLeaveTypeUpsertRequest
@@ -155,12 +211,24 @@ namespace SchoolERP.Shared.Models
         public int LeaveTypeID { get; set; }
         public string LeaveTypeName { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public int CompanyID { get; set; }
+        public int SessionID { get; set; }
     }
 
     public class HRLeaveTypePageViewModel
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<HRLeaveTypeViewModel> Items { get; set; } = new();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
     
     public class HRStaffViewModel
@@ -604,6 +672,15 @@ namespace SchoolERP.Shared.Models
         public bool Success { get; set; }
         public string Message { get; set; }
         public List<HRDepartmentViewModel> Data { get; set; }
+        public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
 
     public class ProfileRequest

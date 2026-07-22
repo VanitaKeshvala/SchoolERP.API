@@ -238,7 +238,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSections($(this).val(), '#modalClassSelect');
         
     });
+    $('#classSelect').on('change', function () {
+        loadSections($(this).val(), '#sectionSelect');
 
+    });
     $('#modalClassSelect').on('change', function () {
         loadSections($(this).val(), '#modalSectionSelect');
     });
@@ -332,7 +335,41 @@ $(document).ready(function () {
 
     
 
-   
+    $('#ddlFilterCompany').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#classSelect').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#sectionSelect').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#statusSelect').select2({
+        dropdownParent: $('#filter-dropdown'),
+        width: '100%'
+    });
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        initFilterSelect2('#ddlFilterCompany');
+        initFilterSelect2('#classSelect');
+        initFilterSelect2('#sectionSelect');
+        initFilterSelect2('#statusSelect');
+    });
+
+    function initFilterSelect2(selector) {
+        var $el = $(selector);
+        // Only init if not already a select2 instance
+        if (!$el.hasClass('select2-hidden-accessible')) {
+            $el.select2({
+                dropdownParent: $('#filter-dropdown'),
+                width: '100%'
+            });
+        }
+    }
+
+
 
     $('#btnSaveLeave').on('click', function () {
         saveLeave();

@@ -253,6 +253,22 @@ $(document).ready(function () {
         info: false
     });
 
+
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        var $panel = $('#filter-dropdown');
+
+        $('#ddlFilterCompany').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
+        $('#ddlFilterSessions').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
+    });
+
     $('#ddlSections').select2({
         placeholder: "Select Sections",
         allowClear: true

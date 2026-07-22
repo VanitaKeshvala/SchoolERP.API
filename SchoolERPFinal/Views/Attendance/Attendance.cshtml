@@ -9,84 +9,13 @@
     var p = Model.Permissions;
 }
 
-<style>
-    .attendance-table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
 
-    .attendance-table thead th {
-        white-space: nowrap;
-        vertical-align: middle;
-        font-size: 13px;
-        font-weight: 600;
-        color: #364159;
-        padding: 10px 12px;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-        /* sortable column headers: label + icon inline, not stacked */
-        .attendance-table thead th.sortable {
-            cursor: pointer;
-        }
-
-            .attendance-table thead th.sortable .th-inner {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-            }
-
-            .attendance-table thead th.sortable .sort-icon {
-                font-size: 11px;
-                color: #94a3b8;
-                line-height: 1;
-            }
-
-        /* status columns: label on top, checkbox centered below, consistent width */
-        .attendance-table thead th.status-col {
-            text-align: center;
-            min-width: 90px;
-        }
-
-            .attendance-table thead th.status-col .status-col-inner {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 6px;
-            }
-
-                .attendance-table thead th.status-col .status-col-inner span {
-                    font-size: 13px;
-                    font-weight: 600;
-                }
-
-                .attendance-table thead th.status-col .status-col-inner input[type="checkbox"] {
-                    width: 16px;
-                    height: 16px;
-                    margin: 0;
-                    cursor: pointer;
-                }
-
-        .attendance-table thead th.note-col {
-            text-align: right;
-            min-width: 220px;
-        }
-
-    .attendance-table tbody td {
-        vertical-align: middle;
-        padding: 8px 12px;
-    }
-
-    :is(.fas,.far,.fab,.fa-solid,.fa-regular,.fa-brands,.fa-classic,.fa):before {
-        content: none !important;
-    }
-</style>
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
         <h6 class="fw-bold mb-0">Student Attendance</h6>
     </div>
-    <div class="d-flex align-items-center flex-wrap gap-1">
+    <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanAdd)
         {
             <button id="btnSaveAttendance" class="btn btn-success d-inline-flex align-items-center">
@@ -100,21 +29,21 @@
 
 <div class="row">
 
+
     <div class="col-xl-12">
         <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
 
                     <!-- ── Search box (name="search" so form submits it) ── -->
-                    <div class="position-relative border d-flex align-items-center rounded-2 px-3">
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
                         <i class="fas fa-search search-icon-input"></i>
                         <input type="text"
-                               name="search"
-                               id="txtSearchInput"
-                               value="@Model.SearchTerm"
-                               class="form-control border-0 ps-2"
-                               placeholder="Search by Student Name, Admission No..."
-                               style="min-width: 320px;" />
+                        name="search"
+                        id="txtSearchInput"
+                        value="@Model.SearchTerm"
+                        class="form-control border-0 ps-2 search-input-responsive"
+                        placeholder="Search by Student Name, Admission No..." />
                     </div>
 
                     <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
@@ -131,19 +60,23 @@
 
                     <div class="dropdown">
                         <a href="#" id="btnFilterToggle"
-                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
-                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
 
-                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-2 shadow-tbl"
-                             id="filter-dropdown">
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="max-width: calc(100vw - 2rem);">
 
                             <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
                                 <div class="d-flex align-items-center justify-content-end">
-                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Apply</button>
+                                    <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                        <i class="ti ti-filter me-1"></i>Apply
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                        <i class="ti ti-x"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -152,8 +85,8 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
-                                                id="ddlFilterCompany"
-                                                data-placeholder="Select company">
+                                        id="ddlFilterCompany"
+                                        data-placeholder="Select company">
                                             <option value="">All</option>
                                             @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
                                             {
@@ -204,10 +137,12 @@
                         </div>
                     </div>
 
+
                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- Active filter badges -->
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
@@ -218,7 +153,7 @@
                 </span>
                 <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
                 <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
-                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                id="btnResetAllFilters" onclick="resetAllFilters()">
                     <i class="ti ti-trash me-1"></i>Clear All
                 </button>
             </div>
@@ -255,34 +190,39 @@
                                         <span class="th-inner">Name <i class="sort-icon">&#8597;</i></span>
                                     </th>
 
-                                    <th class="status-col">
+                                    <th>
                                         <div class="status-col-inner">
+                                            <input type="checkbox" class="form-check-input select-all-col me-1" data-status="1" title="Mark all Present">
                                             <span>Present</span>
-                                            <input type="checkbox" class="form-check-input select-all-col" data-status="1" title="Mark all Present">
+                                            
                                         </div>
                                     </th>
-                                    <th class="status-col">
+                                    <th>
                                         <div class="status-col-inner">
+                                            <input type="checkbox" class="form-check-input select-all-col me-1" data-status="2" title="Mark all Late">
                                             <span>Late</span>
-                                            <input type="checkbox" class="form-check-input select-all-col" data-status="2" title="Mark all Late">
+                                            
                                         </div>
                                     </th>
-                                    <th class="status-col">
+                                    <th>
                                         <div class="status-col-inner">
+                                            <input type="checkbox" class="form-check-input select-all-col me-1" data-status="3" title="Mark all Absent">
                                             <span>Absent</span>
-                                            <input type="checkbox" class="form-check-input select-all-col" data-status="3" title="Mark all Absent">
+                                            
                                         </div>
                                     </th>
-                                    <th class="status-col">
+                                    <th>
                                         <div class="status-col-inner">
+                                            <input type="checkbox" class="form-check-input select-all-col me-1" data-status="4" title="Mark all Half Day">
                                             <span>Half Day</span>
-                                            <input type="checkbox" class="form-check-input select-all-col" data-status="4" title="Mark all Half Day">
+                                            
                                         </div>
                                     </th>
-                                    <th class="status-col">
+                                    <th>
                                         <div class="status-col-inner">
+                                            <input type="checkbox" class="form-check-input select-all-col me-1" data-status="5" title="Mark all Leave">
                                             <span>Leave</span>
-                                            <input type="checkbox" class="form-check-input select-all-col" data-status="5" title="Mark all Leave">
+                                       
                                         </div>
                                     </th>
 
@@ -300,6 +240,7 @@
                             <tbody id="attendanceTableBody">
                                 @if (Model.StudentAttendanceModel != null && Model.StudentAttendanceModel.Any())
                                 {
+                                    int sNo = 1;
                                     @foreach (var c in Model.StudentAttendanceModel)
                                     {
                                         bool isPresent = c.AttendanceStatus == 1 || c.AttendanceStatus == null;
@@ -308,23 +249,23 @@
                                         bool isHalfDay = c.AttendanceStatus == 4;
                                         bool isLeave = (c.AttendanceStatus == 5) || (c.IsStudentLeaveAdd == true);
                                         <tr class="item-row attendance-row" data-student-id="@c.StudentID" onclick="selectItem(@c.AttendanceID, this)" style="cursor: pointer;">
-                                            <td>@c.AttendanceID</td>
+                                            <td>@sNo</td>
                                             <td>@c.AdmissionNo</td>
                                             <td>@c.RollNo</td>
                                             <td>@c.StudentName</td>
-                                            <td class="text-center" onclick="event.stopPropagation();">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="1" checked="@(isPresent ? "checked" : null)">
                                             </td>
-                                            <td class="text-center" onclick="event.stopPropagation();">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="2" checked="@(isLate ? "checked" : null)">
                                             </td>
-                                            <td class="text-center" onclick="event.stopPropagation();">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="3" checked="@(isAbsent ? "checked" : null)">
                                             </td>
-                                            <td class="text-center" onclick="event.stopPropagation();">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="4" checked="@(isHalfDay ? "checked" : null)">
                                             </td>
-                                            <td class="text-center" onclick="event.stopPropagation();">
+                                            <td onclick="event.stopPropagation();">
                                                 <input type="checkbox" class="form-check-input atd-check" name="atd_@(c.StudentID)" value="5" checked="@(isLeave ? "checked" : null)">
                                             </td>
                                             <td>@(Model.AttendanceDate?.ToString("yyyy-MM-dd"))</td>
@@ -333,6 +274,7 @@
                                                 <input type="text" style="width:200px" class="form-control attendance-note" value="@(string.IsNullOrWhiteSpace(c.Note) ? c.Reason : c.Note)" />
                                             </td>
                                         </tr>
+                                        sNo++;
                                     }
                                 }
                                 else

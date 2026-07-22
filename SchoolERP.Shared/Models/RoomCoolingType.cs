@@ -24,6 +24,11 @@ namespace SchoolERP.Shared.Models
         public DateTime CreatedDate { get; set; }
         public int? ModifiedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
+
+        public int TOTALRECORDS { get; set; }   // ← TOTALCOUNT
+        public int CURRENTPAGE { get; set; }   // ← PAGEINDEX
+        public int PageSize { get; set; }   // ← PAGESIZE
+        public int TotalPages { get; set; }   // ← TOTALPAGES
     }
 
     /// <summary>
@@ -63,6 +68,16 @@ namespace SchoolERP.Shared.Models
     {
         public PagePermissions Permissions { get; set; } = PagePermissions.Denied;
         public List<RoomCoolingType> RoomCoolingType { get; set; } = new List<RoomCoolingType>();
+
+        public List<MstCompanyViewModel> Companies { get; set; } = new();
+        public List<MstSessionViewModel> Sessions { get; set; } = new();
+
+        public int TotalRecords { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public string SearchTerm { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public int? SessionId { get; set; }
     }
     public class RoomCoolingTypeAddViewModel
     {

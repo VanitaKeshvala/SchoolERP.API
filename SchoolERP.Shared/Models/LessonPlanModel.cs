@@ -37,6 +37,7 @@ namespace SchoolERP.Shared.Models
         public string? SectionName { get; set; }
         public string? CreatedByName { get; set; }
         public string? ChaptersJson{ get; set; }
+        public string? CLASSTEACHERNAME { get; set; }
        
     }
 

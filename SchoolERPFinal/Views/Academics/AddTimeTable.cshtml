@@ -30,47 +30,65 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <input type="text" id="tableSearch" class="form-control w-25 me-3" style="width:320px" placeholder="Search..." />
                         <div class="d-flex align-items-center flex-wrap gap-2 flex-shrink-0">
+
                             <div class="dropdown">
-                                <a href="#" class="btn btn-white border btn-lg" data-bs-toggle="dropdown">
+                                <a href="#" id="btnFilterToggle"
+                                   class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                                   data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                                     <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                                 </a>
-                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0" id="filter-dropdown">
-                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header py-2">
+
+                                <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="max-width: calc(100vw - 2rem);">
+
+                                    <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                         <h6 class="mb-0 fw-bold">Select Criteria</h6>
                                         <div class="d-flex align-items-center justify-content-end">
-                                            <button type="submit" class="btn text-primary fs-6">Filter</button>
+                                            <button type="submit" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                            <button type="submit" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">
+                                                <i class="ti ti-filter me-1"></i>Apply
+                                            </button>
+                                            <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                                <i class="ti ti-x"></i>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div class="filter-body pb-0 p-3">
-                                        <div class="mb-3">
-                                            <label class="form-label mb-1">Class<span class="text-danger">*</span></label>
-                                            <select name="classId" id="FilterClassID" class="form-select form-control select2" required>
+
+                                    <div class="filter-body pb-0">
+                                        <div class="row">
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label mb-1">Section</label>
+                                               <select name="classId" id="FilterClassID" class="form-select form-control select2" required>
                                                 <option value="">Select</option>
                                                 @foreach (var item in Model.Classes)
                                                 {
                                                     <option value="@item.ClassID" selected="@(Model.SelectedClassId == item.ClassID)">@item.ClassName</option>
                                                 }
                                             </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label mb-1">Section<span class="text-danger">*</span></label>
-                                            <select name="sectionId" id="FilterSectionID" class="form-select form-control select2" required>
-                                                <option value="">Select</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label mb-1">Subject Group<span class="text-danger">*</span></label>
-                                            <select name="subjectGroupId" id="FilterSubjectGroupID" class="form-select form-control select2">
-                                                <option value="">Select</option>
-                                                @foreach (var item in Model.SubjectGroups)
-                                                {
-                                                    <option value="@item.SubjectGroupID" selected="@(Model.SelectedSubjectGroupId == item.SubjectGroupID)">@item.Name</option>
-                                                }
-                                            </select>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label mb-1">Section</label>
+                                                <select name="sectionId" id="FilterSectionID" class="form-select form-control select2" required>
+                                                    <option value="">Select</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-12 mb-3">
+                                                <label class="form-label mb-1">Subject Groups</label>
+                                                <select name="subjectGroupId" id="FilterSubjectGroupID" class="form-select form-control select2">
+                                                    <option value="">Select</option>
+                                                    @foreach (var item in Model.SubjectGroups)
+                                                    {
+                                                        <option value="@item.SubjectGroupID" selected="@(Model.SelectedSubjectGroupId == item.SubjectGroupID)">@item.Name</option>
+                                                    }
+                                                </select>
+                                            </div>
+
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
+
+                           
                         </div>
                     </div>
                 </form>
@@ -102,15 +120,16 @@
                         <label class="form-label">Room No <span class="text-danger">*</span></label>
                         <input type="text" id="GenRoomNo" class="form-control">
                     </div>
-                    <button type="button" onclick="applyGenParameters()" class="btn btn-teal mb-1">Apply</button>
+                    <button type="button" onclick="applyGenParameters()" class="btn btn-teal mb-1 top-btn">Apply</button>
                 </div>
             </div>
         </div>
 
         <!-- Time Table Tabs Card -->
         <div class="card shadow-tbl-outer">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
-                <ul class="nav nav-pills gap-2" id="dayTabs">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap" id="tabsStickyBar">
+                <div class="day-tabs-wrapper">
+                <ul class="nav nav-pills gap-2 tab-scroll" id="dayTabs">
                     @for (int i = 0; i < days.Length; i++)
                     {
                         <li class="nav-item">
@@ -118,7 +137,9 @@
                         </li>
                     }
                 </ul>
-                <button type="button" onclick="addNewRow()" class="btn btn-primary"><i class="ti ti-plus"></i> Add New</button>
+                </div>
+                <button type="button" onclick="addNewRow()" class="btn btn-primary top-btn me-1"><i class="ti ti-plus"></i> Add</button>
+                
             </div>
             <div class="card-body">
                 <div class="tab-content" id="tabContent">
@@ -163,7 +184,7 @@
                                                 <label class="form-label">Room No <span class="text-danger">*</span></label>
                                                 <input type="text" name="RoomNo" class="form-control" value="@slot.RoomNo">
                                             </div>
-                                            <button type="button" class="btn btn-danger mb-1" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+                                            <button type="button" class="btn btn-danger mb-1 top-btn" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
                                         </div>
                                     }
                                 }
@@ -197,7 +218,7 @@
                                             <label class="form-label">Room No <span class="text-danger">*</span></label>
                                             <input type="text" name="RoomNo" class="form-control">
                                         </div>
-                                        <button type="button" class="btn btn-danger py-2" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+                                        <button type="button" class="btn btn-danger py-2 top-btn" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
                                     </div>
                                 }
                             </div>
@@ -237,13 +258,33 @@
             <label class="form-label">Room No <span class="text-danger">*</span></label>
             <input type="text" name="RoomNo" class="form-control">
         </div>
-        <button type="button" class="btn btn-danger py-2" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
+        <button type="button" class="btn btn-danger py-2 top-btn" onclick="deleteRow(this)"><i class="ti ti-trash me-1"></i> Delete</button>
     </div>
 </template>
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
+        $(document).ready(function () 
+        {
+            $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+            var $panel = $('#filter-dropdown');
+
+            $('#FilterClassID').select2({
+                dropdownParent: $('#filter-dropdown'),
+                width: '100%'
+            });
+
+            $('#FilterSectionID').select2({
+                dropdownParent: $('#filter-dropdown'),
+                width: '100%'
+            });
+
+            $('#FilterSubjectGroupID').select2({   // after renaming the id
+                dropdownParent: $('#filter-dropdown'),
+                width: '100%'
+            });
+        });
+
             $('.select2').select2();
             initDynamicSelect2();
 

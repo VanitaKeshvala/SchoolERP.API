@@ -302,7 +302,7 @@ async function saveItem() {
     formData.append('ComprehensiveQuestions', $('#txtComprehensiveQuestions').val() || '');
     formData.append('Presentation', presentationContent || '');
     formData.append('IsActive', true);
-
+    formData.append('TimeTableID', $('#hdnTimeTableID').val() || ''); 
     // Keep existing video path unless it was explicitly removed / replaced
     formData.append('LectureVideoPath', removeExistingVideo ? '' : ($('#hdnLectureVideoPath').val() || ''));
     formData.append('RemoveExistingVideo', removeExistingVideo);
@@ -313,9 +313,10 @@ async function saveItem() {
     }
 
     // New attachment files, matches controller param name: attachmentFiles
-    selectedAttachmentFiles.forEach(file => {
-        formData.append('attachmentFiles', file, file.name);
-    });
+    if (selectedAttachmentFiles && selectedAttachmentFiles.length > 0) {
+        // only the first file is sent since the controller expects a single IFormFile
+        formData.append('attachmentFiles', selectedAttachmentFiles[0], selectedAttachmentFiles[0].name);
+    }
 
     // Attachment IDs removed during edit, so the server can soft-delete them
     formData.append('RemovedAttachmentIds', JSON.stringify(removedAttachmentIds));
@@ -334,7 +335,7 @@ async function saveItem() {
         if (res && res.success) {
             showPageNotice('success', res.message || 'Lesson plan saved successfully.');
             setTimeout(function () {
-                window.location.href = '/Academics/LessonPlan';
+                window.location.href = '/manageLessonPlan/Index';
             }, 1000);
         } else {
             showPageNotice('danger', res.message || 'Failed to save lesson plan.');
@@ -347,9 +348,7 @@ async function saveItem() {
     }
 }
 
-function getPresentationContent() {
-    return $('#txtPresentation').val();
-}
+
 
 function toggleSaveButton(isSaving) {
     const btn = $('.top-btn.btn-success');
@@ -378,7 +377,6 @@ function MyCustomUploadAdapterPlugin(editor) {
     };
 }
 
-
 $(document).ready(function () {
 
     ClassicEditor
@@ -395,3 +393,115 @@ $(document).ready(function () {
             console.error(error);
         });
 });
+
+let selectedMedia = null; // { url, name }
+
+function openAddImageDialog() {
+    selectedMedia = null;
+    $('#btnAddSelectedImage').prop('disabled', true);
+    $('#txtMediaSearch').val('');
+    loadMediaPicker();
+    new bootstrap.Modal(document.getElementById('mediaPickerModal')).show();
+}
+
+function loadMediaPicker(searchTerm) {
+    const $grid = $('#mediaPickerGrid').empty();
+    const $loading = $('#mediaPickerLoading').removeClass('d-none');
+    const $empty = $('#mediaPickerEmpty').addClass('d-none');
+
+    $.ajax({
+        url: '/Media/GetMediaLibrary',
+        type: 'GET',
+        data: { searchTerm: searchTerm || '', pageIndex: 1, pageSize: 40 },
+        success: function (res) {
+            $loading.addClass('d-none');
+
+            //if (!res || res.success !== 1 || !res.data) {
+            //    $('#mediaPickerCount').text('Total Record : 0');
+            //    $empty.removeClass('d-none');
+            //    return;
+            //}
+
+            const images = res.data.data.filter(item => /\.(png|jpe?g|gif|webp|svg)$/i.test(item.fileName));
+            $('#mediaPickerCount').text('Total Record : ' + images.length);
+
+            if (images.length === 0) {
+                $empty.removeClass('d-none');
+                return;
+            }
+
+            images.forEach(function (item) {
+                const $col = $(`
+                    <div class="media-card selectable shadow-tbl-outer"
+             title="${item.fileName}"
+             data-url="${item.attachment}"
+             data-name="${item.fileName}">
+            <div class="media-thumb">
+                <img src="${item.attachment}" alt="${item.fileName}" loading="lazy" />
+            </div>
+            <div class="media-name">${item.fileName}</div>
+        </div>
+                `);
+                $grid.append($col);
+            });
+        },
+        error: function () {
+            $loading.addClass('d-none');
+            $empty.removeClass('d-none').text('Failed to load media.');
+        }
+    });
+}
+
+// Debounced search
+let mediaSearchTimer = null;
+$(document).on('input', '#txtMediaSearch', function () {
+    const term = $(this).val();
+    clearTimeout(mediaSearchTimer);
+    mediaSearchTimer = setTimeout(() => loadMediaPicker(term), 300);
+});
+
+// Click a card -> select it (single-select, like Image 2)
+$(document).on('click', '.media-card.selectable', function () {
+    $('.media-card.selectable').removeClass('selected');
+    $(this).addClass('selected');
+
+    selectedMedia = {
+        url: $(this).data('url'),
+        name: $(this).data('name')
+    };
+    $('#btnAddSelectedImage').prop('disabled', false);
+});
+
+
+
+// Add button -> insert into CKEditor, close modal
+$(document).on('click', '#btnAddSelectedImage', function () {
+    if (!selectedMedia) return;
+
+    if (editorInstance) {
+        editorInstance.model.change(writer => {
+            const imageElement = writer.createElement('imageBlock', {
+                src: selectedMedia.url,
+                alt: selectedMedia.name
+            });
+            editorInstance.model.insertContent(
+                imageElement,
+                editorInstance.model.document.selection
+            );
+        });
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('mediaPickerModal')).hide();
+});
+
+// Reset selection state when modal closes (Cancel, X, backdrop click, or after Add)
+document.getElementById('mediaPickerModal').addEventListener('hidden.bs.modal', function () {
+    selectedMedia = null;
+    $('#btnAddSelectedImage').prop('disabled', true);
+    $('.media-card.selectable').removeClass('selected');
+});
+
+function getPresentationContent() {
+    // Presentation: CKEDITOR.instances['txtPresentation'].getData()
+    return editorInstance.getData();
+}

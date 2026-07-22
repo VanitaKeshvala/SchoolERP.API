@@ -85,22 +85,28 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult>Index()
+        public async Task<IActionResult>Index(int? staffId)
         {
             try
             {
                 var sessionId = await GetSessionId();
                 var companyId = await GetCompanyId();
-                int? staffId = GetStaffID();
+                if(staffId ==null || staffId == 0) 
+                {
+                    staffId = GetStaffID();
+                    staffId = (staffId ?? 0) <= 0 ? null : staffId;
+                }
+                
 
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/Academics/Index"
+                   "/ManageLessonPlan/Index"
                );
 
 
                 var staff = await _hrClient.GetAllStaffAsync(companyId,sessionId, staffId);
 
+                
                 var model = new TeacherTimeTablePageViewModel
                 {
                     Staff = staff.Success ? staff.Data : new List<HRStaffViewModel>(),
@@ -108,10 +114,33 @@ namespace SchoolERP.Net.Controllers
                 };
                 if (staffId > 0)
                 {
-                    var slots = await _academicsClient.GetTimeTableByStaffAsync(staffId.Value);
+                    var req = new TimeTableSearchRequest
+                    {
+                        CompanyID = companyId,
+                        SessionID = sessionId,
+                        StaffID = staffId ?? null
+                    };
+                    var slots = await _academicsClient.GetTimeTableByStaffAsync(req);
                     model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
                 }
-                model.Permissions = perms;
+                else 
+                {
+                    //THIS SECTION IF STUDENT LLOADING CHECK ONLY HER CLASS AND SECTION HOME WORK 
+                    var role = User.FindFirst("UserTypeName")?.Value;
+                    if (role.Trim() == "Student")
+                    {
+                        var req = new TimeTableSearchRequest
+                        {
+                            ClassID = int.Parse(User.FindFirst("ClassID")?.Value),
+                            SectionID = int.Parse(User.FindFirst("SectionID")?.Value),
+                            CompanyID = companyId,
+                            SessionID = sessionId,
+                        };
+                        var slots = await _academicsClient.GetTimeTableByStaffAsync(req);
+                        model.TimeTableSlots = slots.Success ? slots.Data : new List<TimeTableViewModel>();
+                    }
+                }
+                    model.Permissions = perms;
                 return View(model);
             }
             catch (Exception ex)
@@ -127,7 +156,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/LessonPlan/Add"
+                   "/ManageLessonPlan/Index"
                );
                 var model = new ManageLessonPlanAddViewModel();
                 var classes = await _classClient.GetAllAsync(false, await GetSessionId(), await GetCompanyId());
@@ -150,6 +179,7 @@ namespace SchoolERP.Net.Controllers
                     model.SectionID = timeTable.Data.SectionID;
                     model.SubjectGroupID = timeTable.Data.SubjectGroupID;
                     model.SubjectID = timeTable.Data.SubjectID;
+                    model.TimeTableID = timeTableID;
                 }
 
                 if (lessonPlanId.HasValue && lessonPlanId.Value > 0)
@@ -192,6 +222,8 @@ namespace SchoolERP.Net.Controllers
         }
 
         [HttpPost]
+        [RequestFormLimits(MultipartBodyLengthLimit = 100_000_000)] // ~100MB, adjust to your MaxVideoFileSizeMB setting
+        [RequestSizeLimit(100_000_000)]
         public async Task<IActionResult> UpsertLessonPlan([FromForm] ManageLessonPlanRequest request, IFormFile? avideoAttachment, IFormFile? attachmentFiles)
         {
             try
@@ -199,38 +231,68 @@ namespace SchoolERP.Net.Controllers
                 request.CompanyID = await GetCompanyId();
                 request.SessionID = await GetSessionId();
                 var isCreate = request.LessonPlanId <= 0;
+
                 var res = await _client.UpsertAsync(request);
-                if (res?.Data is JsonElement json) 
+
+                if (res?.Data is JsonElement json)
                 {
                     int lessonPlanId = json.GetProperty("data").GetInt32();
+
+                    string? videoPath = null;
+                    string? attachmentPath = null;
+
+                    // ── Handle video upload ─────────────────────────────
+                    if (avideoAttachment != null && avideoAttachment.Length > 0)
+                    {
+                        var videoResult = await _photoService.UploadVideoAsync(
+                            avideoAttachment,
+                            PhotoModule.LessonPlan,
+                            FolderNameModule.Video,
+                            lessonPlanId
+                        );
+
+                        if (!videoResult.Success)
+                            return Json(new { success = false, message = videoResult.Message });
+
+                        videoPath = videoResult.PhotoUrl;
+                    }
+
+                    // ── Handle document/photo attachment upload ─────────
                     if (attachmentFiles != null && attachmentFiles.Length > 0)
                     {
                         using var memoryStream = new MemoryStream();
                         await attachmentFiles.CopyToAsync(memoryStream);
-
                         byte[] fileBytes = memoryStream.ToArray();
-                        PhotoUploadResult photoResult = new PhotoUploadResult();
-                        if (attachmentFiles.FileName != null)
-                        {
-                            photoResult = await _photoService.SaveBase64PhotoAsync(
-                                Convert.ToBase64String(fileBytes),
-                                attachmentFiles.FileName ?? "photo.jpg",
-                                PhotoModule.PostalDispatch,
-                                FolderNameModule.Documents,
-                                lessonPlanId
-                            );
-                            var attchment = new ManageLessonPlanAttachmentUpsertRequest
-                            {
-                                LessonPlanId = lessonPlanId,
-                                CompanyID = request.CompanyID,
-                                AttachmentPath = photoResult.PhotoUrl
 
-                            };
-                            var attachmentRes = await _client.UpsertAttachmentAsync(attchment);
-                        }
+                        var photoResult = await _photoService.SaveBase64PhotoAsync(
+                            Convert.ToBase64String(fileBytes),
+                            attachmentFiles.FileName ?? "photo.jpg",
+                            PhotoModule.LessonPlan,
+                            FolderNameModule.Images,
+                            lessonPlanId
+                        );
+
+                        if (!photoResult.Success)
+                            return Json(new { success = false, message = photoResult.Message });
+
+                        attachmentPath = photoResult.PhotoUrl;
+                    }
+
+                    // ── Single shared upsert call, only fires if something was actually uploaded ──
+                    if (videoPath != null || attachmentPath != null)
+                    {
+                        var attchment = new ManageLessonPlanAttachmentUpsertRequest
+                        {
+                            LessonPlanId = lessonPlanId,
+                            CompanyID = request.CompanyID,
+                            AttachmentPath = attachmentPath,
+                            LectureVideoPath = videoPath
+                        };
+
+                        var attachmentRes = await _client.UpsertAttachmentAsync(attchment);
                     }
                 }
-               
+
                 return Json(res);
             }
             catch (Exception ex)

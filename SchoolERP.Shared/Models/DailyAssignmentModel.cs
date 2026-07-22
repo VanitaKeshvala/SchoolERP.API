@@ -46,7 +46,8 @@ namespace SchoolERP.Shared.Models
         public string? SubjectGroupName { get; set; }
         public string? SubjectName { get; set; }
         public string? CreatedByName { get; set; }
-        public string? EvaluatedByName { get; set; }
+        public string? EVALUATEDBYNAME { get; set; }
+        public string? CLASSTEACHERNAME { get; set; }
 
         // Derived status: 1 = Pending, 2 = Evaluated
         public int? Status { get; set; }

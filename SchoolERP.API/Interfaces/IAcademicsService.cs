@@ -6,7 +6,7 @@ namespace SchoolERP.API.Interfaces
     public interface IAcademicsService
     {
         List<TimeTableViewModel> GetTimeTableByClass(int companyId, int sessionId, int classId, int sectionId);
-        List<TimeTableViewModel> GetTimeTableByStaff(int companyId, int sessionId, int staffId);
+        List<TimeTableViewModel> GetTimeTableByStaff(TimeTableSearchRequest request);
         (bool success, string message) UpsertTimeTable(TimeTableUpsertRequest req, int companyId, int sessionId, int userId);
         (bool success, string message) DeleteTimeTableSlot(int id, int userId);
 

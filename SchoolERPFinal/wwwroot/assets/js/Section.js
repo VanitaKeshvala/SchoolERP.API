@@ -483,6 +483,27 @@ $(document).ready(function () {
         info: false,
         ordering: false
     });
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        var $panel = $('#filter-dropdown');
+
+        if (!$('#ddlFilterCompany').hasClass('select2-hidden-accessible')) {
+            $('#ddlFilterCompany').select2({
+                placeholder: 'Select company',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $panel
+            });
+        }
+
+        if (!$('#ddlFilterSessions').hasClass('select2-hidden-accessible')) {
+            $('#ddlFilterSessions').select2({
+                placeholder: 'Select session',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $panel
+            });
+        }
+    });
 });
 
 function triggerExport(type) {

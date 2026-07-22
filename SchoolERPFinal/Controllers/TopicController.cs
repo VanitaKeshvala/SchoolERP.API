@@ -16,7 +16,7 @@ namespace SchoolERP.Net.Controllers
         private readonly IUserMenuPermissionClientService _menuPerm;
         private readonly ICompanyClientService _companyService;
         private readonly ISessionClientService _sessionService;
-        private const string MenuPath = "/Homework/Add";
+        private const string MenuPath = "/Topic/Add";
         private readonly IConfiguration _configuration;
         private readonly IPhotoUploadService _photoService;
         private readonly IWebHostEnvironment _environment;
@@ -150,7 +150,7 @@ namespace SchoolERP.Net.Controllers
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
-                   "/Topic/Add"
+                   "/Topic"
                );
                 var model = new TopicAddViewModel();
                 var classes = await _classClient.GetAllAsync(false, await GetSessionId(), await GetCompanyId());

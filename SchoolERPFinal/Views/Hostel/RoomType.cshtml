@@ -20,7 +20,7 @@
     }
 </style>
 <!-- Page Header -->
-<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2 page-sticky-header">
     <div>
         <h6 class="fw-bold mb-0">Room Occupancy Type</h6>
     </div>
@@ -84,6 +84,7 @@
 
 <div class="row">
 
+   
     <div class="col-xl-12">
         <div class="card mb-2 shadow-tbl-outer">
             <div class="card-body p-3">
@@ -97,7 +98,7 @@
                                id="txtSearchInput"
                                value="@Model.SearchTerm"
                                class="form-control border-0 ps-2 search-input-responsive"
-                               placeholder="Search by Room Type, Description..."/>
+                               placeholder="Search by Room Type, Description..." />
                     </div>
 
                     <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
@@ -110,6 +111,8 @@
                         <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
                     </form>
 
+
+
                     <div class="dropdown">
                         <a href="#" id="btnFilterToggle"
                            class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
@@ -117,33 +120,25 @@
                             <i class="ti ti-filter text-gray-5 me-1"></i>Filters
                         </a>
 
-                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl"
-                             id="filter-dropdown">
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="max-width: calc(100vw - 2rem);">
 
                             <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
                                 <h6 class="mb-0 fw-bold">Select Criteria</h6>
                                 <div class="d-flex align-items-center justify-content-end">
                                     <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
-                                    <button type="button" class="btn text-primary fs-6 fw-medium" id="btnApplyFilters">Filter</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" onclick="applyFilters()" id="btnApplyFilters">
+                                        <i class="ti ti-filter me-1"></i>Apply
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                        <i class="ti ti-x"></i>
+                                    </button>
                                 </div>
                             </div>
 
                             <div class="filter-body pb-0">
                                 <div class="row">
-                                    <div class="col-md-12 mb-3">
-                                        <label class="form-label mb-1">Session</label>
-                                        <select class="form-select form-control select2"
-                                                id="ddlFilterSessions"
-                                                data-placeholder="Select session">
-                                            <option value="">All</option>
-                                            @foreach (var ut in Model.Sessions)
-                                            {
-                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
-                                                    @ut.SessionTitle
-                                                </option>
-                                            }
-                                        </select>
-                                    </div>
+
+                                    
                                     <div class="col-md-12 mb-3">
                                         <label class="form-label mb-1">Company</label>
                                         <select class="form-select form-control select2"
@@ -158,6 +153,20 @@
                                             }
                                         </select>
                                     </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -168,7 +177,6 @@
             </div>
         </div>
     </div>
-
     <!-- Active filter badges -->
     <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
         <div class="card shadow-tbl border-0 py-2 mb-2">

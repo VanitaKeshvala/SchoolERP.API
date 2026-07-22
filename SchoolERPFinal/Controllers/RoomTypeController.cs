@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Shared.Models;
@@ -42,7 +43,11 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'HostelType' management page where you can define the different grades or Hostel Type in the school.
         /// </summary>
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
         {
             try
             {
@@ -51,15 +56,31 @@ namespace SchoolERP.Net.Controllers
                    "/RoomType/Index"
                );
 
+                var request = new ClassSearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
 
-                var sessionId = await GetSessionId();
-                var companyId = await GetCompanyId();
-                var response = await _roomCoolingTypeService.GetAllAsync(companyId, sessionId);
-
-                
+                var response =  _roomCoolingTypeService.GetAllRoomCoolingTypeWithPageAsync(request);
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyService.GetAllAsync();
+                await Task.WhenAll(response,sessionTask, companiesTask);
+                var pagedResult = await response;
                 var model = new RoomCoolingTypePageViewModel
                 {
-                    RoomCoolingType= response.Data,
+                    RoomCoolingType = pagedResult.Success ? pagedResult.Data.Data : new List<RoomCoolingType>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID,
                     Permissions = perms
                 };
                 

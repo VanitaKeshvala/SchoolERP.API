@@ -134,5 +134,20 @@ namespace SchoolERP.Net.Services.Clients
 
         public Task<ApiResponse<dynamic>> UpdateProfileAsync(ProfileRequest req)
            => PostAsync<dynamic>("api/HumanResourceApi/UpdateProfile", req);
+
+        public async Task<ApiResponse<PagedResult<HRDepartmentViewModel>>> GetAllDepartmentsWithPageAsync(SearchRequest request)
+        {
+            return await PostAsync<PagedResult<HRDepartmentViewModel>>("api/HumanResourceApi/GetAllDepartmentsWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<HRDesignationViewModel>>> GetAllDesignationsWithPageAsync(SearchRequest request)
+        {
+            return await PostAsync<PagedResult<HRDesignationViewModel>>("api/HumanResourceApi/GetAllDesignationsWithPage", request);
+        }
+
+        public async Task<ApiResponse<PagedResult<HRLeaveTypeViewModel>>> GetAllLeaveTypesWithPageAsync(SearchRequest request)
+        {
+            return await PostAsync<PagedResult<HRLeaveTypeViewModel>>("api/HumanResourceApi/GetAllLeaveTypesWithPage", request);
+        }
     }
 }

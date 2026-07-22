@@ -6,6 +6,7 @@ using SchoolERP.API.Services;
 using System;
 using System.Security.Claims;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Controllers.Api
 {
@@ -64,14 +65,35 @@ namespace SchoolERP.API.Controllers.Api
         [HttpPost("UpsertDesignation")]
         public async Task<IActionResult> UpsertDesignation([FromBody] HRDesignationUpsertRequest req)
         {
-            var isCreate = req.HRDesignationID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, DesignationMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add designations." });
-            if (!isCreate && !await _menuPerm.Has(User, DesignationMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit designations." });
+            try
+            {
+                int userId = GetUserId();
+                if (req.CompanyID == null || req.CompanyID == 0)
+                {
+                    req.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (req.SessionID == null || req.SessionID == 0)
+                {
+                    req.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
 
-            var res = _hrService.UpsertDesignation(req, GetCompanyId(), GetSessionId(), GetUserId());
-            return Ok(new { success = res.Success, message = res.Message });
+                if (req.CompanyID == 0 || req.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var isCreate = req.HRDesignationID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, DesignationMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add designations." });
+                if (!isCreate && !await _menuPerm.Has(User, DesignationMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit designations." });
+
+                var res = _hrService.UpsertDesignation(req, req.CompanyID, req.SessionID, GetUserId());
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
 
         [HttpPost("DeleteDesignation")]
@@ -116,14 +138,35 @@ namespace SchoolERP.API.Controllers.Api
         [HttpPost("UpsertDepartment")]
         public async Task<IActionResult> UpsertDepartment([FromBody] HRDepartmentUpsertRequest req)
         {
-            var isCreate = req.DepartmentID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, DepartmentMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add departments." });
-            if (!isCreate && !await _menuPerm.Has(User, DepartmentMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit departments." });
+            try
+            {
+                int userId = GetUserId();
+                if (req.CompanyID == null || req.CompanyID == 0)
+                {
+                    req.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (req.SessionID == null || req.SessionID == 0)
+                {
+                    req.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
 
-            var res = _hrService.UpsertDepartment(req, GetCompanyId(), GetSessionId(), GetUserId());
-            return Ok(new { success = res.Success, message = res.Message });
+                if (req.CompanyID == 0 || req.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var isCreate = req.DepartmentID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, DepartmentMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add departments." });
+                if (!isCreate && !await _menuPerm.Has(User, DepartmentMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit departments." });
+
+                var res = _hrService.UpsertDepartment(req, req.CompanyID, req.SessionID, GetUserId());
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
 
         [HttpPost("DeleteDepartment")]
@@ -152,9 +195,19 @@ namespace SchoolERP.API.Controllers.Api
         /// </summary>
         public IActionResult GetAllLeaveTypes()
         {
-            var data = _hrService.GetAllLeaveTypes(GetCompanyId(), GetSessionId());
-            return Ok(new { success = true, data });
+            try
+            {
+                var data = _hrService.GetAllLeaveTypes(GetCompanyId(), GetSessionId());
+                return Ok(new { success = true, data });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+           
         }
+
+
 
         [HttpGet("GetLeaveTypeByID/{id}")]
         public IActionResult GetLeaveTypeByID(int id)
@@ -167,14 +220,34 @@ namespace SchoolERP.API.Controllers.Api
         [HttpPost("UpsertLeaveType")]
         public async Task<IActionResult> UpsertLeaveType([FromBody] HRLeaveTypeUpsertRequest req)
         {
-            var isCreate = req.LeaveTypeID <= 0;
-            if (isCreate && !await _menuPerm.Has(User, LeaveTypeMenuPath, "Add"))
-                return Ok(new { success = false, message = "You do not have permission to add leave types." });
-            if (!isCreate && !await _menuPerm.Has(User, LeaveTypeMenuPath, "Edit"))
-                return Ok(new { success = false, message = "You do not have permission to edit leave types." });
+            try
+            {
+                int userId = GetUserId();
+                if (req.CompanyID == null || req.CompanyID == 0)
+                {
+                    req.CompanyID = _companySvc.GetUserCurrentCompany(userId) ?? 0;
+                }
+                if (req.SessionID == null || req.SessionID == 0)
+                {
+                    req.SessionID = _sessionSvc.GetUserCurrentSession(userId) ?? 0;
+                }
 
-            var res = _hrService.UpsertLeaveType(req, GetCompanyId(), GetSessionId(), GetUserId());
-            return Ok(new { success = res.Success, message = res.Message });
+                if (req.CompanyID == 0 || req.SessionID == 0)
+                    return BadRequest(ApiResponse<dynamic>.ErrorResponse("Current company or session not set."));
+
+                var isCreate = req.LeaveTypeID <= 0;
+                if (isCreate && !await _menuPerm.Has(User, LeaveTypeMenuPath, "Add"))
+                    return Ok(new { success = false, message = "You do not have permission to add leave types." });
+                if (!isCreate && !await _menuPerm.Has(User, LeaveTypeMenuPath, "Edit"))
+                    return Ok(new { success = false, message = "You do not have permission to edit leave types." });
+
+                var res = _hrService.UpsertLeaveType(req, req.CompanyID, req.SessionID, GetUserId());
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }            
         }
 
         [HttpPost("DeleteLeaveType")]
@@ -586,6 +659,54 @@ namespace SchoolERP.API.Controllers.Api
             catch (Exception ex)
             {
                 return Ok(new { success = false, message = "Database Error: " + ex.Message });
+            }
+        }
+
+        [HttpPost("GetAllDepartmentsWithPage")]
+        public async Task<IActionResult> GetAllDepartmentsWithPage([FromBody] SearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HRDepartmentViewModel>>.SuccessResponse(new List<HRDepartmentViewModel>()));
+                var data = await _hrService.GetAllDepartmentsWithPage(request);
+                return Ok(ApiResponse<PagedResult<HRDepartmentViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpPost("GetAllDesignationsWithPage")]
+        public async Task<IActionResult> GetAllDesignationsWithPage([FromBody] SearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HRDesignationViewModel>>.SuccessResponse(new List<HRDesignationViewModel>()));
+                var data = await _hrService.GetAllDesignationsWithPage(request);
+                return Ok(ApiResponse<PagedResult<HRDesignationViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        [HttpPost("GetAllLeaveTypesWithPage")]
+        public async Task<IActionResult> GetAllLeaveTypesWithPage([FromBody] SearchRequest request)
+        {
+            try
+            {
+                if (request.CompanyID == 0 || request.SessionID == 0)
+                    return Ok(ApiResponse<List<HRLeaveTypeViewModel>>.SuccessResponse(new List<HRLeaveTypeViewModel>()));
+                var data = await _hrService.GetAllLeaveTypesWithPage(request);
+                return Ok(ApiResponse<PagedResult<HRLeaveTypeViewModel>>.SuccessResponse(data));
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
     }

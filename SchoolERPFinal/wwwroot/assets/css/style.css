@@ -10488,7 +10488,7 @@ h1,
         font-size: 24px;
     }
     .card.shadow-tbl-outer .card-body {
-        padding-top: 56px; /* roughly tab-bar height; refine after testing */
+        padding-top: 35px; /* roughly tab-bar height; refine after testing */
     }
 }
 
@@ -13146,14 +13146,13 @@ Author URL: https://themeforest.net/user/dreamstechnologies
     .mail-notifications.compress-width {
         display: none;
     }
-}
-
-@media (max-width: 767.98px) {
     .mail-notifications {
         width: 100%;
         max-width: 100%;
     }
+
 }
+
 
 .tag-with-img .choices__inner {
     border: 0;
@@ -18760,8 +18759,8 @@ Author URL: https://themeforest.net/user/dreamstechnologies
 
     /* Shrink the user avatar image slightly to save space */
     .profile-dropdown img[width="32"] {
-        width: 60px !important;
-        height: 24px !important;
+        width: 25px !important;
+        height: 25px !important;
     }
 
     /* Hide the chevron icon next to username on very small screens to save space */
@@ -18868,7 +18867,7 @@ Author URL: https://themeforest.net/user/dreamstechnologies
         margin: 0 !important;
         border-radius: 12px;
         max-height: 80vh;
-        overflow-y: auto;
+        
         z-index: 1055;
         box-shadow: 0 10px 40px rgba(0,0,0,0.25);
     }
@@ -19040,7 +19039,7 @@ Author URL: https://themeforest.net/user/dreamstechnologies
 
     .filter-dropdown .filter-body {
         padding: 14px 16px 16px;
-        max-height: 70vh;
+        max-height: 64vh;
         overflow-y: auto;
     }
 
@@ -19077,6 +19076,7 @@ Author URL: https://themeforest.net/user/dreamstechnologies
         width: calc(100vw - 32px);
         max-width: 380px;
     }
+
 }
 
 /* ---- ≤575.98px: true centered modal behavior ---- */
@@ -19165,4 +19165,357 @@ Author URL: https://themeforest.net/user/dreamstechnologies
         max-width: 85px;
         font-size: 11px;
     }
+}
+/* Ensure navbar/profile dropdowns always render above sticky headers */
+.dropdown-menu {
+    z-index: 1050 !important;
+}
+
+/* If your topbar/navbar itself needs to stay above the sticky page header too */
+.navbar,
+.topbar,
+.header-top { /* use whichever class your actual top navbar uses */
+    position: relative;
+    z-index: 1030;
+}
+
+
+/* ============================================================
+   REUSABLE STICKY SYSTEM — apply these two classes on ANY page
+   ============================================================ */
+
+/* Button/header bar — sticks below the navbar */
+.page-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 900; /* stays BELOW dropdown-menu (1050) and navbar (1030) */
+    background: var(--white);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Table scroll container — sticks its own <thead> */
+.sticky-table-scroll {
+    max-height: 520px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+    .sticky-table-scroll table {
+        border-collapse: separate;
+        border-spacing: 0;
+        margin-bottom: 0 !important;
+    }
+
+    .sticky-table-scroll thead th {
+        position: sticky;
+        z-index: 50; /* below dropdowns/navbar, above table body */
+        background: var(--white);
+        top: 0; /* JS overrides this to sit below .page-sticky-header */
+    }
+
+/* Dropdowns/profile menu ALWAYS render above both sticky bars */
+.dropdown-menu {
+    z-index: 1050 !important;
+}
+
+.navbar-header {
+    z-index: 1030; /* already set in your theme — confirmed, not duplicated */
+}
+
+.filter-dropdown {
+    max-width: calc(100vw - 2rem);
+}
+.table-responsive table th {
+    white-space: nowrap;
+}
+
+/* optional: keep body cells from wrapping too, if you want every column single-line */
+.table-responsive table td {
+    white-space: nowrap;
+}
+@media (max-width: 576px) {
+    .filter-dropdown.dropdown-menu-end {
+        right: 1rem !important;
+
+    }
+    .dropdown-lg {
+        min-width: 200px !important;
+    }
+    body.filter-open {
+        overflow: hidden; /* prevents background scroll while dropdown is open */
+    }
+
+    .dropdown-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 1040;
+        display: none;
+    }
+
+    body.filter-open .dropdown-backdrop {
+        display: block;
+    }
+
+    .filter-dropdown {
+        position: relative;
+        z-index: 1050; /* stays above the backdrop */
+        background: #fff; /* fully opaque, unaffected by backdrop */
+    }
+    .slot-row select,
+    .slot-row input {
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 768px) {
+    /* Stack tabs and Add New button vertically */
+    #tabsStickyBar.card-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        flex-wrap: nowrap !important;
+    }
+
+    #tabsStickyBar .day-tabs-wrapper {
+        position: relative;
+        width: 100%;
+        overflow: hidden; /* clips content so the fade sits at the true edge */
+    }
+
+    #dayTabs.tab-scroll {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        -ms-overflow-style: none;
+        padding-bottom: 10px;
+    }
+
+    /* Fade hint on right edge */
+    #tabsStickyBar .day-tabs-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 24px;
+        background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
+        pointer-events: none;
+    }
+
+    #tabsStickyBar button {
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    /* Fade hint on the right edge to show there's more to scroll */
+    .day-tabs-wrapper::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 30px;
+        background: linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.95));
+        pointer-events: none;
+    }
+
+    .card-header.d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+        .card-header.d-flex.justify-content-between button {
+            width: 100%;
+        }
+    /* ---- Parameter Generator row: stack fields vertically ---- */
+    .card-body > .d-flex.gap-2.align-items-end {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+        .card-body > .d-flex.gap-2.align-items-end > .flex-grow-1 {
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-body > .d-flex.gap-2.align-items-end > button {
+            width: 100%;
+        }
+
+    /* ---- Slot rows (Subject / Teacher / Time / Room / Delete): stack ---- */
+    .slot-row {
+        flex-direction: column;
+        align-items: stretch !important;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fafafa;
+    }
+
+        .slot-row > div {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .slot-row > button {
+            width: 100%;
+        }
+
+    
+    /* ---- Card header (day tabs + Add New button): stack ---- */
+    .card-header.d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+      
+        .card-header.d-flex.justify-content-between button {
+            width: 100%;
+        }
+
+    /* ---- Top filter/search row: stack search box and filter button ---- */
+    #filterForm .d-flex.align-items-center.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    #tableSearch {
+        width: 100% !important;
+    }
+
+    /* ---- Page header buttons: full width, stacked ---- */
+    .d-flex.align-items-sm-center.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .top-btn {
+        width: 100%;
+    }
+
+    /* ---- Labels: prevent awkward wrapping ---- */
+    .form-label {
+        white-space: normal;
+        font-size: 0.85rem;
+    }
+
+    /* ---- Filter dropdown: full width on mobile ---- */
+    .filter-dropdown.dropdown-lg {
+        min-width: 90vw !important;
+        max-width: 90vw !important;
+    }
+    
+    /* Stack tabs row and Add New button */
+    .card-header.d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+        .card-header.d-flex.justify-content-between button {
+            width: 100%;
+        }
+    .page-sticky-header .btn.top-btn {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+
+    /* Go back to stacked label/checkbox to save horizontal space */
+    .attendance-table thead th.status-col .status-col-inner {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .attendance-table thead th.status-col {
+        min-width: 70px;
+        padding: 8px 6px;
+    }
+
+        .attendance-table thead th.status-col .status-col-inner span {
+            font-size: 11px;
+        }
+
+    /* Shrink sortable header text/icons a bit too, so row doesn't get excessively wide */
+    .attendance-table thead th {
+        font-size: 12px;
+        padding: 8px 6px;
+    }
+
+        .attendance-table thead th.sortable .sort-icon {
+            font-size: 10px;
+        }
+
+        /* Note column: don't force 220px min-width on small screens */
+        .attendance-table thead th.note-col {
+            min-width: 140px;
+        }
+
+    /* Row inputs: keep touch targets usable but compact */
+    .attendance-table tbody td {
+        padding: 6px 8px;
+    }
+
+    .attendance-table tbody .attendance-note {
+        width: 140px !important;
+    }
+}
+
+.attendance-table thead th.status-col .status-col-inner {
+    display: flex;
+    flex-direction: row; /* was: column */
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+    .attendance-table thead th.status-col .status-col-inner span {
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .attendance-table thead th.status-col .status-col-inner input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        cursor: pointer;
+    }
+
+/* since content is now wider (label + checkbox in one line), give a bit more room */
+.attendance-table thead th.status-col {
+    text-align: center;
+    min-width: 110px; /* was 90px — bumped up so "Half Day" + checkbox doesn't wrap */
+}
+
+@media (max-width: 480px) {
+    .attendance-table thead th.status-col {
+        min-width: 56px;
+    }
+
+        .attendance-table thead th.status-col .status-col-inner span {
+            font-size: 10px;
+        }
+}
+
+.att-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+}
+
+.att-cell {
+    display: flex;
+    justify-content: flex-end; /* Align checkbox with header checkbox */
+    align-items: center;
+}
+
+.atd-check,
+.form-check-input {
+    margin: 0;
 }

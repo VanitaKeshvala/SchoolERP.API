@@ -262,6 +262,7 @@ namespace SchoolERP.Shared.Models
         public string? ClassName { get; set; }
         public string? SectionName { get; set; }
         public string? FatherName { get; set; }
+        public string? GuardianName { get; set; }
         public string? FatherPhone { get; set; }
         public string? Gender { get; set; }
         public DateTime? DOB { get; set; }

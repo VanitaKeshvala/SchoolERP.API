@@ -1,4 +1,5 @@
 ﻿using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
 
 namespace SchoolERP.API.Interfaces
 {
@@ -209,5 +210,9 @@ namespace SchoolERP.API.Interfaces
            int staffId,
            string PhotoDoc,
            int userId);
+
+        Task<PagedResult<HRDepartmentViewModel>> GetAllDepartmentsWithPage(SearchRequest req);
+        Task<PagedResult<HRDesignationViewModel>> GetAllDesignationsWithPage(SearchRequest req);
+        Task<PagedResult<HRLeaveTypeViewModel>> GetAllLeaveTypesWithPage(SearchRequest req);
     }
 }

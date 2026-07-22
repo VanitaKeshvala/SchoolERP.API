@@ -79,7 +79,7 @@
         
         @if (p.CanImport)
         {
-            <a href="/StudentInformation/ImportStudent" class="btn btn-warning d-inline-flex align-items-center top-btn"><i class="ti ti-upload me-1"></i> Import Student</a>
+            <a href="/StudentInformation/ImportStudent" class="btn btn-warning d-inline-flex align-items-center top-btn"><i class="ti ti-upload me-1"></i> Import</a>
         }
         @if (p.CanExport)
         {
@@ -428,6 +428,7 @@
         <div class="card shadow-tbl">
             <div class="card-body">
                 <div class="table-responsive">
+                    <div class="student-table-scroll">
                     <table class="table table-nowrap mb-0" id="tblStudents">
                         <thead>
                             <tr>
@@ -458,9 +459,10 @@
                                     </td>
                                     <td>@student.AdmissionNo</td>
                                     <td>
-                                        <a href="/StudentInformation/Details/@student.StudentID" class="text-primary">
+                                        <a class="text-primary">
                                             @student.FullName
                                         </a>
+                                        
                                     </td>
                                     <td>@student.RollNo</td>
                                     <td>@student.ClassName (@student.SectionName)</td>
@@ -476,6 +478,7 @@
                                 </tr>
                             }
                     </table>
+                    </div>
                     <div class="d-flex justify-content-between align-items-center mt-3 mb-3 p-1">
 
                         <div class="text-muted small">

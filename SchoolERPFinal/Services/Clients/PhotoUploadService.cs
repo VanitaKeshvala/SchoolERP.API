@@ -28,8 +28,10 @@ namespace SchoolERP.Net.Services.Clients
         //private const long MaxFileSizeBytes = 2 * 1024 * 1024;
         private long MaxFileSizeBytes =>
     _configuration.GetValue<long>("FileUploadSettings:MaxFileSizeMB");
+        // — separate config key for video, since videos need a much larger cap than photos
+        private long MaxVideoFileSizeBytes =>
+            _configuration.GetValue<long>("FileUploadSettings:MaxVideoFileSizeMB");
 
-        
 
         // ── UPLOAD ────────────────────────────────────────────────
         public async Task<PhotoUploadResult> UploadAsync(
@@ -210,6 +212,77 @@ namespace SchoolERP.Net.Services.Clients
                     Success = false,
                     Message = $"Base64 photo conversion failed: {ex.Message}"
                 };
+            }
+        }
+
+        // ── UPLOAD VIDEO ──────────────────────────────────────────
+        public async Task<PhotoUploadResult> UploadVideoAsync(
+            IFormFile video, PhotoModule module, FolderNameModule folderNameModule, int recordId)
+        {
+            // ── Validate: file present ─────────────────────────
+            if (video == null || video.Length == 0)
+                return Fail("No video file provided.");
+
+            // ── Validate: file type ────────────────────────────
+            if (!AllowedVideoTypes.Contains(video.ContentType.ToLower()))
+                return Fail("Only MP4, MPEG, MOV, AVI, WMV, and WEBM videos are allowed.");
+
+            long maxBytes = MaxVideoFileSizeBytes * 1024L * 1024L;
+
+            // ── Validate: file size ────────────────────────────
+            if (video.Length > maxBytes)
+                return Fail($"Video size must not exceed {MaxVideoFileSizeBytes}MB.");
+
+            // ── Validate: recordId ─────────────────────────────
+            if (recordId <= 0)
+                return Fail("Invalid record ID. Save the record first before uploading video.");
+
+            try
+            {
+                // ── Build folder path ──────────────────────────
+                var folderPath = GetFolderPath(module, folderNameModule, recordId);
+
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);
+
+                // ── Build versioned file name: {recordId}_V{n}.ext ──
+                var ext = Path.GetExtension(video.FileName).ToLower();
+
+                var existingFiles = Directory.GetFiles(folderPath, $"{recordId}_V*.*");
+                int nextVersion = 1;
+                if (existingFiles.Any())
+                {
+                    nextVersion = existingFiles
+                        .Select(f =>
+                        {
+                            var name = Path.GetFileNameWithoutExtension(f);
+                            var parts = name.Split("_V");
+                            return parts.Length > 1 && int.TryParse(parts[1], out int v) ? v : 0;
+                        })
+                        .Max() + 1;
+                }
+
+                var fileName = $"{recordId}_V{nextVersion}{ext}";
+                var fullPath = Path.Combine(folderPath, fileName);
+
+                // ── Save to disk ───────────────────────────────
+                using var stream = new FileStream(fullPath, FileMode.Create);
+                await video.CopyToAsync(stream);
+
+                // ── Return relative URL ────────────────────────
+                var relativeUrl = GetRelativeUrl(module, folderNameModule, recordId, fileName);
+
+                return new PhotoUploadResult
+                {
+                    Success = true,
+                    Message = "Video uploaded successfully.",
+                    PhotoUrl = relativeUrl,
+                    FileName = fileName
+                };
+            }
+            catch (Exception ex)
+            {
+                return Fail($"Video upload failed: {ex.Message}");
             }
         }
     }

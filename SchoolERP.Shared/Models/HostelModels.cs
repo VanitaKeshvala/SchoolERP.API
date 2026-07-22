@@ -114,7 +114,7 @@ namespace SchoolERP.Shared.Models
         public int HostelID { get; set; }
         public string HostelName { get; set; } = string.Empty;
         public string DisplayLabel { get; set; } = string.Empty;
-        public int RoomTypeID { get; set; }
+        public int? RoomTypeID { get; set; }
         public string? HostelAddress { get; set; }
         public int HostelIntake { get; set; }
         public string? HostelDescription { get; set; }
@@ -122,13 +122,13 @@ namespace SchoolERP.Shared.Models
         public int CompanyID { get; set; }
         public int SessionID { get; set; }
 
-        public string HostelCode { get; set;}
+        public string? HostelCode { get; set;}
         public int HostelTypeID { get; set; }
         public string? PostalCode { get; set; }
         public int? CountryId { get; set; }
         public int? StateId { get; set; }
         public int? CityId { get; set; }
-        public string HostelRules { get; set; }
+        public string? HostelRules { get; set; }
 
     }
 

@@ -30,6 +30,11 @@ namespace SchoolERP.Net.Services.Clients
         {
             return await PostAsync<dynamic>($"api/RoomCoolingTypeAPI/ToggleStatus", request);
         }
+
+        public async Task<ApiResponse<PagedResult<RoomCoolingType>>> GetAllRoomCoolingTypeWithPageAsync(ClassSearchRequest request)
+        {
+            return await PostAsync<PagedResult<RoomCoolingType>>("api/RoomCoolingTypeAPI/GetAllRoomCoolingTypeWithPage", request);
+        }
     }
 }
 

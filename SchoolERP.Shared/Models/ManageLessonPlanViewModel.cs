@@ -36,7 +36,7 @@ namespace SchoolERP.Shared.Models
         public string? PreviousKnowledge { get; set; }
         public string? ComprehensiveQuestions { get; set; }
         public string? Presentation { get; set; }
-
+        public int TimeTableID { get; set; }
         public byte Status { get; set; }
 
         public bool IsActive { get; set; }
@@ -60,6 +60,7 @@ namespace SchoolERP.Shared.Models
         public int SubjectID { get; set; }
         public int LessonMapId { get; set; }
         public int TopicMapId { get; set; }
+        public int TimeTableID { get; set; }
 
         public string? SubTopic { get; set; }
 
@@ -70,6 +71,9 @@ namespace SchoolERP.Shared.Models
         public string? LectureYoutubeUrl { get; set; }
         public string? LectureVideoPath { get; set; }
         public string? AttachmentPath { get; set; }
+
+        public bool RemoveExistingVideo { get; set; }        // explicit "user cleared the video" flag
+        public string? RemovedAttachmentIds { get; set; }     // JSON array of ids to soft-delete
 
         public string? TeachingMethod { get; set; }
         public string? GeneralObjectives { get; set; }
@@ -101,6 +105,7 @@ namespace SchoolERP.Shared.Models
 
         public int? UserID { get; set; }
         public string? IPAddress { get; set; }
+
     }
 
     public class ManageLessonPlanAddViewModel
@@ -115,6 +120,7 @@ namespace SchoolERP.Shared.Models
         public int SectionID { get; set; }
         public int SubjectGroupID { get; set; }
         public int SubjectID { get; set; }
+        public int? TimeTableID { get; set; }
     }
 
     public class ManageLessonPlanAttachmentUpsertRequest

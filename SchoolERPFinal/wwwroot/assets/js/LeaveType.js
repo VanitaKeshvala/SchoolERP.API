@@ -1,13 +1,13 @@
 ﻿function triggerExport(index) {
-    if ($.fn.DataTable.isDataTable('#tblRoomType')) {
-        const table = $('#tblRoomType').DataTable();
+    if ($.fn.DataTable.isDataTable('#tblLeaveType')) {
+        const table = $('#tblLeaveType').DataTable();
         table.button(index).trigger();
     }
 }
 // ========================================
 // Filter badges — sessionStorage persistence
 // ========================================
-const FILTER_KEY = 'appliedFilters_hotelRoomType';
+const FILTER_KEY = 'appliedFilters_leaveType';
 let appliedFilters = {};
 try {
     const stored = sessionStorage.getItem(FILTER_KEY);
@@ -59,6 +59,7 @@ function applyFilters() {
         };
     } else delete appliedFilters['ddlFilterCompany'];
 
+
     saveAppliedFilters();
 }
 
@@ -98,7 +99,7 @@ function removeFilter(filterId) {
         const el = document.getElementById('txtSearchInput');
         if (el) el.value = '';
         document.getElementById('hdnSearch').value = '';
-    } 
+    }
     delete appliedFilters[filterId];
     saveAppliedFilters();
     document.getElementById('hdnPageIndex').value = 1;
@@ -127,11 +128,11 @@ function resetAllFilters() {
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── DataTable (export only) ───────────────────────────────────────
-    if ($.fn.DataTable.isDataTable('#tblRoomType')) {
-        $('#tblRoomType').DataTable().destroy();
+    if ($.fn.DataTable.isDataTable('#tblLeaveType')) {
+        $('#tblLeaveType').DataTable().destroy();
     }
     $.fn.dataTable.ext.errMode = 'none';
-    window.exportTable = $('#tblRoomType').DataTable({
+    window.exportTable = $('#tblLeaveType').DataTable({
         dom: 'Bfrtip',
         buttons: [
             { extend: 'copy', exportOptions: { columns: [1, 2, 3, 4] } },
@@ -147,15 +148,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Select2 ───────────────────────────────────────────────────────
-    jQuery('#ddlFilterSessions, #ddlFilterCompany').select2({
-        width: '100%',
-        dropdownParent: jQuery('#filter-dropdown'),
-        allowClear: true,
-        placeholder: function () { return jQuery(this).data('placeholder') || 'Select'; }
-    });
+    try {
+        if (window.jQuery && typeof jQuery.fn.select2 === 'function') {
+            jQuery('#ddlFilterSessions, #ddlFilterCompany').select2({
+                width: '100%',
+                dropdownParent: jQuery('#filter-dropdown'),
+                allowClear: true,
+                placeholder: function () { return jQuery(this).data('placeholder') || 'Select'; }
+            });
+        }
+    } catch (e) {
+        console.warn('Select2 init skipped:', e);
+    }
 
     // ── Keep filter dropdown open while interacting inside ────────────
-    //document.getElementById('filter-dropdown')?.addEventListener('click', e => e.stopPropagation());
+    document.getElementById('filter-dropdown')?.addEventListener('click', e => e.stopPropagation());
 
     // ── Apply Filters ─────────────────────────────────────────────────
     document.getElementById('btnApplyFilters')?.addEventListener('click', () => {
@@ -184,38 +191,53 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFilterBadges();
 });
 
+// ========================================
+// Search input — debounced server submit
+// ========================================
+let searchTimer = null;
+
+document.getElementById('txtSearchInput')?.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+        document.getElementById('hdnSearch').value = this.value;
+        document.getElementById('hdnPageIndex').value = 1;
+
+        // ── Sync search into appliedFilters before submit ─────────────
+        const val = this.value.trim();
+        if (val) appliedFilters['txtSearchInput'] = { label: 'Search', text: val };
+        else delete appliedFilters['txtSearchInput'];
+        saveAppliedFilters(); // ← persist before submit
+
+        submitForm();
+    }, 500);
+});
 
 let selectedId = 0;
 const canEdit = window.canEdit;
 const canDelete = window.canDelete;
-window.selectedRoomTypeId = 0;
+
 function triggerExport(index) {
-    if ($.fn.DataTable.isDataTable('#tblRoomType')) {
-        const table = $('#tblRoomType').DataTable();
+    if ($.fn.DataTable.isDataTable('#tblLeaveType')) {
+        const table = $('#tblLeaveType').DataTable();
         table.button(index).trigger();
     }
 }
 
 $(document).ready(function () {
-
-    
-    $('#tblRoomType').DataTable({
+    $('#tblLeaveType').DataTable({
         dom: 'Bfrtip',
         buttons: [
-            { extend: 'copy', exportOptions: { columns: [1, 2] } },
-            { extend: 'csv', exportOptions: { columns: [1, 2] } },
-            { extend: 'excel', exportOptions: { columns: [1, 2] } },
-            { extend: 'pdf', exportOptions: { columns: [1, 2] } },
-            { extend: 'print', exportOptions: { columns: [1, 2] } }
+            { extend: 'copy', exportOptions: { columns: [1] } },
+            { extend: 'csv', exportOptions: { columns: [1] } },
+            { extend: 'excel', exportOptions: { columns: [1] } },
+            { extend: 'pdf', exportOptions: { columns: [1] } },
+            { extend: 'print', exportOptions: { columns: [1] } }
         ],
         searching: false,
         paging: false,
         info: false
     });
-
-    
 })
-
 
 
 function selectItem(id, row) {
@@ -223,22 +245,25 @@ function selectItem(id, row) {
     document.querySelectorAll('.item-row').forEach(r => r.classList.remove('bg-light'));
     row.classList.add('bg-light');
     //row.querySelector('input[type="radio"]').checked = true;
-    window.selectedRoomTypeId = id;
-    if (canEdit) document.getElementById('btnEdit').disabled = false;
-    if (canDelete) document.getElementById('btnDelete').disabled = false;
+
+    if (canEdit) {
+        const btnEdit = document.getElementById('btnEdit');
+        if (btnEdit) btnEdit.disabled = false;
+    }
+    if (canDelete) {
+        const btnDelete = document.getElementById('btnDelete');
+        if (btnDelete) btnDelete.disabled = false;
+    }
 
     let checkedCount = $('.student-checkbox:checked').length;
     $('#btnDelete').prop('disabled', checkedCount === 0);
     // Edit sirf 1 record select hone par
     $('#btnEdit').prop('disabled', checkedCount !== 1);
-    $('#btnActive').prop('disabled', checkedCount === 0);
-    $('#btnInactive').prop('disabled', checkedCount === 0);
 }
 
-// Search
 document.getElementById('txtSearchInput').addEventListener('keyup', function () {
     const q = this.value.toLowerCase();
-    document.querySelectorAll('#tblRoomType tbody tr').forEach(row => {
+    document.querySelectorAll('#tblLeaveType tbody tr').forEach(row => {
         if (row.classList.contains('item-row')) {
             row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
         }
@@ -246,83 +271,51 @@ document.getElementById('txtSearchInput').addEventListener('keyup', function () 
 });
 
 function openAddModal() {
-    document.getElementById('modalTitle').textContent = 'Add Room Type';
-    document.getElementById('hdnRoomTypeID').value = 0;
-    document.getElementById('roomTypeForm').reset();
+    document.getElementById('modalTitle').textContent = 'Add Leave Type';
+    document.getElementById('hdnLeaveTypeID').value = 0;
+    document.getElementById('entryForm').reset();
     document.getElementById('chkActive').checked = true;
-    new bootstrap.Modal(document.getElementById('roomTypeModal')).show();
+    new bootstrap.Modal(document.getElementById('entryModal')).show();
 }
 
 function editSelected() {
-    if (!window.selectedRoomTypeId) return;
-    try {
-
-        if (window.selectedRoomTypeId) {
-            location.href = `/Hostel/AddRoomType/${window.selectedRoomTypeId}`;
-        }
-
-    } catch (err) {
-        console.error(err);
-    }
+    if (!selectedId) return;
+    location.href = `/HumanResource/AddLeaveType/${selectedId}`;
 }
 
 async function saveRecord() {
-    const form = document.getElementById('itemForm');
+    const form = document.getElementById('entryForm');
     if (!form.checkValidity()) { form.reportValidity(); return; }
-    const roomTypeId = parseInt(document.getElementById('txtItemId').value);
-    if (roomTypeId === 0 && !window.canAdd) {
-        IV.setNotice('classModalNotice', 'You do not have permission to add.');
-        return;
-    }
-    const bedCapacity = parseInt(document.getElementById('txtBedCapacity').value);
-    if (roomTypeId === 0 && !window.canAdd) {
-        IV.setNotice('classModalNotice', 'You do not have permission to add.');
-        return;
-    }
+
     const data = {
-        roomTypeID: roomTypeId || 0,
-        roomTypeTitle: document.getElementById('txtTitle').value.trim(),
-        displayLabel: document.getElementById('txtDisplayLabel').value.trim(),
-        roomTypeDescription: document.getElementById('txtDescription').value.trim() || null,
-        isActive: document.getElementById('chkActive').checked,
-        bedCapacity: bedCapacity||0
+        leaveTypeID: parseInt(document.getElementById('hdnLeaveTypeID').value) || 0,
+        leaveTypeName: document.getElementById('txtName').value.trim(),
+        isActive: document.getElementById('chkActive').checked
     };
 
-
-    try {
-
-        const r = await fetch('/Hostel/UpsertRoomType', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        })
-        const res = await r.json();
-        if (res.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Saved!',
-                text: 'Room Type has been added successfully.',
-                confirmButtonText: 'OK',
-                customClass: { confirmButton: 'btn btn-success' },
-                buttonsStyling: false
-            }).then(() => {
-                window.location.href = '/Hostel/RoomType';
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: res.message || 'Failed to save Room Type.',
-                confirmButtonText: 'OK',
-                customClass: { confirmButton: 'btn btn-danger' },
-                buttonsStyling: false
-            });
-        }
-
-    } catch (err) {
-        console.error(err);
-        IV.setNotice('classModalNotice', 'Could not save Room Type.');
-    }    
+    fetch('/UpsertLeaveType', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: 'Designation has been saved successfully.',
+                    confirmButtonText: 'OK',
+                    customClass: { confirmButton: 'btn btn-success' },
+                    buttonsStyling: false
+                }).then(() => { window.location.href = '/HumanResource/Designation'; });
+            } else {
+                Swal.fire({
+                    icon: 'error', title: 'Error', text: res.message || 'Failed to save designation.',
+                    confirmButtonText: 'OK', customClass: { confirmButton: 'btn btn-danger' }, buttonsStyling: false
+                });
+            }
+        });
 }
 
 function deleteSelected() {
@@ -352,7 +345,7 @@ function deleteSelected() {
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
-                url: '/Hostel/DeleteRoomType',
+                url: '/HumanResource/DeleteLeaveType',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(selectedIds),
@@ -373,95 +366,9 @@ function deleteSelected() {
 }
 
 function toggleStatus(id, isActive) {
-
-    let sectionIds = [];
-    $('.student-checkbox:checked').each(function () {
-        sectionIds.push(parseInt($(this).val()));
-    });
-
-    if (sectionIds.length === 0) {
-        if (id != 0) {
-            sectionIds.push(parseInt(id));
-        }
-        else {
-            showToast('Please select at least one user', false);
-            return;
-        }
-
-    }
-
-    const request = {
-        ids: sectionIds.join(','),
-        isActive: isActive
-    };
-    try {
-        const config = isActive
-            ? {
-                icon: 'question',
-                title: 'Activate Record(s)?',
-                text: 'Activating this record will make it visible and available for use across the system. Do you want to continue?',
-                confirmText: 'Yes, Activate',
-                confirmBtnClass: 'btn btn-success me-2',
-                successTitle: 'Activated Successfully!',
-                successText: 'The selected record(s) have been activated and are now available for use.'
-            }
-            : {
-                icon: 'warning',
-                title: 'Deactivate Record(s)?',
-                text: 'Deactivating this record will hide it from the system and prevent it from being used. Do you want to continue?',
-                confirmText: 'Yes, Deactivate',
-                confirmBtnClass: 'btn btn-danger me-2',
-                successTitle: 'Deactivated Successfully!',
-                successText: 'The selected record(s) have been deactivated and are no longer available for use.'
-            };
-
-
-        Swal.fire({
-            icon: config.icon,
-            title: config.title,
-            text: config.text,
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, proceed!',
-            customClass: {
-                confirmButton: 'btn btn-danger me-2',
-                cancelButton: 'btn btn-secondary'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    // fixed typo bluk → bulk
-                    url: '/Hostel/ToggleRoomTypeStatus',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(request),
-                    success: function (res) {
-                        if (res.success) {
-                            Swal.fire('Updated!', res.message || 'Status updated successfully.', 'success')
-                                .then(() => location.reload());
-                        } else {
-                            Swal.fire('Error!', res.message || 'Failed to update status.', 'error');
-                        }
-                    },
-                    error: function (xhr) {
-                        // log xhr for debugging
-                        console.error('Status update error:', xhr.status, xhr.responseText);
-                        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
-                    }
-                });
-            }
-        });
-    }
-    catch (err) {
-        console.error(err);
-        IV.setNotice('sectionPageNotice', 'Could not update status.');
-        location.reload();
-    }
-    //fetch(`/Hostel/ToggleRoomTypeStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
-    //    .then(r => r.json())
-    //    .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
+    fetch(`/HumanResource/ToggleLeaveTypeStatus?id=${id}&isActive=${isActive}`, { method: 'POST' })
+        .then(r => r.json())
+        .then(res => showToast(res.message, res.success ? 'success' : 'danger'));
 }
 
 function showToast(msg, type = 'success') {
@@ -473,15 +380,3 @@ function showToast(msg, type = 'success') {
     document.body.appendChild(wrapper);
     setTimeout(() => wrapper.remove(), 3000);
 }
-
-$('#btnFilterToggle').on('shown.bs.dropdown', function () {
-    var dropdownInstance = bootstrap.Dropdown.getInstance(this);
-    if (dropdownInstance && dropdownInstance._popper) {
-        dropdownInstance._popper.setOptions({
-            modifiers: [
-                { name: 'flip', enabled: false },
-                { name: 'preventOverflow', enabled: false }
-            ]
-        });
-    }
-});

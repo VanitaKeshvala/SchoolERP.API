@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Mono.TextTemplating;
 using SchoolERP.Net.Helpers;
 using SchoolERP.Net.Services.Clients;
 using SchoolERP.Shared.Models;
+using SchoolERP.Shared.Models.Common;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 
 
@@ -72,7 +76,62 @@ namespace SchoolERP.Net.Controllers
         /// <summary>
         /// Shows the 'Designation' page where you can manage different job titles (like Teacher, Admin, or Accountant).
         /// </summary>
-        public async Task<IActionResult> Designation()
+        public async Task<IActionResult> Designation(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
+        {
+            var model = new HRDesignationPageViewModel();
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Designation"
+               );
+
+                var request = new SearchRequest
+                {
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+                // Step 1: Ask the system for all the job titles currently set up.
+                var res =await  _hrClient.GetAllDesignationsWithPageAsync(request);
+                // Step 2: Prepare the list to be shown on the screen.
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyClient.GetAllAsync();
+                await Task.WhenAll( sessionTask, companiesTask);
+
+                var pagedResult = res;
+                model = new HRDesignationPageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<HRDesignationViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID
+                };
+
+                model.Permissions = perms;
+                // Step 3: Open the 'Designation' page.
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+            
+        }
+
+        public async Task<IActionResult> AddDesignation(int? id)
         {
             try
             {
@@ -80,15 +139,21 @@ namespace SchoolERP.Net.Controllers
                 var perms = await GetPermissions(
                    "/HumanResource/Designation"
                );
-                // Step 1: Ask the system for all the job titles currently set up.
-                var res = await _hrClient.GetAllDesignationsAsync();
 
                 // Step 2: Prepare the list to be shown on the screen.
-                var model = new HRDesignationPageViewModel
+                var model = new HRDesignationAddPageViewModel();
+                if (id.HasValue && id.Value > 0)
                 {
-                    Items = res.Success ? res.Data : new List<HRDesignationViewModel>()
-                };
-                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                    var response = await _hrClient.GetDesignationByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
+                }
                 model.Permissions = perms;
                 // Step 3: Open the 'Designation' page.
                 return View(model);
@@ -97,66 +162,199 @@ namespace SchoolERP.Net.Controllers
             {
                 throw;
             }
-            
+
         }
 
         /// <summary>
         /// Shows the 'Department' page where you can manage different departments in the school (like Academic, Finance, or Sports).
         /// </summary>
-        public async Task<IActionResult> Department()
+        public async Task<IActionResult> Department(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
         {
+            var model = new DepartmentListResponse();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/HumanResource/Department"
                );
-                var res = await _hrClient.GetAllDepartmentsAsync();
-                var model = new HRDepartmentPageViewModel();
-                if (res.Success)
+                //var res = await _hrClient.GetAllDepartmentsAsync();
+                
+                
+                var request = new SearchRequest
                 {
-                    model.Items = res.Data.Data;
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
+                };
+                // Step 1: Ask the system for all the job titles currently set up.
+                var res = await _hrClient.GetAllDepartmentsWithPageAsync(request);
+                // Step 2: Prepare the list to be shown on the screen.
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyClient.GetAllAsync();
+                await Task.WhenAll(sessionTask, companiesTask);
+
+                var pagedResult = res;
+                model = new DepartmentListResponse
+                {
+                    Data = pagedResult.Success ? pagedResult.Data.Data : new List<HRDepartmentViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID
+                };
+
+                model.Permissions = perms;
+                // Step 3: Open the 'Designation' page.
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+                return View(model);
+            }
+           
+        }
+
+
+        public async Task<IActionResult> AddDepartment(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Designation"
+               );
+
+                // Step 2: Prepare the list to be shown on the screen.
+                var model = new DepartmentAddPageViewModel();
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _hrClient.GetDepartmentByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
                 }
                 model.Permissions = perms;
-                if (!res.Success) ViewBag.ErrorMessage = res.Message;
+                // Step 3: Open the 'Designation' page.
                 return View(model);
             }
             catch (Exception)
             {
-
                 throw;
             }
-           
+
         }
 
         /// <summary>
         /// Shows the 'Leave Type' page where you can define different types of employee leave (like Medical Leave or Casual Leave).
         /// </summary>
-        public async Task<IActionResult> LeaveType()
+        public async Task<IActionResult> LeaveType(int? pageIndex,
+        int? pageSize,
+        string? search,
+        int? companyId,
+        int? sessionID)
         {
+            var model = new HRLeaveTypePageViewModel();
             try
             {
                 // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
                 var perms = await GetPermissions(
                    "/HumanResource/LeaveType"
                );
-                var res = await _hrClient.GetAllLeaveTypesAsync();
-                var model = new HRLeaveTypePageViewModel
+               
+                var request = new SearchRequest
                 {
-                    Items = res.Success ? res.Data : new List<HRLeaveTypeViewModel>()
+                    PageNumber = pageIndex ?? 1,
+                    PageSize = pageSize ?? 10,
+                    SearchKeyword = search,
+                    CompanyID = companyId ?? await GetCompanyId(),
+                    SessionID = sessionID ?? await GetSessionId()
                 };
+                
+
+                // Step 1: Ask the system for all the job titles currently set up.
+                var res = await _hrClient.GetAllLeaveTypesWithPageAsync(request);
+                // Step 2: Prepare the list to be shown on the screen.
+                var sessionTask = _sessionService.GetAllAsync();
+                var companiesTask = _companyClient.GetAllAsync();
+                await Task.WhenAll(sessionTask, companiesTask);
+
+                var pagedResult = res;
+                model = new HRLeaveTypePageViewModel
+                {
+                    Items = pagedResult.Success ? pagedResult.Data.Data : new List<HRLeaveTypeViewModel>(),
+                    Companies = (await companiesTask).Data ?? new(),
+                    Sessions = (await sessionTask).Data ?? new(),
+                    TotalRecords = pagedResult.Data.TotalRecords,
+                    PageNumber = pagedResult.Data.PageNumber,
+                    PageSize = pagedResult.Data.PageSize,
+                    SearchTerm = search,
+                    CompanyId = companyId,
+                    SessionId = sessionID
+                };
+
                 model.Permissions = perms;
+
                 if (!res.Success) ViewBag.ErrorMessage = res.Message;
                 return View(model);
             }
-            catch (Exception)
+            catch (Exception ex) 
             {
-
-                throw;
+                TempData["Error"] = ex.Message;
+                return View(model);
             }
             
         }
 
+
+        public async Task<IActionResult> AddLeaveType(int? id)
+        {
+            try
+            {
+                // Retrieves the logged-in user's access rights (View, Add, Edit, Delete, etc.)
+                var perms = await GetPermissions(
+                   "/HumanResource/Designation"
+               );
+
+                // Step 2: Prepare the list to be shown on the screen.
+                var model = new HRLeaveTypeAddPageViewModel();
+                if (id.HasValue && id.Value > 0)
+                {
+                    var response = await _hrClient.GetLeaveTypeByIDAsync(id.Value);
+                    if (response.Success)
+                    {
+                        model.EditItems = response.Data;
+                    }
+                }
+                else
+                {
+                    model.EditItems = null;
+                }
+                model.Permissions = perms;
+                // Step 3: Open the 'Designation' page.
+                return View(model);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+
+        }
         /// <summary>
         /// Shows the 'Add Staff' page where you can register a new employee or update an existing employee's details.
         /// </summary>
@@ -704,15 +902,34 @@ namespace SchoolERP.Net.Controllers
         [HttpPost("UpdateDepartment")]
         public async Task<IActionResult> UpdateDepartment([FromBody] HRDepartmentUpsertRequest req)
         {
-            var isCreate = req.DepartmentID <= 0;
-            var res =await _hrClient.UpsertDepartmentAsync(req);
-            return Ok(new { success = res.Success, message = res.Message });
+            try
+            {
+                req.CompanyID = await GetCompanyId();
+                req.SessionID = await GetSessionId();
+                var isCreate = req.DepartmentID <= 0;
+                var res = await _hrClient.UpsertDepartmentAsync(req);
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, message = ex.Message });
+            }
+            
         }
         [HttpPost("UpsertDesignation")]
         public async Task<IActionResult> UpsertDesignation([FromBody] HRDesignationUpsertRequest req)
-        {            
-            var res = await _hrClient.UpsertDesignationAsync(req);
-            return Ok(new { success = res.Success, message = res.Message });
+        {
+            try
+            {
+                req.CompanyID = await GetCompanyId();
+                req.SessionID = await GetSessionId();
+                var res = await _hrClient.UpsertDesignationAsync(req);
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }            
         }
 
         [HttpPost("UpsertStaff")]
@@ -753,10 +970,25 @@ namespace SchoolERP.Net.Controllers
         {
             return View();
         }
+        [HttpPost("UpsertLeaveType")]
+        public async Task<IActionResult> UpsertLeaveType([FromBody] HRLeaveTypeUpsertRequest req)
+        {
+            try
+            {
+                req.CompanyID = await GetCompanyId();
+                req.SessionID = await GetSessionId();
+                var res = await _hrClient.UpsertLeaveTypeAsync(req);
+                return Ok(new { success = res.Success, message = res.Message });
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
 
 
-       
 
-        
+
+
     }
 }

@@ -74,6 +74,8 @@ function applyFilters() {
     } else delete appliedFilters['ddlFilterRoolType'];
 
     saveAppliedFilters();
+    submitForm();
+    renderFilterBadges();
 }
 
 function renderFilterBadges() {
@@ -313,6 +315,25 @@ $(document).ready(function ()
         searching: false,
         paging: false,
         info: false
+    });
+
+    $('#btnFilterToggle').on('shown.bs.dropdown', function () {
+        var $panel = $('#filter-dropdown');
+
+        $('#ddlFilterCompany').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
+        $('#ddlFilterSessions').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        }); 
+        $('#ddlFilterRoolType').select2({
+            dropdownParent: $('#filter-dropdown'),
+            width: '100%'
+        });
+
     });
 })
 

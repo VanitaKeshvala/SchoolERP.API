@@ -40,6 +40,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@LESSONMAPID", request.LessonMapId);
                 parameters.Add("@TOPICMAPID", request.TopicMapId);
                 parameters.Add("@SUBTOPIC", request.SubTopic);
+                parameters.Add("@TimeTableID", request.TimeTableID);
                 parameters.Add("@PLANDATE", request.PlanDate);
                 parameters.Add("@TIMEFROM", request.TimeFrom);
                 parameters.Add("@TIMETO", request.TimeTo);

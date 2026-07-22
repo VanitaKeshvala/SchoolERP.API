@@ -20,7 +20,7 @@
     var p = Model.Permissions;
 }
 
-<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2">
+<div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-1 mb-2 page-sticky-header">
     <div>
         <h6 class="fw-bold mb-0">Room Type</h6>
     </div>
@@ -85,6 +85,111 @@
 <div id="classPageNotice"></div>
 
 <div class="row">
+    <div class="col-xl-12">
+        <div class="card mb-2 shadow-tbl-outer">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                    <!-- ── Search box (name="search" so form submits it) ── -->
+                    <div class="position-relative border d-flex align-items-center rounded-2 px-3 bg-white flex-grow-1 search-box-wrap" style="max-width:420px;">
+                        <i class="fas fa-search search-icon-input"></i>
+                        <input type="text"
+                               name="search"
+                               id="txtSearchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control border-0 ps-2 search-input-responsive"
+                               placeholder="Search by Room Type..." />
+                    </div>
+
+                    <!-- Hidden form for filter submission — outside Bootstrap dropdown -->
+                    <form method="get" asp-action="Index" id="frmSearch" style="display:none;">
+                        <input type="hidden" name="pageIndex" id="hdnPageIndex" value="1" />
+                        <input type="hidden" name="search" id="hdnSearch" value="@Model.SearchTerm" />
+                        <input type="hidden" name="sessionID" id="hdnSessionID" value="" />
+                        <input type="hidden" name="companyId" id="hdnCompanyId" value="" />
+                        <input type="hidden" name="roomTypeID" id="hdnRoomTypeID" value="" />
+                        <input type="hidden" name="pageSize" id="hdnPageSize" value="@Model.PageSize" />
+                    </form>
+
+
+                    <div class="dropdown">
+                        <a href="#" id="btnFilterToggle"
+                           class="btn btn-white border rounded btn-md text-dark fs-14 align-items-center d-flex fw-normal"
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="ti ti-filter text-gray-5 me-1"></i>Filters
+                        </a>
+
+                        <div class="dropdown-menu dropdown-lg dropdown-menu-end filter-dropdown p-0 shadow-tbl" id="filter-dropdown" style="max-width: calc(100vw - 2rem);">
+
+                            <div class="d-flex align-items-center justify-content-between border-bottom filter-header">
+                                <h6 class="mb-0 fw-bold">Select Criteria</h6>
+                                <div class="d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-light btn-md me-2 fw-medium" onclick="resetAllFilters()" id="btnResetFilters">Reset</button>
+                                    <button type="button" class="btn text-primary fs-6 fw-medium" onclick="applyFilters()" id="btnApplyFilters">
+                                        <i class="ti ti-filter me-1"></i>Apply
+                                    </button>
+                                    <button type="button" class="btn btn-icon btn-sm ms-1 d-md-none" id="btnCloseFilter" aria-label="Close">
+                                        <i class="ti ti-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="filter-body pb-0">
+                                <div class="row">
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Company</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterCompany"
+                                                data-placeholder="Select company">
+                                            <option value="">All</option>
+                                            @foreach (var c in Model.Companies ?? new List<MstCompanyViewModel>())
+                                            {
+                                                <option value="@c.CompanyId" selected="@(Model.CompanyId == c.CompanyId)">
+                                                    @c.SchoolName
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label mb-1">Session</label>
+                                        <select class="form-select form-control select2"
+                                                id="ddlFilterSessions"
+                                                data-placeholder="Select session">
+                                            <option value="">All</option>
+                                            @foreach (var ut in Model.Sessions)
+                                            {
+                                                <option value="@ut.SessionId" selected="@(Model.SessionId == ut.SessionId)">
+                                                    @ut.SessionTitle
+                                                </option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Active filter badges -->
+    <div class="col-xl-12" id="activeFilterBadges" style="display: none;">
+        <div class="card shadow-tbl border-0 py-2 mb-2">
+            <div class="card-body p-2 d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted small fw-bold ms-2 me-2">
+                    <i class="ti ti-filter-check me-1"></i>Active Filters:
+                </span>
+                <div id="badgeContainer" class="d-flex flex-wrap gap-2"></div>
+                <button class="btn btn-sm btn-link text-danger p-0 ms-auto me-2 fw-bold text-decoration-none"
+                        id="btnResetAllFilters" onclick="resetAllFilters()">
+                    <i class="ti ti-trash me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div class="col-xl-12">
         <div class="card shadow-tbl">

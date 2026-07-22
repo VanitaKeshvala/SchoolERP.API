@@ -61,9 +61,7 @@ namespace SchoolERP.API.Services
                         ? user.UserTypeName
                         : string.Empty;
 
-                int? staffId = 18;
-
-
+               
                 // Result set 3: role-specific context (present only for Student/Parent/Staff)
                 // multi.IsConsumed is false only if the SP actually returned this result set,
                 // but since the SP always issues a SELECT for known roles, just check the grid is not empty.
@@ -78,7 +76,7 @@ namespace SchoolERP.API.Services
                         user.ParentUserID = studentRoleContextDto.ParentUserID;
                     }
                 }
-                else if (userTypeName.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+                else if (userTypeName.Equals("Parent", StringComparison.OrdinalIgnoreCase))
                 {
                     var staffCtx = await multi.ReadFirstOrDefaultAsync<StaffRoleContextDto>();
                     if (staffCtx != null)
@@ -86,7 +84,14 @@ namespace SchoolERP.API.Services
                         user.StaffID = staffCtx.StaffID;
                     }
                 }
-
+                else
+                {
+                    var staffCtx = await multi.ReadFirstOrDefaultAsync<int>();
+                    if (staffCtx != null)
+                    {
+                        user.StaffID = staffCtx;
+                    }
+                }
                 // Generate JWT token for authenticated user
                 user.Token = _jwtHelper.GenerateToken(
                     user.Username,
@@ -95,7 +100,7 @@ namespace SchoolERP.API.Services
                     user.UserTypeID,
                     user.DefaultRoleID,
                     userTypeName,
-                    user.StaffID= staffId,
+                    user.StaffID= user.StaffID,
                     studentRoleContextDto= studentRoleContextDto);
 
                 return Common.ApiResponse<UserSessionModel?>

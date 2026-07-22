@@ -81,7 +81,13 @@
                             <label class="form-label fw-semibold">Promotion Order<span class="text-danger">*</span></label>
                             <select id="ddlSequenceOrder" name="ClassID" class="form-select">
                                 <option value="">-- Select Class --</option>
-
+                                <option value="19">Playgroup</option>
+                                <option value="18">Nursery</option>
+                                <option value="17">LKG</option>
+                                <option value="16">UKG</option>
+                                <option value="15">Balvatika 1</option>
+                                <option value="14">Balvatika 2</option>
+                                <option value="13">Balvatika 3</option>
                                 @for (int i = 1; i <= 12; i++)
                                 {
                                     if (Model.EditClasses?.SequenceOrder == i)
@@ -93,6 +99,7 @@
                                         <option value="@i">Class @i</option>
                                     }
                                 }
+                                
                             </select>
                             <div class="invalid-feedback" id="errtxtSequenceOrder"></div>
                         </div>

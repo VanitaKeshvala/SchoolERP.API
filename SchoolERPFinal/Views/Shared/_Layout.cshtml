@@ -1029,7 +1029,9 @@
          * Sidebar Toggle & Persistence Logic
          * Overrides default script.js behavior to ensure ThemeCustomizer state is preserved.
          */
-        $(document).ready(function () {
+        $(document).ready(function () 
+        {
+
             if (typeof ThemeCustomizer !== 'undefined') {
                 // Initialize customizer if not already assigned to window
                 if (!window.themeCustomizer) {
@@ -1234,24 +1236,23 @@
           
         $(document).ready(function () {
 
-            // ================= Sticky Header/Tabs =================
-            function updateStickyLayout() {
-                var isMobile = window.matchMedia('(max-width: 767.98px)').matches;
-                var pageHeader = document.getElementById('pageStickyHeader');
-                var tabsBar = document.getElementById('tabsStickyBar');
-                var card = document.querySelector('.card.shadow-tbl-outer');
-                if (!pageHeader || !tabsBar) return;
+                   // ================= Generic Sticky Layout (works on ANY page) =================
+        function updateStickyLayout() {
+            var headers = document.querySelectorAll('.page-sticky-header');
+            if (headers.length === 0) return;
 
-                if (isMobile) {
-                    var headerHeight = pageHeader.offsetHeight;
-                    tabsBar.style.top = headerHeight + 'px';
-                    if (card) card.style.marginTop = (headerHeight + 8) + 'px';
-                    tabsBar.style.marginTop = '0';
-                } else {
-                    tabsBar.style.top = (55 + pageHeader.offsetHeight) + 'px';
-                    if (card) card.style.marginTop = '';
-                }
-            }
+            // Use the tallest sticky header on the page (usually just one)
+            var headerHeight = 0;
+            headers.forEach(function (h) { headerHeight = Math.max(headerHeight, h.offsetHeight); });
+
+            document.querySelectorAll('.sticky-table-scroll thead th').forEach(function (th) {
+                th.style.top = 0 + 'px';
+            });
+        }
+
+        window.addEventListener('load', updateStickyLayout);
+        window.addEventListener('resize', updateStickyLayout);
+        setTimeout(updateStickyLayout, 300); // catch late-rendering content (AJAX tables, filters, etc.)
 
             function scrollTabIntoView($tab) {
                 var $scroller = $tab.closest('.tab-scroll');
@@ -1345,8 +1346,13 @@
                 scrollbar: true
             });
         });
-   
 
+                document.getElementById('btnCloseFilter').addEventListener('click', function () {
+            const dropdownToggleEl = document.getElementById('btnFilterToggle');
+            const dropdownInstance = bootstrap.Dropdown.getInstance(dropdownToggleEl)
+                || new bootstrap.Dropdown(dropdownToggleEl);
+            dropdownInstance.hide();
+        });
     </script>
 
 

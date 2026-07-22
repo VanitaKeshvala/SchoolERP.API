@@ -73,7 +73,7 @@ namespace SchoolERP.API.Services
                 parameters.Add("@ASSIGNMENTDATE", request.AssignmentDate);
                 parameters.Add("@REMARK", request.Remark);
                 parameters.Add("@EVALUATIONDATE", request.EvaluationDate);
-                parameters.Add("@EVALUATEDBY", request.EvaluatedBy);
+                parameters.Add("@EVALUATEDBY", request.EvaluationDate.HasValue ? userId : (int?)null);
                 parameters.Add("@ISACTIVE", request.IsActive);
                 parameters.Add("@USERID", userId);
                 parameters.Add("@IPADDRESS", request.IPAddress);

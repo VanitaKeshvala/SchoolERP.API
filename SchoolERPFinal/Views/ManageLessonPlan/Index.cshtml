@@ -240,7 +240,7 @@
 <!-- Page Header -->
 <div class="d-flex align-items-sm-center justify-content-between flex-wrap gap-2 mb-2">
     <div>
-        <h6 class="fw-bold mb-0">Teacher Timetable</h6>
+        <h6 class="fw-bold mb-0">Lesson Plan</h6>
     </div>
     <div class="d-flex align-items-center flex-wrap gap-1 responsive-btn-group">
         @if (p.CanPrint)
@@ -315,7 +315,7 @@
         </div>
     </div>
     <div class="tt-grid">
-        @if (Model.SelectedStaffId > 0)
+        @if (days.Length > 0)
         {
 
             @for (int di = 0; di < days.Length; di++)
@@ -355,19 +355,19 @@
                             <span class="slot-count-badge">
                                 @normalSlots.Count period@(normalSlots.Count != 1 ? "s" : "")
                             </span>
-                            
-                    }
-                </div>
 
-                <!-- ── Holiday banner ── -->
-                @if (daySlots.Any())
-                {
-                    <!-- ── Normal period cards ── -->
-                    <div class="day-card-body">
-                        @for (int si = 0; si < daySlots.Count; si++)
-                        {
-                            var slot = daySlots[si];
-                            var accent = slotAccents[si % slotAccents.Length];
+                        }
+                    </div>
+
+                    <!-- ── Holiday banner ── -->
+                    @if (daySlots.Any())
+                    {
+                        <!-- ── Normal period cards ── -->
+                        <div class="day-card-body">
+                            @for (int si = 0; si < daySlots.Count; si++)
+                            {
+                                var slot = daySlots[si];
+                                var accent = slotAccents[si % slotAccents.Length];
                                 <div class="period-block" style="border-left-color:@accent;">
                                     <div class="period-header">
                                         <div class="period-subject">
@@ -375,16 +375,41 @@
                                             @slot.SubjectName
                                         </div>
                                         <div class="period-actions">
-                                            <a href="/ManageLessonPlan/Add?timeTableID=@slot.TimeTableID"
-                                               class="action-icon" title="Add Lesson Plan">
-                                                <i class="ti ti-plus"></i>
-                                            </a>
-                                            <a href="/ManageLessonPlan/LessonPlanDetail/@slot.TimeTableID" class="action-icon" title="View Lesson Plans">
-                                                <i class="ti ti-list-details"></i>
-                                            </a>
-                                            <a href="#" class="action-icon action-icon-danger" title="Delete Period">
-                                                <i class="ti ti-trash"></i>
-                                            </a>
+
+
+                                            @if (slot.LessonPlanId != 0)
+                                            {
+                                                @if (p.CanEdit)
+                                                {
+                                                    <a href="/ManageLessonPlan/Add?timeTableID=@slot.TimeTableID&lessonPlanId=@slot.LessonPlanId"
+                                                    class="action-icon" title="Add Lesson Plan">
+                                                        <i class="ti ti-pencil"></i>
+                                                    </a>
+                                                }
+                                                <a href="/ManageLessonPlan/LessonPlanDetail/@slot.LessonPlanId" class="action-icon" title="View Lesson Plans">
+                                                    <i class="ti ti-list-details"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                    @if (p.CanAdd)
+                                                    {
+                                                        <a href="/ManageLessonPlan/Add?timeTableID=@slot.TimeTableID"
+                                                           class="action-icon" title="Add Lesson Plan">
+                                                            <i class="ti ti-plus"></i>
+                                                        </a>
+                                                    }
+                                                    @if (p.CanDelete)
+                                                    {
+                                                        <a href="#" class="action-icon action-icon-danger" title="Delete Period">
+                                                            <i class="ti ti-trash"></i>
+                                                        </a>
+                                                    }
+                                            }
+                                            
+                                            
+
+                                            
                                         </div>
                                     </div>
 

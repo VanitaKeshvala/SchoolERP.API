@@ -233,7 +233,7 @@
                                 <th>Select</th>
                                 <th>Class (Section)</th>
                                 <th>Subject Group</th>
-                                <th>Subject</th>
+                                <th>Subject (Teacher Name)</th>
                                 <th>Lesson Name</th>
                                 <th>Topic Name</th>
                                 <th>Created By</th>
@@ -262,7 +262,7 @@
                                             <span>@h.ClassName</span> (@h.SectionName)
                                         </td>
                                         <td>@h.SubjectGroupName</td>
-                                        <td>@h.SubjectName</td>
+                                        <td>@h.SubjectName (@h.CLASSTEACHERNAME)</td>
                                         <td>@h.LessonName</td>
                                         <td>
                                             @if (h.TopicNamesJson != null && h.TopicNamesJson.Any())
