@@ -18,11 +18,22 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Display .NET Version
-        run: dotnet --version
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Show Folder Structure
+        run: |
+          dir
+          dir SchoolERPFinal
+          dir SchoolERP.API
+          dir SchoolERP.Shared
 
       - name: Restore Solution
+        working-directory: SchoolERPFinal
         run: dotnet restore SchoolERP.Net.sln
 
       - name: Build Solution
+        working-directory: SchoolERPFinal
         run: dotnet build SchoolERP.Net.sln --configuration Release --no-restore
