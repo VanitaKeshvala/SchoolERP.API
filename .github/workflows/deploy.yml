@@ -6,6 +6,7 @@ on:
       - main
 
 jobs:
+
   build:
     runs-on: windows-latest
 
@@ -24,6 +25,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Show Folder Structure
+        shell: powershell
         run: |
           dir
           dir SchoolERPFinal
@@ -37,3 +39,115 @@ jobs:
       - name: Build Solution
         working-directory: SchoolERPFinal
         run: dotnet build SchoolERP.Net.sln --configuration Release --no-restore
+
+  publish:
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Publish Web
+        run: dotnet publish SchoolERPFinal/SchoolERP.Net.csproj -c Release -o publish/web
+
+      - name: Publish API
+        run: dotnet publish SchoolERP.API/SchoolERP.API.csproj -c Release -o publish/api
+
+      - name: Zip Web
+        shell: powershell
+        run: Compress-Archive -Path publish/web/* -DestinationPath web.zip
+
+      - name: Zip API
+        shell: powershell
+        run: Compress-Archive -Path publish/api/* -DestinationPath api.zip
+
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: web.zip
+
+      - name: Upload API Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api
+          path: api.zip
+
+  deploy-web:
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Web Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload ZIP to S3
+        run: |
+          aws s3 cp web.zip s3://${{ secrets.AWS_S3_BUCKET }}/web-${{ github.sha }}.zip
+
+      - name: Create Elastic Beanstalk Version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ secrets.AWS_APPLICATION_NAME }}" \
+            --version-label "web-${{ github.sha }}" \
+            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=web-${{ github.sha }}.zip
+
+      - name: Deploy Web
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name "${{ secrets.AWS_WEB_ENVIRONMENT }}" \
+            --version-label "web-${{ github.sha }}"
+
+  deploy-api:
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download API Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload ZIP to S3
+        run: |
+          aws s3 cp api.zip s3://${{ secrets.AWS_S3_BUCKET }}/api-${{ github.sha }}.zip
+
+      - name: Create Elastic Beanstalk Version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "${{ secrets.AWS_APPLICATION_NAME }}" \
+            --version-label "api-${{ github.sha }}" \
+            --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=api-${{ github.sha }}.zip
+
+      - name: Deploy API
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name "${{ secrets.AWS_API_ENVIRONMENT }}" \
+            --version-label "api-${{ github.sha }}"
