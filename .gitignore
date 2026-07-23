@@ -3,6 +3,4 @@
 *.mdf
 *.ldf
 *.bak
-bin/
-obj/
 Publish/
