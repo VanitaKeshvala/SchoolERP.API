@@ -1,1 +1,28 @@
+name: SchoolERP CI/CD
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Display .NET Version
+        run: dotnet --version
+
+      - name: Restore Solution
+        run: dotnet restore SchoolERP.Net.sln
+
+      - name: Build Solution
+        run: dotnet build SchoolERP.Net.sln --configuration Release --no-restore
