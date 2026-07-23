@@ -11,7 +11,8 @@
           "Dapper": "2.1.79",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "8.0.8",
           "Microsoft.AspNetCore.OpenApi": "9.0.16",
-          "Microsoft.Data.SqlClient": "7.0.0"
+          "Microsoft.Data.SqlClient": "7.0.0",
+          "SchoolERP.Shared": "1.0.0"
         },
         "runtime": {
           "SchoolERP.API.dll": {}
@@ -377,6 +378,14 @@
             "fileVersion": "9.0.1326.6317"
           }
         }
+      },
+      "SchoolERP.Shared/1.0.0": {
+        "runtime": {
+          "SchoolERP.Shared.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
       }
     }
   },
@@ -574,6 +583,11 @@
       "sha512": "sha512-t8S9IDpjJKsLpLkeBdW8cWtcPyYqrGu93Dej1RO6WwuL/lkFSqWlan3rMJfortqz1mRIh+sys2AFsSA6jWJ3Jg==",
       "path": "system.security.cryptography.protecteddata/9.0.13",
       "hashPath": "system.security.cryptography.protecteddata.9.0.13.nupkg.sha512"
+    },
+    "SchoolERP.Shared/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }
