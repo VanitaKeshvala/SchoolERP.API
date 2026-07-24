@@ -24,14 +24,6 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Show Folder Structure
-        shell: powershell
-        run: |
-          dir
-          dir SchoolERPFinal
-          dir SchoolERP.API
-          dir SchoolERP.Shared
-
       - name: Restore Solution
         working-directory: SchoolERPFinal
         run: dotnet restore SchoolERP.Net.sln
@@ -45,8 +37,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
@@ -59,18 +50,40 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Publish Web
-        run: dotnet publish SchoolERPFinal/SchoolERP.Net.csproj -c Release -o publish/web
+        shell: powershell
+        run: |
+          dotnet publish SchoolERPFinal/SchoolERP.Net.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -o publish/web
 
       - name: Publish API
-        run: dotnet publish SchoolERP.API/SchoolERP.API.csproj -c Release -o publish/api
+        shell: powershell
+        run: |
+          dotnet publish SchoolERP.API/SchoolERP.API.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -o publish/api
+
+      - name: Show Web Publish
+        shell: powershell
+        run: |
+          dir publish\web
+
+      - name: Show API Publish
+        shell: powershell
+        run: |
+          dir publish\api
 
       - name: Zip Web
         shell: powershell
-        run: Compress-Archive -Path publish/web/* -DestinationPath web.zip
+        run: Compress-Archive -Path publish\web\* -DestinationPath web.zip -Force
 
       - name: Zip API
         shell: powershell
-        run: Compress-Archive -Path publish/api/* -DestinationPath api.zip
+        run: Compress-Archive -Path publish\api\* -DestinationPath api.zip -Force
 
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
@@ -89,12 +102,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Download Web Artifact
         uses: actions/download-artifact@v4
         with:
           name: web
 
-      - name: Configure AWS
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -105,7 +119,7 @@ jobs:
         run: |
           aws s3 cp web.zip s3://${{ secrets.AWS_S3_BUCKET }}/web-${{ github.sha }}.zip
 
-      - name: Create Elastic Beanstalk Version
+      - name: Create Application Version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.AWS_APPLICATION_NAME }}" \
@@ -118,17 +132,28 @@ jobs:
             --environment-name "${{ secrets.AWS_WEB_ENVIRONMENT }}" \
             --version-label "web-${{ github.sha }}"
 
+      - name: Wait for Deployment
+        run: |
+          aws elasticbeanstalk wait environment-updated \
+            --environment-names "${{ secrets.AWS_WEB_ENVIRONMENT }}"
+
+      - name: Deployment Status
+        run: |
+          aws elasticbeanstalk describe-environments \
+            --environment-names "${{ secrets.AWS_WEB_ENVIRONMENT }}"
+
   deploy-api:
     needs: publish
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Download API Artifact
         uses: actions/download-artifact@v4
         with:
           name: api
 
-      - name: Configure AWS
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -139,7 +164,7 @@ jobs:
         run: |
           aws s3 cp api.zip s3://${{ secrets.AWS_S3_BUCKET }}/api-${{ github.sha }}.zip
 
-      - name: Create Elastic Beanstalk Version
+      - name: Create Application Version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.AWS_APPLICATION_NAME }}" \
@@ -151,3 +176,13 @@ jobs:
           aws elasticbeanstalk update-environment \
             --environment-name "${{ secrets.AWS_API_ENVIRONMENT }}" \
             --version-label "api-${{ github.sha }}"
+
+      - name: Wait for Deployment
+        run: |
+          aws elasticbeanstalk wait environment-updated \
+            --environment-names "${{ secrets.AWS_API_ENVIRONMENT }}"
+
+      - name: Deployment Status
+        run: |
+          aws elasticbeanstalk describe-environments \
+            --environment-names "${{ secrets.AWS_API_ENVIRONMENT }}"
