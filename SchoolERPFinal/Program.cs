@@ -15,7 +15,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
 
 // Single shared API base address (point to SchoolERP.API)
-var apiBaseUrl = builder.Configuration["ApiUrl:BaseUrl"] ?? "https://localhost:7205/";
+var apiBaseUrl = builder.Configuration["ApiUrl:BaseUrl"] ?? "http://schoolerp-api.eba-7sujy8di.us-west-2.elasticbeanstalk.com/";
 
 builder.Services.AddScoped<ILocalizationService, LocalizationService>();
 builder.Services.AddScoped<SchoolERP.Net.Helpers.PermissionHelper>();
